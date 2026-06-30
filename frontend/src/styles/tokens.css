@@ -1,70 +1,39 @@
 @theme {
-  /* --font-display / --font-body: set by next/font on <html> only */
-  /*
-   * Responsive sizing step used by existing clamp() formulas.
-   * The viewport-math version broke on older iOS Safari, so the value is now
-   * assigned explicitly through media-query tiers below.
-   */
-  --fluid-progress: 0;
+  /* Fonts — next/font sets --font-display (Oswald) / --font-body (Hanken) on <html>.
+     Expose them as Tailwind utilities: font-oswald (display) and font-sans (body). */
+  --font-oswald: var(--font-display);
+  --font-sans: var(--font-body);
 
-  --color-brand-primary: #f56024;
-  --color-brand-primary-dark: #bf3700;
-  --color-brand-ink: #151515;
-  /* Promo / hero charcoal starter surface */
-  --color-surface-dark: #151515;
-  --color-surface-base: #ffffff;
-  --color-surface-tint: #f4fcee;
-  --color-surface-muted: #f9f9f9;
-  --color-text-muted: #808080;
-  --color-text-muted-strong: #636363;
-  --color-accent: #53c507;
-  --color-accent-soft: #c8ffa3;
-  --color-accent-mid: #a3e379;
-  --color-brand-gradient-start: #f56024;
-  --color-brand-gradient-end: #ffc869;
+  /* ---- Brand colours (from design.md §2 — the single source of truth) ---- */
+  --color-green: #27412e;
+  --color-green-dark: #16271c;
+  --color-green-mid: #2f5238;
+  --color-rust: #c17c2c;
+  --color-rust-dark: #a8691f;
+  --color-cream: #f6f1e4;
+  --color-cream-deep: #efe7d2;
+  --color-gold: #e5c079;
 
-  --radius-button: 38px;
-  --radius-card: 15px;
-  --radius-input: 8px;
+  /* neutrals & support */
+  --color-ink: #2b2a25;
+  --color-muted: #6d6e71;
+  --color-sand: #ded4bb;
+  --color-line: #e8dfcf;
+  --color-tag: #54514a;
+  --color-star: #f4b400;
+  --color-service: #3a7d4e;
+  --color-badge-open: #27412e;
+  --color-badge-open-bg: #e6ede0;
+  --color-badge-closed: #6d6e71;
+  --color-badge-closed-bg: #eef0f2;
+
+  /* ---- Radii (design.md §6) ---- */
+  --radius-button: 12px;
+  --radius-card: 16px;
+  --radius-chip: 30px;
+  --radius-input: 10px;
+
+  /* ---- Motion (design.md §8) ---- */
+  --animate-marquee: marquee 42s linear infinite;
+  --animate-pop: pop 0.24s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-
-:root {
-  /*
-   * Breakpoint-based approximation of the old 680px -> 1440px fluid scale.
-   * Values map to representative widths inside each tier so existing
-   * `clamp(min, calc(min + delta * var(--fluid-progress)), max)` formulas
-   * continue to scale smoothly enough without relying on unsupported viewport math.
-   */
-  --fluid-progress: 0;
-}
-
-@media (min-width: 680px) {
-  :root {
-    --fluid-progress: 0.06;
-  }
-}
-
-@media (min-width: 768px) {
-  :root {
-    --fluid-progress: 0.28;
-  }
-}
-
-@media (min-width: 1024px) {
-  :root {
-    --fluid-progress: 0.62;
-  }
-}
-
-@media (min-width: 1280px) {
-  :root {
-    --fluid-progress: 0.89;
-  }
-}
-
-@media (min-width: 1440px) {
-  :root {
-    --fluid-progress: 1;
-  }
-}
-

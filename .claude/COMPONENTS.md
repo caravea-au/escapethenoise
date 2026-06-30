@@ -15,7 +15,21 @@ Tiers (see `nextjs-component-standards`): **1** global primitive (`components/ui
 
 | Component | Tier | Purpose | Path | Key props | Used on |
 |---|---|---|---|---|---|
-| _none yet — populated by `/project-setup` (Tier-1) and `/build-component` (Tier-2)_ | | | | | |
+| Container | 1 | Centred max-width column (marketing/education/article) + gutters | components/ui/Container.tsx | children, width, className | navbar, footer, all home sections |
+| Button | 1 | CTA — primary/secondary/outline/glass; Link when `href` set | components/ui/Button.tsx | variant, href, fullWidth, className | navbar, hero, openday, journey, guides, lifestyle, not-found |
+| Eyebrow | 1 | Uppercase tracked label above headings (rust/gold) | components/ui/Eyebrow.tsx | tone, className | trustbar, journey, guides, lifestyle |
+| Heading | 1 | Oswald display heading; pass `as` for h1/h2/h3 | components/ui/Heading.tsx | as, className | trustbar, journey, guides, lifestyle |
+| Navbar | 2 | Global green header w/ reversed lockup + nav + CTA | components/Navbar/Navbar.tsx | — | layout (all pages) |
+| Footer | 2 | Global green footer — link columns, states, legal | components/Footer/Footer.tsx | — | layout (all pages) |
+| Hero | home | Video hero + headline + search card + glass pills | components/home/Hero.tsx | — | home |
+| TrustBar | home | Stats + state-association logo marquee | components/home/TrustBar.tsx | — | home |
+| OpenDayCTA | home | Single highlighted event banner | components/home/OpenDayCTA.tsx | — | home |
+| JourneySection | home | "What are you looking for?" 4 entry cards | components/home/JourneySection.tsx | — | home |
+| BuyingGuides | home | Latest guides — 3 article cards | components/home/BuyingGuides.tsx | — | home |
+| LifestyleBand | home | Full-bleed photo band + CTA | components/home/LifestyleBand.tsx | — | home |
+
+> **Note:** an `Input` Tier-1 primitive is not yet extracted — the hero search uses an inline
+> `<input>`. Extract it to `components/ui/` the first time a second form needs it.
 
 <!-- Example row once built:
 | Button | 1 | Primary/secondary CTA | frontend/src/components/ui/Button.tsx | variant, href, children | home/hero, home/cta |

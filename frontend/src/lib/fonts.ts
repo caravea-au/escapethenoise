@@ -1,15 +1,18 @@
-import { Goldman, Work_Sans } from "next/font/google";
+import { Oswald, Hanken_Grotesk } from "next/font/google";
 
-export const goldman = Goldman({
+// Display — Oswald (headings, stats, eyebrows). Body — Hanken Grotesk.
+// Variable names (--font-display / --font-body) are the contract used by
+// tokens.css (@theme) and globals.css; keep them stable.
+export const oswald = Oswald({
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-display",
   display: "swap",
 });
 
-export const workSans = Work_Sans({
+export const hanken = Hanken_Grotesk({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
   variable: "--font-body",
   display: "swap",
 });
