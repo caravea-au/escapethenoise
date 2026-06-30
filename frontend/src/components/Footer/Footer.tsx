@@ -1,21 +1,22 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 
-const COLUMNS = [
-  // Hidden during design iteration — dealer-search column:
-  // {
-  //   title: "Find a Dealer",
-  //   links: ["Search dealers", "Near me", "Special offers", "Open now"],
-  // },
-  {
-    title: "Resources",
-    links: ["Buying guides", "Towing guide", "Events & shows", "Safety advice"],
-  },
-  {
-    title: "About CIAA",
-    links: ["About us", "Accreditation", "For dealers", "Contact"],
-  },
-];
+// Hidden during design iteration — footer navigation columns:
+// const COLUMNS = [
+//   // Hidden during design iteration — dealer-search column:
+//   // {
+//   //   title: "Find a Dealer",
+//   //   links: ["Search dealers", "Near me", "Special offers", "Open now"],
+//   // },
+//   {
+//     title: "Resources",
+//     links: ["Buying guides", "Towing guide", "Events & shows", "Safety advice"],
+//   },
+//   {
+//     title: "About CIAA",
+//     links: ["About us", "Accreditation", "For dealers", "Contact"],
+//   },
+// ];
 
 // Hidden during design iteration — "Browse by state" row:
 // const STATES = ["NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"];
@@ -53,6 +54,7 @@ export function Footer() {
           </p>
         </div>
 
+        {/* Hidden during design iteration — footer navigation columns:
         {COLUMNS.map((col) => (
           <div key={col.title}>
             <div className="mb-3.5 font-oswald text-sm font-semibold uppercase tracking-[1px] text-white">
@@ -67,6 +69,7 @@ export function Footer() {
             </div>
           </div>
         ))}
+        */}
       </Container>
 
       {/* Hidden during design iteration — "Browse by state" row:
