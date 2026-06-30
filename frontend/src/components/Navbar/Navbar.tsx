@@ -1,25 +1,27 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
-// import { Button } from "@/components/ui/Button"; // hidden with "Visit a Dealer" CTA
+import { Button } from "@/components/ui/Button";
+import { getHeader, strapiMedia, type StrapiLink } from "@/lib/strapi";
 
-const LINKS = [
-  // Hidden during design iteration — dealer-search elements:
-  // { label: "Find a Dealer", href: "#" },
-  // { label: "Browse by State", href: "#" },
-  { label: "Buying Guides", href: "/buying-guides" },
-  // Hidden during design iteration:
-  // { label: "Events", href: "#" },
-];
+// Fallback menu when Strapi is unset/unreachable.
+const FALLBACK_MENU: StrapiLink[] = [{ label: "Buying Guides", url: "/buying-guides" }];
 
 // Tier-2 — global header (design.md §4). Reversed lockup on the green band.
-export function Navbar() {
+// Content comes from the Strapi `header` single type, with hardcoded fallbacks.
+export async function Navbar() {
+  const header = await getHeader();
+  const menu = header?.menuItems?.length ? header.menuItems : FALLBACK_MENU;
+  const logoSrc =
+    strapiMedia(header?.logo?.url) ?? "/brand/lockup-horizontal-reversed.svg";
+  const cta = header?.ctaButton;
+
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-green">
       <Container className="flex h-[90px] items-center gap-7">
         <Link href="/" className="flex shrink-0 items-center">
           <Image
-            src="/brand/lockup-horizontal-reversed.svg"
+            src={logoSrc}
             alt="No Better Time to Escape the Noise — Caravan Industry Association of Australia"
             width={210}
             height={64}
@@ -28,24 +30,24 @@ export function Navbar() {
           />
         </Link>
         <nav className="ml-3.5 flex flex-wrap items-center gap-0.5">
-          {LINKS.map((l) => (
+          {menu.map((l) => (
             <Link
               key={l.label}
-              href={l.href}
+              href={l.url}
               className="rounded-lg px-3.5 py-2 text-sm text-sand transition-colors hover:bg-white/10 hover:text-white"
             >
               {l.label}
             </Link>
           ))}
         </nav>
-        {/* Hidden during design iteration — dealer-search element:
-        <Button
-          href="#"
-          className="ml-auto shrink-0 whitespace-nowrap rounded-[9px] px-[19px] py-[11px] text-sm"
-        >
-          Visit a Dealer →
-        </Button>
-        */}
+        {cta?.label && (
+          <Button
+            href={cta.url}
+            className="ml-auto shrink-0 whitespace-nowrap rounded-[9px] px-[19px] py-[11px] text-sm"
+          >
+            {cta.label}
+          </Button>
+        )}
       </Container>
     </header>
   );

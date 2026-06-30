@@ -83,3 +83,48 @@ export async function getBuyingGuideSlugs(): Promise<string[]> {
   );
   return json.data.map((g) => g.slug);
 }
+
+// ── Header / Footer single types (global chrome) ─────────────────────────────
+// A label + URL pair (Strapi `shared.link` component).
+export type StrapiLink = { label: string; url: string };
+// A footer column (Strapi `shared.link-column` component).
+export type LinkColumn = { title: string; links: StrapiLink[] | null };
+
+export type HeaderData = {
+  logo: StrapiImage;
+  menuItems: StrapiLink[] | null;
+  ctaButton: StrapiLink | null;
+} | null;
+
+export type FooterData = {
+  logo: StrapiImage;
+  heading: string | null;
+  content: string | null;
+  columns: LinkColumn[] | null;
+  statesLabel: string | null;
+  states: StrapiLink[] | null;
+  legalLinks: StrapiLink[] | null;
+  copyright: string | null;
+} | null;
+
+/** Header single type, or null if unset / Strapi is unreachable (frontend falls back). */
+export async function getHeader(): Promise<HeaderData> {
+  try {
+    const json = await strapiFetch<{ data: HeaderData }>("/api/header?populate=*");
+    return json.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Footer single type, or null if unset / Strapi is unreachable. Deep-populates nested column links. */
+export async function getFooter(): Promise<FooterData> {
+  try {
+    const json = await strapiFetch<{ data: FooterData }>(
+      "/api/footer?populate[logo]=true&populate[columns][populate][links]=true&populate[states]=true&populate[legalLinks]=true",
+    );
+    return json.data ?? null;
+  } catch {
+    return null;
+  }
+}

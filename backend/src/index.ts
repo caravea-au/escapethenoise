@@ -1,9 +1,11 @@
 import type { Core } from "@strapi/strapi";
 
-// Public read actions the frontend relies on (it queries buying-guides without a token).
+// Public read actions the frontend relies on (it queries these without a token).
 const PUBLIC_ACTIONS = [
   "api::buying-guide.buying-guide.find",
   "api::buying-guide.buying-guide.findOne",
+  "api::header.header.find",
+  "api::footer.footer.find",
 ];
 
 export default {
