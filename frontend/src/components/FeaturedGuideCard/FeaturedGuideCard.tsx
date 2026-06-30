@@ -3,6 +3,7 @@ import type { BuyingGuide } from "@/lib/strapi";
 import { strapiMedia } from "@/lib/strapi";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
+import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 
 // Large two-column promoted guide at the top of the listing.
@@ -23,10 +24,11 @@ export function FeaturedGuideCard({ guide }: { guide: BuyingGuide }) {
         )}
       </div>
       <div className="flex flex-col justify-center p-7 md:p-12">
-        <Text variant="eyebrow" className="text-rust">
-          Featured guide
-        </Text>
-        <Heading as="h2" size="feature" className="mt-3 text-green">
+        <Eyebrow tone="rust">Featured guide</Eyebrow>
+        <Heading
+          as="h2"
+          className="mt-3 text-[24px] leading-[1.1] text-green md:text-[30px] lg:text-[34px]"
+        >
           {guide.title}
         </Heading>
         {guide.excerpt && (

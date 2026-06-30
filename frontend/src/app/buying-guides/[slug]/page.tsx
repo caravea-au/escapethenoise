@@ -65,7 +65,10 @@ export default async function BuyingGuideDetailPage({
           <div className="mt-4">
             {guide.category && <CategoryBadge tone="hero">{guide.category}</CategoryBadge>}
           </div>
-          <Heading as="h1" size="page" className="mt-[18px] text-balance text-white">
+          <Heading
+            as="h1"
+            className="mt-[18px] text-[30px] tracking-[-1px] text-balance text-white md:text-[40px] lg:text-[50px]"
+          >
             {guide.title}
           </Heading>
           <div className="mt-4 flex flex-wrap gap-[18px] text-[13.5px] text-sand">

@@ -27,7 +27,7 @@ export function GuideCard({ guide }: { guide: BuyingGuide }) {
       </div>
       <div className="flex flex-1 flex-col gap-[11px] p-[22px]">
         {guide.category && <CategoryBadge tone="card">{guide.category}</CategoryBadge>}
-        <Heading as="h3" size="card" className="text-green">
+        <Heading as="h3" className="text-[19px] leading-tight text-green">
           {guide.title}
         </Heading>
         {guide.excerpt && (

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Container } from "@/components/ui/Container";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
+import { Eyebrow } from "@/components/ui/Eyebrow";
 import { FeaturedGuideCard } from "@/components/FeaturedGuideCard/FeaturedGuideCard";
 import { BuyingGuidesExplorer } from "@/components/BuyingGuidesExplorer/BuyingGuidesExplorer";
 import { getBuyingGuides } from "@/lib/strapi";
@@ -20,11 +21,12 @@ export default async function BuyingGuidesPage() {
   return (
     <>
       <section className="bg-[linear-gradient(165deg,var(--color-green-mid),var(--color-green-dark))]">
-        <Container width="content" className="pt-[54px] pb-[50px]">
-          <Text as="div" variant="eyebrow" className="font-bold tracking-[3px] text-gold">
-            Education
-          </Text>
-          <Heading as="h1" size="page" className="mt-2.5 text-white">
+        <Container width="education" className="pt-[54px] pb-[50px]">
+          <Eyebrow tone="gold">Education</Eyebrow>
+          <Heading
+            as="h1"
+            className="mt-2.5 text-[30px] tracking-[-1px] text-white md:text-[40px] lg:text-[50px]"
+          >
             Buying Guides &amp; Caravan Advice
           </Heading>
           <Text variant="lead" className="mt-2.5 max-w-[600px] text-sand">
@@ -34,7 +36,7 @@ export default async function BuyingGuidesPage() {
         </Container>
       </section>
 
-      <Container width="content" className="pt-8 pb-24">
+      <Container width="education" className="pt-8 pb-24">
         {featured && <FeaturedGuideCard guide={featured} />}
         <BuyingGuidesExplorer guides={gridGuides} />
       </Container>

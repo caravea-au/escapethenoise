@@ -67,7 +67,7 @@ export function ArticleBody({ blocks }: { blocks: Block[] }) {
             return (
               <h2
                 key={i}
-                className="font-(family-name:--font-display) mt-[38px] mb-3.5 text-[25px] font-bold tracking-[-0.3px] text-green"
+                className="font-oswald mt-[38px] mb-3.5 text-[25px] font-bold tracking-[-0.3px] text-green"
               >
                 <Inline nodes={children} />
               </h2>

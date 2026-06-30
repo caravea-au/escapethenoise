@@ -15,15 +15,27 @@ Tiers (see `nextjs-component-standards`): **1** global primitive (`components/ui
 
 | Component | Tier | Purpose | Path | Key props | Used on |
 |---|---|---|---|---|---|
-| Button | 1 | primary (rust) / secondary (outline) / tertiary (solid green) CTA; renders `<a>` when `href` given | frontend/src/components/ui/Button.tsx | variant, href, children | buying-guides/listing, buying-guides/detail |
-| Link | 1 | Inline rust text link (wraps next/link) | frontend/src/components/ui/Link.tsx | href, children | — |
-| Input | 1 | Text input — cream fill, line border, rust focus | frontend/src/components/ui/Input.tsx | (native input props) | — |
-| Container | 1 | Max-width wrapper (1280/1180/820) + 24px gutters | frontend/src/components/ui/Container.tsx | width, children | layout shell, buying-guides/listing, buying-guides/detail |
-| Section | 1 | Cream / dark-green band + vertical rhythm | frontend/src/components/ui/Section.tsx | tone, children | — |
-| Heading | 1 | Oswald display (hero/page/feature/section/stat/card steps) | frontend/src/components/ui/Heading.tsx | as, size, children | buying-guides/listing, buying-guides/detail |
-| Text | 1 | Hanken body (body/lead/eyebrow/meta) | frontend/src/components/ui/Text.tsx | as, variant, children | buying-guides/listing |
-| CategoryBadge | 2 | Category pill — `card` (rust on cream) / `hero` (green on gold) | frontend/src/components/CategoryBadge/CategoryBadge.tsx | tone, children | buying-guides/listing, buying-guides/detail |
-| GuideCard | 2 | Buying-guide grid card (image + badge + title + excerpt + meta); whole-card link | frontend/src/components/GuideCard/GuideCard.tsx | guide | buying-guides/listing |
-| FeaturedGuideCard | 2 | Two-column promoted guide card | frontend/src/components/FeaturedGuideCard/FeaturedGuideCard.tsx | guide | buying-guides/listing |
-| BuyingGuidesExplorer | 2 | Client island: category chips + filtered grid of GuideCard | frontend/src/components/BuyingGuidesExplorer/BuyingGuidesExplorer.tsx | guides | buying-guides/listing |
-| ArticleBody | 2 | Renders Strapi `blocks` (¶/H2/list/tip callout/links) for a guide | frontend/src/components/ArticleBody/ArticleBody.tsx | blocks | buying-guides/detail |
+| Container | 1 | Centred max-width column (marketing/education/article) + gutters | components/ui/Container.tsx | children, width, className | navbar, footer, all home sections, buying-guides/listing, buying-guides/detail |
+| Button | 1 | CTA — primary/secondary/outline/glass/tertiary (solid green); Link when `href` set | components/ui/Button.tsx | variant, href, fullWidth, className | navbar, hero, openday, journey, guides, lifestyle, not-found, buying-guides/listing, buying-guides/detail |
+| Eyebrow | 1 | Uppercase tracked label above headings (rust/gold) | components/ui/Eyebrow.tsx | tone, className | trustbar, journey, guides, lifestyle, buying-guides/listing |
+| Heading | 1 | Oswald display heading; pass `as` for h1/h2/h3, size/colour via className | components/ui/Heading.tsx | as, className | trustbar, journey, guides, lifestyle, buying-guides/listing, buying-guides/detail |
+| Link | 1 | Inline rust text link (wraps next/link) | components/ui/Link.tsx | href, children | — |
+| Input | 1 | Text input — cream fill, line border, rust focus | components/ui/Input.tsx | (native input props) | — |
+| Section | 1 | Cream / dark-green band + vertical rhythm | components/ui/Section.tsx | tone, children | — |
+| Text | 1 | Hanken body (body/lead/eyebrow/meta) | components/ui/Text.tsx | as, variant, children | buying-guides/listing |
+| Navbar | 2 | Global green header w/ reversed lockup + nav + CTA | components/Navbar/Navbar.tsx | — | layout (all pages) |
+| Footer | 2 | Global green footer — link columns, states, legal | components/Footer/Footer.tsx | — | layout (all pages) |
+| CategoryBadge | 2 | Category pill — `card` (rust on cream) / `hero` (green on gold) | components/CategoryBadge/CategoryBadge.tsx | tone, children | buying-guides/listing, buying-guides/detail |
+| GuideCard | 2 | Buying-guide grid card (image + badge + title + excerpt + meta); whole-card link | components/GuideCard/GuideCard.tsx | guide | buying-guides/listing |
+| FeaturedGuideCard | 2 | Two-column promoted guide card | components/FeaturedGuideCard/FeaturedGuideCard.tsx | guide | buying-guides/listing |
+| BuyingGuidesExplorer | 2 | Client island: category chips + filtered grid of GuideCard | components/BuyingGuidesExplorer/BuyingGuidesExplorer.tsx | guides | buying-guides/listing |
+| ArticleBody | 2 | Renders Strapi `blocks` (¶/H2/list/tip callout/links) for a guide | components/ArticleBody/ArticleBody.tsx | blocks | buying-guides/detail |
+| Hero | home | Video hero + headline + search card + glass pills | components/home/Hero.tsx | — | home |
+| TrustBar | home | Stats + state-association logo marquee | components/home/TrustBar.tsx | — | home |
+| OpenDayCTA | home | Single highlighted event banner | components/home/OpenDayCTA.tsx | — | home |
+| JourneySection | home | "What are you looking for?" 4 entry cards | components/home/JourneySection.tsx | — | home |
+| BuyingGuides | home | Latest guides — 3 article cards | components/home/BuyingGuides.tsx | — | home |
+| LifestyleBand | home | Full-bleed photo band + CTA | components/home/LifestyleBand.tsx | — | home |
+
+> **Note:** an `Input` Tier-1 primitive exists (`components/ui/Input.tsx`) but the hero search
+> still uses an inline `<input>` — adopt `Input` there the next time the search is touched.
