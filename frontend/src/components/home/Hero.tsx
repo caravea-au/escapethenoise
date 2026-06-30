@@ -1,9 +1,27 @@
+import type { ReactNode } from "react";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 // import { Button } from "@/components/ui/Button"; // hidden with search card + chips
 
 // Homepage hero — autoplaying muted video under a dark-green scrim (design.md §7),
 // eyebrow + headline + sub. clamp() replaced with Tailwind breakpoint steps.
-export function Hero() {
+// Copy is overridable (optional props) so other pages — e.g. the dealer
+// onboarding thank-you — can reuse the same banner; defaults are the home copy.
+export function Hero({
+  eyebrow = "No better time to",
+  title,
+  subtitle = (
+    <>
+      Plain-English guides that help everyday Australians choose the right van and escape the
+      noise — at your own pace, with nothing to sell you.
+    </>
+  ),
+  children,
+}: {
+  eyebrow?: ReactNode;
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  children?: ReactNode;
+} = {}) {
   return (
     <section className="relative overflow-hidden bg-[linear-gradient(165deg,#2f5238_0%,#27412E_46%,#16271C_100%)]">
       <video
@@ -21,17 +39,21 @@ export function Hero() {
 
       <div className="relative z-[2] mx-auto max-w-[920px] px-6 pt-[92px] pb-[112px] text-center lg:pt-[120px] lg:pb-[140px] xl:pt-[150px] xl:pb-[172px]">
         <Eyebrow tone="gold" className="tracking-[3px]">
-          No better time to
+          {eyebrow}
         </Eyebrow>
         <h1 className="m-0 mt-3.5 font-oswald text-[40px] font-bold uppercase leading-[.97] tracking-[-1.7px] text-white md:text-[51px] lg:text-[68px] xl:text-[78px]">
-          Buy your caravan with
-          <br />
-          <span className="text-rust">confidence</span> — not pressure
+          {title ?? (
+            <>
+              Buy your caravan with
+              <br />
+              <span className="text-rust">confidence</span> — not pressure
+            </>
+          )}
         </h1>
         <p className="mx-auto mt-6 max-w-[600px] text-[16px] font-normal leading-[1.5] text-[#c4b89b] lg:text-[18px] xl:text-[20px]">
-          Plain-English guides that help everyday Australians choose the right van and escape the
-          noise — at your own pace, with nothing to sell you.
+          {subtitle}
         </p>
+        {children}
 
         {/* Hidden during design iteration — dealer-search elements (search card + chips):
         <div className="mx-auto mt-[46px] flex max-w-[680px] flex-wrap gap-3 rounded-[22px] bg-white p-3.5 shadow-[0_1px_0_rgba(255,255,255,.5)_inset,0_32px_70px_-20px_rgba(16,28,20,.7)]">
