@@ -1,11 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
-import { Button } from "@/components/ui/Button";
+// import { Button } from "@/components/ui/Button"; // hidden with "Visit a Dealer" CTA
 
 const LINKS = [
-  { label: "Find a Dealer", href: "#" },
-  { label: "Browse by State", href: "#" },
+  // Hidden during design iteration — dealer-search elements:
+  // { label: "Find a Dealer", href: "#" },
+  // { label: "Browse by State", href: "#" },
   { label: "Buying Guides", href: "#" },
   { label: "Events", href: "#" },
 ];
@@ -36,12 +37,14 @@ export function Navbar() {
             </Link>
           ))}
         </nav>
+        {/* Hidden during design iteration — dealer-search element:
         <Button
           href="#"
           className="ml-auto shrink-0 whitespace-nowrap rounded-[9px] px-[19px] py-[11px] text-sm"
         >
           Visit a Dealer →
         </Button>
+        */}
       </Container>
     </header>
   );

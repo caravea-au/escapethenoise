@@ -2,10 +2,11 @@ import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 
 const COLUMNS = [
-  {
-    title: "Find a Dealer",
-    links: ["Search dealers", "Near me", "Special offers", "Open now"],
-  },
+  // Hidden during design iteration — dealer-search column:
+  // {
+  //   title: "Find a Dealer",
+  //   links: ["Search dealers", "Near me", "Special offers", "Open now"],
+  // },
   {
     title: "Resources",
     links: ["Buying guides", "Towing guide", "Events & shows", "Safety advice"],
@@ -16,13 +17,14 @@ const COLUMNS = [
   },
 ];
 
-const STATES = ["NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"];
+// Hidden during design iteration — "Browse by state" row:
+// const STATES = ["NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"];
 
 // Tier-2 — global footer (design.md §4).
 export function Footer() {
   return (
     <footer className="bg-green text-sand">
-      <Container className="grid grid-cols-1 gap-9 pt-14 pb-[30px] sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+      <Container className="grid grid-cols-1 gap-9 pt-14 pb-[30px] sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr]">
         <div className="min-w-[200px]">
           <div className="flex items-center gap-3">
             <svg width="40" height="40" viewBox="0 0 220 220" className="shrink-0" aria-hidden="true">
@@ -67,6 +69,7 @@ export function Footer() {
         ))}
       </Container>
 
+      {/* Hidden during design iteration — "Browse by state" row:
       <Container>
         <div className="flex flex-wrap gap-3 border-t border-white/10 py-[18px] text-[12.5px] text-[#b3a98d]">
           <span className="font-semibold text-sand">Browse by state:</span>
@@ -78,6 +81,7 @@ export function Footer() {
           ))}
         </div>
       </Container>
+      */}
 
       <Container>
         <div className="flex flex-wrap justify-between gap-3.5 border-t border-white/10 pt-[18px] pb-1 text-xs text-[#9c9277]">
