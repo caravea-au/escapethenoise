@@ -61,4 +61,5 @@ frontend/.deploy
 /design-input/*
 !/design-input/README.md
 
-.claude\worktrees
+.claude/worktrees
+.playwright-mcp
