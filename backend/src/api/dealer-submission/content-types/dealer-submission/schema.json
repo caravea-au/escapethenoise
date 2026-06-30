@@ -1,0 +1,85 @@
+{
+  "kind": "collectionType",
+  "collectionName": "dealer_submissions",
+  "info": {
+    "singularName": "dealer-submission",
+    "pluralName": "dealer-submissions",
+    "displayName": "Dealer Submission",
+    "description": "Dealership onboarding form submissions from /dealer-directory-onboarding"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "dealershipName": { "type": "string", "required": true },
+    "legalName": { "type": "string", "required": true },
+    "abn": { "type": "string", "required": true },
+    "established": { "type": "integer" },
+    "dms": { "type": "string" },
+    "dmsOther": { "type": "string" },
+
+    "street": { "type": "string", "required": true },
+    "suburb": { "type": "string", "required": true },
+    "state": {
+      "type": "enumeration",
+      "enum": ["VIC", "NSW", "QLD", "SA", "WA", "TAS", "NT", "ACT"]
+    },
+    "postcode": { "type": "string", "required": true },
+    "multipleLocations": { "type": "boolean", "default": false },
+
+    "phone": { "type": "string", "required": true },
+    "leadsEmail": { "type": "email", "required": true },
+    "smsNumber": { "type": "string" },
+    "contactName": { "type": "string", "required": true },
+    "contactRole": { "type": "string" },
+    "enquiriesEmail": { "type": "email" },
+
+    "tradingHours": { "type": "json" },
+
+    "services": { "type": "json" },
+    "servicesOther": { "type": "string" },
+    "brands": { "type": "json" },
+    "brandsOther": { "type": "string" },
+    "productTypes": { "type": "json" },
+    "productsOther": { "type": "string" },
+    "stockCondition": {
+      "type": "enumeration",
+      "enum": ["New", "Used", "Both"],
+      "default": "Both"
+    },
+    "financeAvailable": { "type": "boolean", "default": false },
+    "deliveryAvailable": { "type": "boolean", "default": false },
+    "rvmapBadged": { "type": "boolean", "default": false },
+    "rvmasterBadged": { "type": "boolean", "default": false },
+
+    "website": { "type": "string" },
+    "description": { "type": "text", "maxLength": 320 },
+    "logo": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "photos": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "facebook": { "type": "string" },
+    "instagram": { "type": "string" },
+    "youtube": { "type": "string" },
+    "googleProfile": { "type": "string" },
+
+    "submitterName": { "type": "string", "required": true },
+    "submitterEmail": { "type": "email", "required": true },
+    "submitterPhone": { "type": "string" },
+    "stateAssociation": { "type": "string" },
+    "authorised": { "type": "boolean", "default": false },
+    "privacyConsent": { "type": "boolean", "default": false },
+    "marketingConsent": { "type": "boolean", "default": false },
+
+    "submittedAt": { "type": "datetime" }
+  }
+}
