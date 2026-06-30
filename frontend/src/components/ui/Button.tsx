@@ -1,6 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
-type Variant = "primary" | "secondary";
+type Variant = "primary" | "secondary" | "tertiary";
 
 const base =
   "inline-flex items-center justify-center gap-2 rounded-button px-[22px] py-[12px] text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-[cubic-bezier(.2,.7,.2,1)] disabled:opacity-50 disabled:pointer-events-none";
@@ -12,6 +12,8 @@ const variants: Record<Variant, string> = {
   // white fill, green text, 1.5px green border
   secondary:
     "bg-white text-green border-[1.5px] border-green hover:-translate-y-0.5",
+  // solid green fill (article footer / dealer-conversion CTA)
+  tertiary: "bg-green text-white hover:bg-green-dark hover:-translate-y-0.5",
 };
 
 type ButtonAsButton = {
