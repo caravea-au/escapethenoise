@@ -7,14 +7,14 @@ import { Parallax } from "@/components/ui/motion/Parallax";
 // visual richness a premium editorial page needs. Parallax for depth, editorial caption.
 export function ImageBand() {
   return (
-    <section className="relative h-[58vh] min-h-[400px] overflow-hidden md:h-[78vh]">
-      <Parallax className="absolute inset-0" distance={90}>
+    <section className="relative h-[58vh] min-h-[400px] overflow-hidden bg-green-dark md:h-[78vh]">
+      <Parallax className="absolute inset-0" distance={50}>
         <Image
           src="/photos/edu-feat.webp"
           alt="A family setting up their caravan"
           fill
           sizes="100vw"
-          className="scale-[1.15] object-cover object-[center_45%]"
+          className="scale-[1.3] object-cover object-[center_45%]"
           priority={false}
         />
       </Parallax>

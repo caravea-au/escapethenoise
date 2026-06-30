@@ -8,14 +8,14 @@ import { Parallax } from "@/components/ui/motion/Parallax";
 // Full-bleed closing CTA — parallax photo under a green scrim, oversized mask headline.
 export function CtaBand() {
   return (
-    <section className="relative flex min-h-[520px] items-center overflow-hidden md:min-h-[640px]">
-      <Parallax className="absolute inset-0" distance={80}>
+    <section className="relative flex min-h-[520px] items-center overflow-hidden bg-green-dark md:min-h-[640px]">
+      <Parallax className="absolute inset-0" distance={50}>
         <Image
           src="/photos/road-calling.webp"
           alt=""
           fill
           sizes="100vw"
-          className="scale-[1.18] object-cover object-[center_55%]"
+          className="scale-[1.3] object-cover object-[center_55%]"
         />
       </Parallax>
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,28,20,.5)_0%,rgba(16,28,20,.82)_100%)]" />
