@@ -1,34 +1,47 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
-type Variant = "primary" | "secondary";
+const VARIANTS = {
+  // design.md §6 — rust fill, white text, glow + hover lift
+  primary:
+    "bg-rust hover:bg-rust-dark text-white shadow-[0_10px_24px_-6px_rgba(193,124,44,.5)] hover:-translate-y-0.5",
+  // white fill, green text, hairline border
+  secondary: "bg-white text-green border-[1.5px] border-[#c9bda0] hover:border-green",
+  // green outline on white
+  outline: "bg-white text-green border-[1.5px] border-green",
+  // translucent glass for dark/photo backgrounds
+  glass:
+    "bg-white/[.06] hover:bg-white/[.15] text-white border border-white/20 hover:border-white/40 backdrop-blur-[6px]",
+} as const;
+
+type Variant = keyof typeof VARIANTS;
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-button px-[22px] py-[12px] text-sm font-semibold whitespace-nowrap transition-all duration-200 ease-[cubic-bezier(.2,.7,.2,1)] disabled:opacity-50 disabled:pointer-events-none";
-
-const variants: Record<Variant, string> = {
-  // design.md §6 — rust fill, white text, glow shadow; hover rust.dark + lift
-  primary:
-    "bg-rust text-white shadow-[0_4px_14px_rgba(193,124,44,.35)] hover:bg-rust-dark hover:-translate-y-0.5",
-  // white fill, green text, 1.5px green border
-  secondary:
-    "bg-white text-green border-[1.5px] border-green hover:-translate-y-0.5",
-};
+  "inline-flex items-center justify-center gap-2 font-semibold rounded-button px-6 py-3 text-base transition-all duration-200 cursor-pointer";
 
 type ButtonAsButton = {
   variant?: Variant;
+  fullWidth?: boolean;
   children: ReactNode;
   href?: undefined;
 } & ComponentPropsWithoutRef<"button">;
 
 type ButtonAsLink = {
   variant?: Variant;
+  fullWidth?: boolean;
   children: ReactNode;
   href: string;
 } & ComponentPropsWithoutRef<"a">;
 
+// design.md §6 — primary CTA + variants. Renders an <a> when `href` is set, else a <button>.
 export function Button(props: ButtonAsButton | ButtonAsLink) {
-  const { variant = "primary", className = "", children, ...rest } = props;
-  const cls = `${base} ${variants[variant]} ${className}`;
+  const {
+    variant = "primary",
+    fullWidth = false,
+    className = "",
+    children,
+    ...rest
+  } = props;
+  const cls = `${base} ${fullWidth ? "w-full" : ""} ${VARIANTS[variant]} ${className}`;
 
   if ("href" in rest && rest.href !== undefined) {
     return (
@@ -38,7 +51,11 @@ export function Button(props: ButtonAsButton | ButtonAsLink) {
     );
   }
   return (
-    <button className={cls} {...(rest as ComponentPropsWithoutRef<"button">)}>
+    <button
+      type="button"
+      className={cls}
+      {...(rest as ComponentPropsWithoutRef<"button">)}
+    >
       {children}
     </button>
   );
