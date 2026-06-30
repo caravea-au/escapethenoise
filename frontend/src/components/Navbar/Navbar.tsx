@@ -4,8 +4,13 @@ import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
 import { getHeader, strapiMedia, type StrapiLink } from "@/lib/strapi";
 
-// Fallback menu when Strapi is unset/unreachable.
-const FALLBACK_MENU: StrapiLink[] = [{ label: "Buying Guides", url: "/buying-guides" }];
+// Fallback menu when Strapi is unset/unreachable. Guides-first nav (#10) —
+// all guide topics route to the Buying Guides listing for now (no per-topic routes yet).
+const FALLBACK_MENU: StrapiLink[] = [
+  { label: "Education & Safety", url: "/buying-guides" },
+  { label: "Happy Campers", url: "/buying-guides" },
+  { label: "Towing Guide", url: "/buying-guides" },
+];
 
 // Tier-2 — global header (design.md §4). Reversed lockup on the green band.
 // Content comes from the Strapi `header` single type, with hardcoded fallbacks.
@@ -18,7 +23,7 @@ export async function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-green">
-      <Container className="flex h-[90px] items-center gap-7">
+      <Container className="flex min-h-[90px] flex-wrap items-center gap-x-7 gap-y-2 py-3">
         <Link href="/" className="flex shrink-0 items-center">
           <Image
             src={logoSrc}
