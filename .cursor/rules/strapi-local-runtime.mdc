@@ -1,0 +1,43 @@
+---
+description: Keep local Strapi startup reliable across Node version changes and QA runs
+alwaysApply: true
+---
+
+# Strapi Local Runtime
+
+This backend uses Strapi with SQLite through the native `better-sqlite3` package. Native packages are compiled for the active Node.js ABI, so changing Node versions can leave `node_modules` in a state where Strapi cannot start.
+
+## Requirements
+
+- When `npm run dev:backend`, `npm run build:backend`, or `strapi develop` fails with a `NODE_MODULE_VERSION` error, do not change Strapi schemas or app code first. Rebuild or reinstall dependencies for the active Node runtime:
+
+```sh
+npm rebuild better-sqlite3
+```
+
+- If the rebuild does not resolve the mismatch, run a workspace install from the repository root:
+
+```sh
+npm install
+```
+
+- Before reporting that the backend cannot start, verify whether port `1337` is already occupied by an existing repo-local Strapi process.
+- If port `1337` is occupied, identify the owning process and command line. Only stop it automatically when it clearly belongs to this repository and was started for the current task or QA run.
+- Prefer Node 20 or 22 for local Strapi work when possible. Node 24 is allowed by the current `backend/package.json` engine range, but native package rebuilds are more likely after switching Node versions.
+
+## Why
+
+The local backend can fail with an error like:
+
+```text
+was compiled against a different Node.js version
+NODE_MODULE_VERSION ...
+Please try re-compiling or re-installing the module
+```
+
+That is a dependency/runtime mismatch, not a Strapi content type, seed, or schema problem.
+
+## Before Finishing
+
+- After fixing a native module mismatch, rerun `npm run dev:backend` and confirm Strapi reaches `http://localhost:1337/admin`.
+- Stop any backend process started for the check unless the user explicitly asks to keep it running.

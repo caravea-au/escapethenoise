@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "Figma": {
+      "url": "https://mcp.figma.com/mcp",
+      "headers": {}
+    },
+    "next-devtools": {
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@latest"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "strapi": {
+      "type": "streamable-http",
+      "url": "http://localhost:1337/api/mcp/streamable",
+      "headers": {}
+    }
+  }
+}

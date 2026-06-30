@@ -1,0 +1,44 @@
+---
+description: Avoid clamp-based responsive sizing in frontend styling
+globs: frontend/src/**/*.{css,scss,tsx,ts},frontend/public/**/*.css
+alwaysApply: false
+---
+
+# Avoid `clamp()` For Responsiveness
+
+Do not use CSS `clamp()` as the default way to make typography, spacing, widths, heights, or offsets responsive. Some target devices and browsers may not handle dynamic clamp-based sizing consistently.
+
+## Preferred Approach
+
+- Use explicit breakpoint styles through CSS media queries, CSS Modules, or Tailwind responsive variants.
+- Use stable `px` values or project tokens for spacing, sizing, radii, and layout measurements.
+- Test important responsive changes at the actual target widths instead of relying on fluid formulas.
+- Prefer separate desktop, tablet, and mobile declarations when a value needs to change across devices.
+
+## Avoid
+
+```css
+.title {
+  font-size: clamp(32px, 5vw, 72px);
+}
+```
+
+## Prefer
+
+```css
+.title {
+  font-size: 32px;
+}
+
+@media (min-width: 768px) {
+  .title {
+    font-size: 48px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .title {
+    font-size: 72px;
+  }
+}
+```

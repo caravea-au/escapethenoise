@@ -1,0 +1,44 @@
+---
+description: Prevent stale Strapi generated output from breaking backend deployments
+alwaysApply: true
+---
+
+# Strapi Generated Output
+
+When working on the Strapi backend, treat `backend/dist` as generated output that can become stale after content type, component, route, controller, or service renames.
+
+## Requirements
+
+- Do not manually add or preserve files under `backend/dist` as source of truth.
+- Before running or changing a backend production build, ensure the build cleans `backend/dist` first.
+- Keep `backend/package.json` build behavior equivalent to:
+
+```json
+"build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && strapi build"
+```
+
+- When renaming or deleting Strapi content types or components, check for stale generated files that may still exist under `backend/dist/src`.
+- Before finishing backend schema changes, verify there are no duplicate Strapi `collectionName` values across active schemas:
+
+```sh
+rg '"collectionName"' backend/src
+```
+
+## Why
+
+Strapi can load stale generated schemas from `backend/dist`. If an old generated content type remains after a rename, Strapi may see two models using the same database table and fail on startup with an error like:
+
+```text
+DB table "..." already exists. Change the collectionName of the related content type.
+```
+
+This can put the Ploi CMS process into a PM2 restart loop and cause the public admin URL to return `502 Bad Gateway`.
+
+## Before Finishing
+
+- Run `npm run build:backend` after backend schema/build-script changes.
+- If diagnosing a remote `502`, check PM2 logs before changing Nginx:
+
+```sh
+pm2 logs <cms-process-name> --lines 100 --nostream
+```

@@ -1,0 +1,56 @@
+# Claude Code / skills installer (this repo targets Cursor)
+.claude/
+
+# Dependencies (workspaces hoist to root)
+node_modules/
+
+# Frontend (Next.js)
+frontend/.next/
+frontend/out/
+
+# Backend (Strapi)
+backend/.tmp/
+backend/build/
+backend/dist/
+backend/.cache/
+backend/.strapi/
+backend/local-backup.tar.gz
+backend/public/uploads/*
+!backend/public/uploads/.gitkeep
+.strapi-updater.json
+
+# Environment
+.env
+.env.local
+.env.*.local
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+backend/.env
+!**/.env.example
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python (UI/UX Pro Max scripts under frontend/src)
+__pycache__/
+*.pyc
+
+# TypeScript
+*.tsbuildinfo
+frontend/.env
+
+#Deployed files
+frontend/.deploy

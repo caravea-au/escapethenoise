@@ -1,0 +1,33 @@
+############################
+# Dependencies & build
+############################
+node_modules/
+dist/
+build/
+.cache/
+
+############################
+# Strapi / local data
+############################
+.tmp/
+.strapi/
+.strapi-updater.json
+license.txt
+exports/
+*.log
+
+############################
+# Environment
+############################
+.env
+.env.*
+!.env.example
+
+############################
+# OS & editors
+############################
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*~

@@ -1,0 +1,48 @@
+---
+description: Prevent Cursor from overwriting live Strapi CMS content through unsafe seeds or transfers
+alwaysApply: true
+---
+
+# Strapi Content Safety
+
+Live Strapi content is production data. Treat it as runtime state, not as disposable generated output.
+
+## Hard Rules
+
+- Do not make Strapi seeds run unconditionally on startup.
+- Do not change `STRAPI_SEED_MODE` to `once` or `force` for a remote environment without an explicit user request and a current database backup.
+- Do not run a remote seed without a narrow `STRAPI_SEED_SCOPE`; use `all` only when the user explicitly accepts that every registered seed will run.
+- Do not use `force` on live or staging unless the user explicitly asks to overwrite seeded CMS content.
+- Do not edit, reset, delete, replace, or commit `backend/.tmp/data.db`.
+- Do not commit Strapi upload files under `backend/public/uploads`; only `.gitkeep` belongs in Git.
+- Do not assume local Strapi admin changes sync to live Strapi. They do not.
+- Do not assume pushing backend code preserves live content if seed code overwrites existing records.
+
+## Required Workflow For New CMS Pages
+
+When adding a new CMS-backed page or content type:
+
+1. Put schema/code changes in Git under `backend/src`.
+2. Add seed data only for first-time bootstrap of missing content.
+3. Prefer create-if-missing behavior over update-existing behavior.
+4. If a one-time seed must run remotely, bump `CONTENT_SEED_VERSION` in `backend/src/index.ts`.
+5. Set `STRAPI_SEED_SCOPE` to only the new or changed seed names.
+6. Document the migration in `docs/STRAPI-CONTENT-MIGRATION.md` or the related deployment note.
+7. Keep production `STRAPI_SEED_MODE=off` after the migration is complete.
+
+## Required Checks Before Backend Completion
+
+- Inspect `backend/src/index.ts` and `backend/src/seeds` for seed behavior.
+- Confirm remote seed mode expectations in docs when deployment behavior changes.
+- Run `npm run build:backend` after backend changes.
+
+## Migration Preference
+
+For moving local content to live, prefer Strapi transfer with a remote database backup:
+
+```sh
+cd backend
+npx strapi transfer --to https://your-strapi-admin.example.com/admin --to-token "YOUR_TRANSFER_TOKEN"
+```
+
+Never use Git commits, deploy scripts, or unconditional bootstrap seeds as a content synchronization mechanism.

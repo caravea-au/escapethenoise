@@ -1,0 +1,24 @@
+---
+description: Optimize image assets before adding or updating them
+alwaysApply: true
+---
+
+# Image Optimization
+
+When adding or updating image assets, optimize them before they land in the project.
+
+## Requirements
+
+- Compress images with lossless or visually lossless settings so there is no noticeable quality loss.
+- Convert raster image assets to `.webp` unless a different format is required for transparency, animation, vector artwork, or third-party constraints.
+- Keep desktop image assets at or below **200 KB**.
+- Keep mobile image assets at or below **100 KB**.
+- Prefer separate desktop and mobile assets when responsive images need different dimensions or crops.
+- Do not upscale images just to meet dimensions; export at the smallest dimensions that still look sharp in the UI.
+- Use descriptive lowercase asset names and preserve existing folder conventions.
+
+## Before Finishing
+
+- Check the final file size of every new or changed image.
+- If an image cannot meet the target budget without visible quality loss, mention the exception and why.
+- Update code references when converting an existing asset to `.webp`.

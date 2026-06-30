@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "context7": {
+      "source": "intellectronica/agent-skills",
+      "sourceType": "github",
+      "computedHash": "4e1e101b21c5be62420caffed99a5c11281ff48bfd208411b8714a14f8c82eab"
+    },
+    "figma": {
+      "source": "openai/skills",
+      "sourceType": "github",
+      "computedHash": "0139fbd3f7afd9d81dbf128e3ad912daf21047bcd7f2be0f6997f718b48c0643"
+    },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "computedHash": "6337038fe1fe6bbe1b9f252ab678ee575859190bab6f0f246f4061824eb40875"
+    }
+  }
+}

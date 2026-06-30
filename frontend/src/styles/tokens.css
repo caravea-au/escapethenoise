@@ -1,0 +1,70 @@
+@theme {
+  /* --font-display / --font-body: set by next/font on <html> only */
+  /*
+   * Responsive sizing step used by existing clamp() formulas.
+   * The viewport-math version broke on older iOS Safari, so the value is now
+   * assigned explicitly through media-query tiers below.
+   */
+  --fluid-progress: 0;
+
+  --color-brand-primary: #f56024;
+  --color-brand-primary-dark: #bf3700;
+  --color-brand-ink: #151515;
+  /* Promo / hero charcoal starter surface */
+  --color-surface-dark: #151515;
+  --color-surface-base: #ffffff;
+  --color-surface-tint: #f4fcee;
+  --color-surface-muted: #f9f9f9;
+  --color-text-muted: #808080;
+  --color-text-muted-strong: #636363;
+  --color-accent: #53c507;
+  --color-accent-soft: #c8ffa3;
+  --color-accent-mid: #a3e379;
+  --color-brand-gradient-start: #f56024;
+  --color-brand-gradient-end: #ffc869;
+
+  --radius-button: 38px;
+  --radius-card: 15px;
+  --radius-input: 8px;
+}
+
+:root {
+  /*
+   * Breakpoint-based approximation of the old 680px -> 1440px fluid scale.
+   * Values map to representative widths inside each tier so existing
+   * `clamp(min, calc(min + delta * var(--fluid-progress)), max)` formulas
+   * continue to scale smoothly enough without relying on unsupported viewport math.
+   */
+  --fluid-progress: 0;
+}
+
+@media (min-width: 680px) {
+  :root {
+    --fluid-progress: 0.06;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --fluid-progress: 0.28;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --fluid-progress: 0.62;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --fluid-progress: 0.89;
+  }
+}
+
+@media (min-width: 1440px) {
+  :root {
+    --fluid-progress: 1;
+  }
+}
+

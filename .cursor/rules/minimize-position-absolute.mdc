@@ -1,0 +1,72 @@
+---
+description: Prefer document flow and practical flexbox/grid choices over absolute positioning in UI layout
+alwaysApply: true
+---
+
+# Minimize `position: absolute`
+
+Structure each component with document flow first so layouts stay predictable on desktop and across viewports. Prefer flexbox for simple one-axis layout and reserve grid for layouts that are actually grid-shaped. Reserve `position: absolute` for narrow cases where it is the right tool, not the default way to place content.
+
+## Why This Matters
+
+- Absolute positioning removes elements from normal flow, so siblings no longer account for that box. Spacing, wrapping, and reading order become fragile when breakpoints or content length change.
+- Responsive work multiplies the cost of absolute positioning. What lines up at one width often drifts or overlaps at another unless many breakpoint-specific offsets are added.
+- Accessibility and maintainability improve when DOM structure matches visual structure. Flex, grid, and grid areas keep relationships explicit.
+
+## Default Approach
+
+1. Use flexbox for rows, toolbars, stacked groups, and "this block next to that block" patterns.
+2. Use CSS Grid only when the design needs two-dimensional control, repeated grid tracks, or explicit row-and-column placement.
+3. Use padding, margin, and `gap` from Tailwind or tokens instead of manual pixel nudging with absolutely positioned children.
+4. Use stack patterns such as `flex flex-col gap-*` for vertical rhythm inside sections.
+5. Author CSS sizing in `px` by default. Use `px` for spacing, widths, heights, offsets, radii, and breakpoint-specific responsive values so layout math stays consistent with the current codebase.
+
+## Choose Flex Before Grid
+
+Start with flexbox unless the design clearly needs grid. Flexbox is for one-dimensional flow: a row or a column where content can grow, shrink, wrap, align, or stack naturally. CSS Grid is for two-dimensional layout: rows and columns controlled together.
+
+Use flexbox for:
+
+- Navigation bars, headers, footers, button groups, icon + label pairs, and toolbars.
+- Simple side-by-side sections where one block sits next to another and stacks on mobile.
+- Vertical content stacks, form rows, metadata rows, media objects, and inline control groups.
+- Components whose children should size from their content instead of being forced into equal tracks.
+- Layouts that only need `gap`, `align-items`, `justify-content`, `flex-wrap`, or responsive `flex-col` / `md:flex-row`.
+
+Use CSS Grid for:
+
+- Listing layouts: product listings, article listings, event listings, galleries, card grids, logo grids, and dashboard tile grids.
+- Repeated items that should align into consistent columns and rows, especially when each item should share the same track width.
+- Two-dimensional page regions where both columns and rows matter at the same time.
+- Asymmetric compositions that need explicit placement, such as a featured card spanning multiple columns beside smaller cards.
+- Layouts that benefit from `grid-template-columns`, `grid-template-areas`, `auto-fit`, `minmax()`, or row/column spanning.
+
+Do not use grid just because a design has multiple children. If the layout reads in a single direction, if only one axis needs control, or if grid requires extra wrappers and manual track tuning to behave, use flexbox instead.
+
+## Acceptable Uses
+
+Use `absolute`, `fixed`, or `sticky` sparingly. Add a short comment naming the reason when it is not obvious.
+
+- Decorative overlays: non-interactive visuals that must sit on top of a photo or gradient.
+- Badges or small UI affordances: "New" labels or counts, usually inside a relatively positioned wrapper that defines the anchor.
+- Sticky headers or modal backdrops: use `fixed` or `sticky` according to design system patterns.
+- Known third-party or one-off effects: masks and clipping demos should be isolated in a dedicated wrapper.
+
+Avoid absolute positioning as a substitute for layout when flex or grid can express the same hierarchy.
+
+## Implementation Checklist
+
+- Is this layout one-dimensional? If yes, use flexbox.
+- Is this layout a real listing, card grid, gallery, dashboard tile grid, or row-and-column composition? If yes, grid may be appropriate.
+- Can this be solved with flexbox using `gap`, `items-*`, `justify-*`, `flex-wrap`, and responsive `flex-col` / `md:flex-row` before reaching for grid?
+- If using grid, can you name the grid requirement: equal tracks, repeated cards, explicit areas, spanning, or row-and-column alignment?
+- If something must overlap, is there a single containing block with a small number of absolutely positioned children?
+- Does reading order in the DOM match the intended visual order, especially for screen readers and keyboard focus?
+- Are breakpoints tested without adding one-off `top` / `left` values per width unless unavoidable?
+
+## Related Docs
+
+- HiFi styling conventions: `HIFI-PLAN.md`
+- Component inventory: `COMPONENT-LIBRARY.md`
+
+This is a standing guideline for new and refactored UI. It does not require rewriting existing pages in one pass unless a section is already hard to maintain.

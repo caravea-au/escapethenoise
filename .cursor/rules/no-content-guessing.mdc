@@ -1,0 +1,42 @@
+---
+description: Use only provided content verbatim; never invent copy, labels, or answers — ask when unclear
+alwaysApply: true
+---
+
+# Never Guess Content
+
+Use only the content the user or source material provides. Do not invent, expand, polish, or substitute text, labels, placeholders, or answers.
+
+## Hard Rules
+
+- Copy text exactly as given — same words, same length, same punctuation. No paraphrasing, no "improving" placeholder copy, no adding extra sentences.
+- If a Figma frame shows `Lorem ipsum dolor sit amet`, use exactly that string — not a longer lorem block, not real marketing copy, not a shortened version.
+- If a design, spec, CMS field, or user message omits content, leave it out or ask — do not fill the gap with plausible guesses.
+- If requirements, behavior, or intent are ambiguous, ask a clarifying question before proceeding. Do not assume and implement.
+- Do not guess answers to technical or product questions. Say what is known from the codebase or source; ask when it is not known.
+
+## When Content Is Missing
+
+1. Check whether the source (Figma, Strapi, spec, ticket) actually provides the value.
+2. If missing and blocking, ask the user one focused question with concrete options when helpful.
+3. If missing and non-blocking, use an explicit placeholder only when the project already defines one — otherwise omit or ask.
+
+## Examples
+
+```text
+# Figma label: "Lorem ipsum"
+✅ "Lorem ipsum"
+❌ "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+
+# User shares a heading with no body copy
+✅ Ask: "Should this section have body copy, or stay heading-only?"
+❌ Invent a paragraph of marketing text.
+
+# Unknown API behavior
+✅ Inspect the code or ask the user.
+❌ Assume endpoint shape or error handling without evidence.
+```
+
+## Why
+
+Invented content creates review churn, breaks design fidelity, and hides missing requirements. Asking early is faster than undoing guessed work.

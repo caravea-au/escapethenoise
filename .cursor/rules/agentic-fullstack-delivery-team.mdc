@@ -1,0 +1,88 @@
+---
+description: Coordinate Figma-to-production work through the repo's Agentic Fullstack Delivery Team.
+---
+
+# Agentic Fullstack Delivery Team
+
+Use this rule when the user asks to turn a Figma design into frontend/backend implementation, run the agentic team, or use `/agentic-team`.
+
+## Agent Profiles
+
+Load and follow the relevant profiles from `.cursor/agents/`:
+
+- `.cursor/agents/project-manager-agent.md`
+- `.cursor/agents/frontend-architect-agent.md`
+- `.cursor/agents/backend-architect-agent.md`
+- `.cursor/agents/developer-subagent.md`
+- `.cursor/agents/design-qa-agent.md`
+- `.cursor/agents/accurate-design-qa-agent.md`
+- `.cursor/agents/functional-compatibility-qa-agent.md`
+- `.cursor/agents/integration-qa-agent.md`
+- `.cursor/agents/accessibility-qa-agent.md`
+- `.cursor/agents/performance-optimization-qa-agent.md`
+- `.cursor/agents/security-qa-agent.md`
+- `.cursor/agents/documentation-agent.md`
+
+## Required Workflow
+
+1. Repository Discovery
+   - Inspect project structure, package scripts, frontend stack, backend stack, styling system, test tools, and existing conventions.
+   - Do not edit files during this phase.
+2. Figma Understanding
+   - Read the provided Figma design/context.
+   - Use Figma MCP if available, with a hard limit of one Figma design-context fetch for the current `/agentic-team` invocation.
+   - The Project Manager Agent owns the single Figma fetch. Fetch the broadest useful node once, then summarize and share the captured context with all architects, developer subagents, and QA agents.
+   - Do not call `get_design_context`, `get_screenshot`, `get_metadata`, or other Figma MCP read tools again during the same invocation unless the user explicitly approves the extra quota use.
+   - If the first fetch is incomplete or truncated, continue from the returned context, pasted user context, existing screenshots/assets, and repo docs. Ask the user before spending another Figma MCP call.
+   - If Figma MCP is unavailable, work from pasted context and state the limitation.
+3. Architecture Planning
+   - Frontend Architect creates the frontend plan.
+   - Backend Architect creates the backend/API plan when backend changes are needed.
+   - Project Manager converts plans into implementation tasks.
+4. Implementation
+   - Developer Subagents implement one assigned task at a time.
+   - Reuse existing code wherever possible.
+   - Commit each completed task as a checkpoint if git is available.
+5. QA Validation
+   - Run Design QA, Accurate Design QA, Functional QA, Integration QA, Accessibility QA, Performance QA, and Security QA as relevant.
+6. Fix Loop
+   - Project Manager deduplicates and prioritizes issues.
+   - Developer Subagents fix assigned issues.
+   - Re-run relevant QA after each fix.
+7. Final Review
+   - Documentation Agent updates docs if needed.
+   - Project Manager produces the final report and approval status.
+8. Local Server Cleanup
+   - Before final approval, stop any local frontend or backend processes started for validation unless the user explicitly asks to keep them running.
+   - Cleanup includes repo-local `npm run dev`, `npm run dev:backend`, `next dev`, `next start`, standalone frontend server, and `strapi develop` processes.
+   - Prefer tracking and stopping the exact process IDs launched during validation. If PIDs were not tracked, only stop processes whose command lines clearly point to this repository.
+   - The Project Manager Agent owns this cleanup gate. QA agents must report any servers they started and whether they were stopped.
+
+## Completion Gate
+
+Do not mark the task complete until:
+
+- The final report states whether the single Figma MCP fetch budget was used, skipped, or explicitly exceeded with user approval.
+- All P0 and P1 issues are resolved.
+- P2 issues are resolved or explicitly deferred.
+- Required QA reports are complete.
+- Local frontend and backend verification servers started by the team have been stopped, unless the user explicitly asked to leave them running.
+- The Project Manager Agent has reviewed all agent reports.
+
+## Required Final Output
+
+1. Implementation summary
+2. Final file changes
+3. Components created or reused
+4. Backend/API changes
+5. Tests/checks run
+6. Figma MCP quota usage
+7. Design accuracy report
+8. Functional QA report
+9. Performance report
+10. Accessibility report
+11. Security report
+12. Remaining known issues
+13. Manual review checklist
+14. Local server cleanup status
+15. Final approval status

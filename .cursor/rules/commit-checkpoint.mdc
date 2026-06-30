@@ -1,0 +1,38 @@
+---
+description: Create a git commit after each completed task as a checkpoint
+alwaysApply: true
+---
+
+# Commit as checkpoint per task
+
+Treat each finished task as a **checkpoint**: record it with a focused git commit before moving on.
+
+## When to commit
+
+- After a **single coherent task** is done (feature slice, bugfix, refactor scoped to one goal, config change).
+- Before starting the **next** unrelated task, so history stays readable and reversible.
+
+## How
+
+1. Stage only files that belong to that task (`git add` specific paths; avoid unrelated changes in the same commit).
+2. Write a **clear, imperative** subject line (and optional body if the change needs context).
+
+## Examples
+
+```text
+# Good — task-sized, specific
+Add password reset email template
+Fix null guard on user profile loader
+Wire checkout API error handling to toast
+
+# Avoid — too vague or mixing concerns
+Updates
+Fix stuff and refactor
+```
+
+## Exceptions
+
+- **Micro-tasks** that are truly part of the same logical change can stay in one commit.
+- If the user explicitly asks for **one** squashed commit or no commits, follow their instruction.
+
+If git is unavailable or the repo has no commits yet, still **prepare** the change set as if for one task per commit so the user can commit locally when ready.

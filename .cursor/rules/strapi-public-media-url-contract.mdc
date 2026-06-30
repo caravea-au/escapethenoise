@@ -1,0 +1,51 @@
+---
+description: Keep Strapi public media URLs compatible with Next image optimization
+alwaysApply: true
+---
+
+# Strapi Public Media URL Contract
+
+The frontend consumes Strapi media through Next image optimization. Strapi must emit public media URLs that match the frontend `images.remotePatterns` allowlist.
+
+## Hard Rules
+
+- Do not remove `url: env('PUBLIC_URL', env('STRAPI_PUBLIC_URL', ''))` from `backend/config/server.ts`.
+- Do not remove the public-base URL normalization in `backend/src/utils/content.js`.
+- Do not pass raw `ctx.request.origin` through to media URL generation without normalizing it against `PUBLIC_URL` or `STRAPI_PUBLIC_URL`.
+- Do not change `frontend/next.config.ts` `images.remotePatterns` without checking the exact media URLs returned by Strapi.
+- Do not assume Strapi sees the browser protocol when running behind Ploi/nginx. The internal request origin can be `http://...` even when the public CMS URL is `https://...`.
+- Do not fix protocol mismatches by broadening image access to every remote path or host. Prefer making Strapi emit the correct public HTTPS URLs.
+
+## Required Environment Contract
+
+For HTTPS remote CMS deployments, set the CMS public URL in the backend runtime environment:
+
+```sh
+PUBLIC_URL=https://<public-cms-host>
+```
+
+The frontend environment should point to the same public HTTPS CMS host:
+
+```sh
+NEXT_PUBLIC_STRAPI_URL=https://<public-cms-host>
+```
+
+If another staging or production hostname is used, keep these two values protocol-compatible.
+
+## Required Checks
+
+After changing Strapi media helpers, custom content API routes, `frontend/next.config.ts`, deployment scripts, or CMS environment handling, verify:
+
+```sh
+curl -sS "$NEXT_PUBLIC_STRAPI_URL/api/<content-endpoint>" | rg "http://<public-cms-host>"
+curl -sS -o NUL -w "%{http_code}\n" "https://<public-frontend-host>/_next/image?url=https%3A%2F%2F<public-cms-host>%2Fuploads%2F<known-media-file>&w=3840&q=75"
+```
+
+Expected result:
+
+- The first command returns no matches.
+- The optimized image request returns `200`.
+
+## Why
+
+If Strapi emits `http://<public-cms-host>/uploads/...` while Next only allows `https://<public-cms-host>/uploads/**`, the page may fetch CMS JSON successfully but CMS images fail through `/_next/image` with `400`.
