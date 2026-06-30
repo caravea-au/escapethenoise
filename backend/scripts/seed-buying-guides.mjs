@@ -7,11 +7,13 @@
 // Idempotent: skips any article whose slug already exists. Pass --reset to
 // delete every existing buying-guide first (DESTRUCTIVE).
 //
-// No dependencies — uses Node 20+ global fetch / FormData / Blob.
+// Uses Node 20+ global fetch / FormData / Blob, plus sharp (already a Strapi
+// dependency) to downscale images so they fit under the live nginx upload cap.
 
 import { readFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
+import sharp from "sharp";
 
 const STRAPI_URL = (process.env.STRAPI_URL ?? "http://localhost:1337").replace(/\/$/, "");
 const TOKEN = process.env.STRAPI_TOKEN;
@@ -29,6 +31,24 @@ const EXPORT_DIR = path.resolve(
 );
 
 const auth = { Authorization: `Bearer ${TOKEN}` };
+const MAX_BYTES = 900_000; // keep uploads under the live nginx client_max_body_size
+
+/** Downscale/re-encode an image so it fits under MAX_BYTES. Falls back to the
+ *  original bytes for anything sharp can't process. Preserves PNG vs JPEG. */
+async function downscale(bytes, filename) {
+  try {
+    const isPng = /\.png$/i.test(filename);
+    const encode = (w, q) => {
+      const p = sharp(bytes, { failOn: "none" }).rotate().resize({ width: w, withoutEnlargement: true });
+      return (isPng ? p.png({ compressionLevel: 9, palette: true, quality: q }) : p.jpeg({ quality: q, mozjpeg: true })).toBuffer();
+    };
+    let out = await encode(1600, 80);
+    if (out.length > MAX_BYTES) out = await encode(1200, 65);
+    return out.length < bytes.length ? out : bytes;
+  } catch {
+    return bytes;
+  }
+}
 
 /** Upload one image (local path or remote URL) to the media library → full file object. */
 async function uploadFile(src, name) {
@@ -43,6 +63,7 @@ async function uploadFile(src, name) {
     bytes = await readFile(path.join(EXPORT_DIR, src));
     filename = `${name}${path.extname(src) || ".jpg"}`;
   }
+  bytes = await downscale(bytes, filename);
   const form = new FormData();
   form.append("files", new Blob([bytes]), filename);
   const res = await fetch(`${STRAPI_URL}/api/upload`, { method: "POST", headers: auth, body: form });
