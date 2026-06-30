@@ -15,16 +15,21 @@ Tiers (see `nextjs-component-standards`): **1** global primitive (`components/ui
 
 | Component | Tier | Purpose | Path | Key props | Used on |
 |---|---|---|---|---|---|
-| Container | 1 | Centred max-width column (marketing/education/article) + gutters | components/ui/Container.tsx | children, width, className | navbar, footer, all home sections |
-| Button | 1 | CTA — primary/secondary/outline/glass; Link when `href` set | components/ui/Button.tsx | variant, href, fullWidth, className | navbar, hero, openday, journey, guides, lifestyle, not-found |
-| Eyebrow | 1 | Uppercase tracked label above headings (rust/gold) | components/ui/Eyebrow.tsx | tone, className | trustbar, journey, guides, lifestyle |
-| Heading | 1 | Oswald display heading; pass `as` for h1/h2/h3 | components/ui/Heading.tsx | as, className | trustbar, journey, guides, lifestyle |
+| Container | 1 | Centred max-width column (marketing/education/article) + gutters | components/ui/Container.tsx | children, width, className | navbar, footer, all home sections, buying-guides/listing, buying-guides/detail |
+| Button | 1 | CTA — primary/secondary/outline/glass/tertiary (solid green); Link when `href` set | components/ui/Button.tsx | variant, href, fullWidth, className | navbar, hero, openday, journey, guides, lifestyle, not-found, buying-guides/listing, buying-guides/detail |
+| Eyebrow | 1 | Uppercase tracked label above headings (rust/gold) | components/ui/Eyebrow.tsx | tone, className | trustbar, journey, guides, lifestyle, buying-guides/listing |
+| Heading | 1 | Oswald display heading; pass `as` for h1/h2/h3, size/colour via className | components/ui/Heading.tsx | as, className | trustbar, journey, guides, lifestyle, buying-guides/listing, buying-guides/detail |
 | Link | 1 | Inline rust text link (wraps next/link) | components/ui/Link.tsx | href, children | — |
 | Input | 1 | Text input — cream fill, line border, rust focus | components/ui/Input.tsx | (native input props) | — |
 | Section | 1 | Cream / dark-green band + vertical rhythm | components/ui/Section.tsx | tone, children | — |
-| Text | 1 | Hanken body (body/lead/eyebrow/meta) | components/ui/Text.tsx | as, variant, children | — |
+| Text | 1 | Hanken body (body/lead/eyebrow/meta) | components/ui/Text.tsx | as, variant, children | buying-guides/listing |
 | Navbar | 2 | Global green header w/ reversed lockup + nav + CTA | components/Navbar/Navbar.tsx | — | layout (all pages) |
 | Footer | 2 | Global green footer — link columns, states, legal | components/Footer/Footer.tsx | — | layout (all pages) |
+| CategoryBadge | 2 | Category pill — `card` (rust on cream) / `hero` (green on gold) | components/CategoryBadge/CategoryBadge.tsx | tone, children | buying-guides/listing, buying-guides/detail |
+| GuideCard | 2 | Buying-guide grid card (image + badge + title + excerpt + meta); whole-card link | components/GuideCard/GuideCard.tsx | guide | buying-guides/listing |
+| FeaturedGuideCard | 2 | Two-column promoted guide card | components/FeaturedGuideCard/FeaturedGuideCard.tsx | guide | buying-guides/listing |
+| BuyingGuidesExplorer | 2 | Client island: category chips + filtered grid of GuideCard | components/BuyingGuidesExplorer/BuyingGuidesExplorer.tsx | guides | buying-guides/listing |
+| ArticleBody | 2 | Renders Strapi `blocks` (¶/H2/list/tip callout/links) for a guide | components/ArticleBody/ArticleBody.tsx | blocks | buying-guides/detail |
 | Hero | home | Video hero + headline + search card + glass pills | components/home/Hero.tsx | — | home |
 | TrustBar | home | Stats + state-association logo marquee | components/home/TrustBar.tsx | — | home |
 | OpenDayCTA | home | Single highlighted event banner | components/home/OpenDayCTA.tsx | — | home |
@@ -34,7 +39,3 @@ Tiers (see `nextjs-component-standards`): **1** global primitive (`components/ui
 
 > **Note:** an `Input` Tier-1 primitive exists (`components/ui/Input.tsx`) but the hero search
 > still uses an inline `<input>` — adopt `Input` there the next time the search is touched.
-
-<!-- Example row once built:
-| Button | 1 | Primary/secondary CTA | frontend/src/components/ui/Button.tsx | variant, href, children | home/hero, home/cta |
--->

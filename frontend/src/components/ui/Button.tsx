@@ -11,6 +11,8 @@ const VARIANTS = {
   // translucent glass for dark/photo backgrounds
   glass:
     "bg-white/[.06] hover:bg-white/[.15] text-white border border-white/20 hover:border-white/40 backdrop-blur-[6px]",
+  // solid green fill (article footer / dealer-conversion CTA)
+  tertiary: "bg-green hover:bg-green-dark text-white hover:-translate-y-0.5",
 } as const;
 
 type Variant = keyof typeof VARIANTS;
