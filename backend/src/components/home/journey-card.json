@@ -1,0 +1,31 @@
+{
+  "collectionName": "components_home_journey_cards",
+  "info": {
+    "displayName": "Journey Card",
+    "icon": "compass",
+    "description": "An entry-point card in the \"What are you looking for?\" section"
+  },
+  "options": {},
+  "attributes": {
+    "icon": {
+      "type": "enumeration",
+      "enum": ["search", "compass", "calendar", "van"]
+    },
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "text"
+    },
+    "ctaLabel": {
+      "type": "string"
+    },
+    "ctaUrl": {
+      "type": "string"
+    },
+    "featured": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "collectionName": "components_home_stats",
+  "info": {
+    "displayName": "Stat",
+    "icon": "chartBubble",
+    "description": "A single headline statistic (value + optional + suffix + label)"
+  },
+  "options": {},
+  "attributes": {
+    "value": {
+      "type": "string"
+    },
+    "showPlus": {
+      "type": "boolean",
+      "default": false
+    },
+    "label": {
+      "type": "string"
+    }
+  }
+}
