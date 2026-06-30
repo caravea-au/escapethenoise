@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-npm workspaces monorepo:
-- `frontend/` — Next.js 15.3, React 19, TypeScript 5.8, Tailwind CSS 4
+npm workspaces monorepo (this repo is a **baseplate/starter** — `project-baseplate-monorepo`, with `[project-name]` placeholders to replace):
+- `frontend/` — Next.js 16.2, React 19, TypeScript 5.8, **Tailwind CSS 4 (CSS-first: tokens in `@theme {}` inside `src/styles/tokens.css`, no `tailwind.config.js`)**
 - `backend/` — Strapi 5.40.0 CMS, SQLite (`better-sqlite3`)
+- `npm run lint` runs **ESLint 9 flat config** (`frontend/eslint.config.mjs`, bridges `eslint-config-next` via `FlatCompat`) — `next lint` was removed in Next 16. (Pre-existing baseplate lint errors in `layout.tsx`/`not-found.tsx` clear when `/project-setup` replaces those files.)
 - `app.js` — production Node.js HTTP wrapper around Next.js (reads `PORT`, binds `0.0.0.0`, serves from `frontend/`)
 
 ## Commands
@@ -30,21 +31,46 @@ If `better-sqlite3` throws `NODE_MODULE_VERSION` errors, run `npm rebuild better
 ## Frontend Structure
 
 ```
-frontend/src/app/          ← Next.js App Router route files
-frontend/src/styles/       ← tokens.css + global CSS
+frontend/src/app/             ← Next.js App Router route files
+frontend/src/components/ui/    ← Tier-1 global primitives (Button, Container, Section…)
+frontend/src/components/<Name>/ ← Tier-2 shared patterns (Card, Navbar…)
+frontend/src/styles/          ← tokens.css + global CSS
 frontend/src/lib/fonts.ts
 frontend/src/pages/_error.tsx  ← Next.js compat shim
-frontend/public/           ← static assets
+frontend/public/              ← static assets
 ```
 
-Do not introduce `src/components/` until genuine reuse exists across routes. Component files follow `Component.tsx` + `Component.module.css` naming.
+**Component tiers** (full rules in `.claude/skills/nextjs-component-standards`):
+- **Tier 1 — global primitives** (Button, Link, Input, Container, Section, Heading/Text): created at `/project-setup`, live in `components/ui/`. These are deliberate, known reuse — build them up front.
+- **Tier 2 — shared patterns**: created the **first** time a section needs one, live in `components/<Name>/`.
+- **Tier 3 — one-off**: stay inline in the route until a second section needs them.
+
+Do not pre-build Tier-2/3 abstractions before reuse exists. Every Tier-1/Tier-2 component is recorded in `.claude/COMPONENTS.md` — **check it before building so nothing is rebuilt.** Files: `Component.tsx` (+ `Component.module.css` only when Tailwind can't express the style).
 
 ## CSS & Layout Rules
 
-- **No `clamp()`** for responsive sizing — use explicit `px` values with media queries at standard breakpoints.
-- **Sizing/spacing in `px`**, not `rem`/`em`.
-- Layout priority: document flow → flexbox → CSS grid → `position: absolute` (last resort, only for overlays, badges, decorative elements that cannot participate in flow).
-- Images: WebP format, ≤200 KB desktop / ≤100 KB mobile.
+- **Tailwind-first.** Use Tailwind utilities; drop to custom CSS (`Component.module.css`, `@layer`) only when Tailwind genuinely can't express it. Tailwind's `rem`-based spacing scale is accepted as the trade-off of going Tailwind-first.
+- **No `clamp()`** for responsive sizing (it misbehaves on iOS/Safari) — use **Tailwind breakpoint steps** instead, e.g. `text-[40px] md:text-[60px] lg:text-[78px]`.
+- **Theme tokens only — never raw hex.** Colours come from the Tailwind theme set in `/project-setup` (`text-rust`, `bg-green`). Add a token before using a new colour.
+- Layout priority: document flow → flexbox → CSS grid → `position: absolute` (last resort, only for overlays, badges, decorative elements that cannot participate in flow). Use `gap`, not margin-based inline spacing.
+- Images: `next/image`, WebP format, ≤200 KB desktop / ≤100 KB mobile.
+
+## AI Build Workflow (Claude)
+
+Building pages from a Claude design export follows a fixed loop (commands in `.claude/commands/`):
+
+```
+/preflight        check MCP (strapi, next-devtools) + node + build + lint + kit
+/project-setup <export>      ONCE: brand tokens, fonts, global CSS, Tier-1 primitives
+─ per page/section ─
+/criteria <page>/<section>   read design → fidelity spec + reuse map → you approve
+/build-component <page>/<section>   reuse-first build → light gate → register → stop
+/commit                      small local commits, never push
+```
+
+- **Exports go in `design-input/<export>/`** (git-ignored, drop-zone). **`design.md` is the brand source of truth**; if it disagrees with the exported HTML, follow `design.md`.
+- **NEVER reference `design-input/` from committed code.** It is git-ignored and excluded from the deploy package, so any import/`src`/`url()`/path pointing into `design-input/` breaks the build/deploy. Copy assets into `frontend/public/` and reference them from there; read design files only at authoring time, never at runtime.
+- Reuse skills: **`ponytail`** / **`ponytail-review`** (simplest, no duplication) and **`caveman`** (terse prose / compress memory) live in `.claude/skills/`.
 
 ## Strapi (Backend)
 
