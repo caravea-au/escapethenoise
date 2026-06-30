@@ -30,8 +30,8 @@ const EXPORT_DIR = path.resolve(
 
 const auth = { Authorization: `Bearer ${TOKEN}` };
 
-/** Upload one image (local path or remote URL) to the media library → returns id. */
-async function uploadImage(src, name) {
+/** Upload one image (local path or remote URL) to the media library → full file object. */
+async function uploadFile(src, name) {
   let bytes;
   let filename;
   if (/^https?:\/\//.test(src)) {
@@ -48,34 +48,43 @@ async function uploadImage(src, name) {
   const res = await fetch(`${STRAPI_URL}/api/upload`, { method: "POST", headers: auth, body: form });
   if (!res.ok) throw new Error(`upload ${filename} → ${res.status} ${await res.text()}`);
   const [file] = await res.json();
-  return file.id;
+  return file;
 }
 
 const text = (t) => [{ type: "text", text: t }];
 
-/** Convert an articles.js body[] into Strapi blocks rich-text JSON. */
-function toBlocks(body) {
-  return body.map((b) => {
+/** Convert an articles.js body[] into Strapi blocks rich-text JSON.
+ *  `img` blocks need a real uploaded media object (Strapi validates the shape),
+ *  so they're uploaded here. */
+async function toBlocks(body, slug) {
+  const blocks = [];
+  for (let i = 0; i < body.length; i++) {
+    const b = body[i];
     switch (b.t) {
       case "h":
-        return { type: "heading", level: 2, children: text(b.x) };
+        blocks.push({ type: "heading", level: 2, children: text(b.x) });
+        break;
       case "ul":
-        return {
+        blocks.push({
           type: "list",
           format: "unordered",
           children: b.items.map((it) => ({ type: "list-item", children: text(it) })),
-        };
+        });
+        break;
       case "tip":
-        return { type: "quote", children: text(b.x) };
-      case "img":
-        // Body images stay as remote URLs (rendered by a plain <img> in ArticleBody).
-        return {
+        blocks.push({ type: "quote", children: text(b.x) });
+        break;
+      case "img": {
+        const file = await uploadFile(b.src, `${slug}-body-${i}`);
+        blocks.push({
           type: "image",
-          image: { url: b.src, alternativeText: b.caption ?? "" },
-          children: text(b.caption ?? ""),
-        };
+          image: { ...file, alternativeText: b.caption ?? file.alternativeText ?? "" },
+          children: text(""),
+        });
+        break;
+      }
       case "video":
-        return {
+        blocks.push({
           type: "paragraph",
           children: [
             {
@@ -84,12 +93,14 @@ function toBlocks(body) {
               children: text(b.label ?? "Watch video"),
             },
           ],
-        };
+        });
+        break;
       case "p":
       default:
-        return { type: "paragraph", children: text(b.x) };
+        blocks.push({ type: "paragraph", children: text(b.x) });
     }
-  });
+  }
+  return blocks;
 }
 
 async function existingGuides() {
@@ -136,8 +147,12 @@ async function main() {
     }
     process.stdout.write(`  seed  ${a.id} … `);
 
-    const cardImage = await uploadImage(a.img, `${a.id}-card`);
-    const heroImage = await uploadImage(a.heroUrl, `${a.id}-hero`);
+    // Not every article has both images — fall back between them.
+    const cardSrc = a.img ?? a.heroUrl;
+    const heroSrc = a.heroUrl ?? a.img;
+    const cardImage = cardSrc ? (await uploadFile(cardSrc, `${a.id}-card`)).id : null;
+    const heroImage = heroSrc ? (await uploadFile(heroSrc, `${a.id}-hero`)).id : null;
+    const content = await toBlocks(a.body ?? [], a.id);
 
     const data = {
       title: a.title,
@@ -149,7 +164,7 @@ async function main() {
       author: a.author ?? null,
       cardImage,
       heroImage,
-      content: toBlocks(a.body ?? []),
+      content,
       seo: {
         metaTitle: a.title.slice(0, 60),
         metaDescription: (a.excerpt ?? a.title).slice(0, 160),
