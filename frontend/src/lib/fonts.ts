@@ -1,6 +1,8 @@
 import { Oswald, Hanken_Grotesk } from "next/font/google";
 
-// Display — Oswald (design.md §3): headings 600–700, uppercase hero/banners.
+// Display — Oswald (headings, stats, eyebrows). Body — Hanken Grotesk.
+// Variable names (--font-display / --font-body) are the contract used by
+// tokens.css (@theme) and globals.css; keep them stable.
 export const oswald = Oswald({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -8,8 +10,7 @@ export const oswald = Oswald({
   display: "swap",
 });
 
-// Body — Hanken Grotesk (design.md §3): body 400–500, emphasis 600–800.
-export const hankenGrotesk = Hanken_Grotesk({
+export const hanken = Hanken_Grotesk({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-body",

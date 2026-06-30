@@ -1,27 +1,18 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import type { ReactNode } from "react";
 
-// design.md §5 — max content width: 1280 (marketing) / 1180 (education, events)
-// / 820 (article). Gutters 24px (px-6).
-type Width = "marketing" | "content" | "article";
-
-const widths: Record<Width, string> = {
+const WIDTHS = {
   marketing: "max-w-[1280px]",
-  content: "max-w-[1180px]",
+  education: "max-w-[1180px]",
   article: "max-w-[820px]",
+} as const;
+
+type Props = {
+  children: ReactNode;
+  className?: string;
+  width?: keyof typeof WIDTHS;
 };
 
-export function Container({
-  width = "marketing",
-  className = "",
-  children,
-  ...rest
-}: { width?: Width; children: ReactNode } & ComponentPropsWithoutRef<"div">) {
-  return (
-    <div
-      className={`mx-auto w-full px-6 ${widths[width]} ${className}`}
-      {...rest}
-    >
-      {children}
-    </div>
-  );
+// design.md §5 — centred content column with 24px gutters.
+export function Container({ children, className = "", width = "marketing" }: Props) {
+  return <div className={`${WIDTHS[width]} mx-auto px-6 ${className}`}>{children}</div>;
 }

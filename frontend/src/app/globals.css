@@ -22,6 +22,7 @@ html {
 
   a:focus-visible,
   button:focus-visible,
+  input:focus-visible,
   select:focus-visible {
     outline: 2px solid var(--color-rust);
     outline-offset: 2px;
@@ -79,9 +80,14 @@ html {
   }
 }
 
+/* design.md §8 — always honour reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
