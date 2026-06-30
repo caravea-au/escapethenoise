@@ -14,6 +14,7 @@ build/
 .strapi-updater.json
 license.txt
 exports/
+types/generated/
 *.log
 
 ############################

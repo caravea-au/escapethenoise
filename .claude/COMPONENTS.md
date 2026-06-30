@@ -19,6 +19,10 @@ Tiers (see `nextjs-component-standards`): **1** global primitive (`components/ui
 | Button | 1 | CTA — primary/secondary/outline/glass; Link when `href` set | components/ui/Button.tsx | variant, href, fullWidth, className | navbar, hero, openday, journey, guides, lifestyle, not-found |
 | Eyebrow | 1 | Uppercase tracked label above headings (rust/gold) | components/ui/Eyebrow.tsx | tone, className | trustbar, journey, guides, lifestyle |
 | Heading | 1 | Oswald display heading; pass `as` for h1/h2/h3 | components/ui/Heading.tsx | as, className | trustbar, journey, guides, lifestyle |
+| Link | 1 | Inline rust text link (wraps next/link) | components/ui/Link.tsx | href, children | — |
+| Input | 1 | Text input — cream fill, line border, rust focus | components/ui/Input.tsx | (native input props) | — |
+| Section | 1 | Cream / dark-green band + vertical rhythm | components/ui/Section.tsx | tone, children | — |
+| Text | 1 | Hanken body (body/lead/eyebrow/meta) | components/ui/Text.tsx | as, variant, children | — |
 | Navbar | 2 | Global green header w/ reversed lockup + nav + CTA | components/Navbar/Navbar.tsx | — | layout (all pages) |
 | Footer | 2 | Global green footer — link columns, states, legal | components/Footer/Footer.tsx | — | layout (all pages) |
 | Hero | home | Video hero + headline + search card + glass pills | components/home/Hero.tsx | — | home |
@@ -28,8 +32,8 @@ Tiers (see `nextjs-component-standards`): **1** global primitive (`components/ui
 | BuyingGuides | home | Latest guides — 3 article cards | components/home/BuyingGuides.tsx | — | home |
 | LifestyleBand | home | Full-bleed photo band + CTA | components/home/LifestyleBand.tsx | — | home |
 
-> **Note:** an `Input` Tier-1 primitive is not yet extracted — the hero search uses an inline
-> `<input>`. Extract it to `components/ui/` the first time a second form needs it.
+> **Note:** an `Input` Tier-1 primitive exists (`components/ui/Input.tsx`) but the hero search
+> still uses an inline `<input>` — adopt `Input` there the next time the search is touched.
 
 <!-- Example row once built:
 | Button | 1 | Primary/secondary CTA | frontend/src/components/ui/Button.tsx | variant, href, children | home/hero, home/cta |

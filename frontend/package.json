@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "build:synergy": "npm run build && node scripts/package-synergy.mjs",
     "verify:synergy": "node scripts/verify-synergy-deploy.mjs",
     "archive:synergy": "node scripts/archive-synergy.mjs",

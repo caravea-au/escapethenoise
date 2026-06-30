@@ -1,0 +1,110 @@
+name: Ploi Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - chore/setup-strapi-backend
+  workflow_dispatch:
+    inputs:
+      deploy_frontend:
+        description: "Deploy escapethenoise-temp.caravea.dev"
+        required: false
+        type: boolean
+        default: false
+      deploy_backend:
+        description: "Deploy cms-escapethenoise-temp.caravea.dev"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect changed workspaces
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.detect.outputs.frontend }}
+      backend: ${{ steps.detect.outputs.backend }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          frontend=false
+          backend=false
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            frontend="${{ inputs.deploy_frontend }}"
+            backend="${{ inputs.deploy_backend }}"
+          else
+            before="${{ github.event.before }}"
+            after="${{ github.sha }}"
+
+            if [[ "$before" =~ ^0+$ ]]; then
+              changed_files="$(git diff-tree --no-commit-id --name-only -r "$after")"
+            else
+              changed_files="$(git diff --name-only "$before" "$after")"
+            fi
+
+            while IFS= read -r file; do
+              [[ -z "$file" ]] && continue
+
+              case "$file" in
+                frontend/*|app.js)
+                  frontend=true
+                  ;;
+                backend/public/uploads/*)
+                  ;;
+                backend/*)
+                  backend=true
+                  ;;
+                package.json)
+                  frontend=true
+                  backend=true
+                  ;;
+              esac
+            done <<< "$changed_files"
+          fi
+
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend"
+          echo "backend=$backend"
+
+  deploy-frontend:
+    name: Deploy frontend
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Ploi frontend deploy
+        env:
+          PLOI_DEPLOY_WEBHOOK: ${{ secrets.PLOI_FRONTEND_DEPLOY_WEBHOOK }}
+        run: |
+          set -euo pipefail
+          test -n "$PLOI_DEPLOY_WEBHOOK"
+          curl --fail --silent --show-error --location --request POST "$PLOI_DEPLOY_WEBHOOK"
+
+  deploy-backend:
+    name: Deploy backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Ploi backend deploy
+        env:
+          PLOI_DEPLOY_WEBHOOK: ${{ secrets.PLOI_BACKEND_DEPLOY_WEBHOOK }}
+        run: |
+          set -euo pipefail
+          test -n "$PLOI_DEPLOY_WEBHOOK"
+          curl --fail --silent --show-error --location --request POST "$PLOI_DEPLOY_WEBHOOK"

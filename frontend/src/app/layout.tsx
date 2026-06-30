@@ -18,7 +18,13 @@ export const metadata: Metadata = {
     "caravan industry association of australia",
     "CIAA",
   ],
-  // TODO: add real favicons to public/ then restore an `icons` block (export has favicon-*.png in uploads/).
+  icons: {
+    icon: [
+      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon.ico" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

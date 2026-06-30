@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import Link from "next/link";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 const VARIANTS = {
   // design.md §6 — rust fill, white text, glow + hover lift
@@ -14,37 +13,49 @@ const VARIANTS = {
     "bg-white/[.06] hover:bg-white/[.15] text-white border border-white/20 hover:border-white/40 backdrop-blur-[6px]",
 } as const;
 
-type Props = {
-  children: ReactNode;
-  variant?: keyof typeof VARIANTS;
-  href?: string;
-  className?: string;
+type Variant = keyof typeof VARIANTS;
+
+const base =
+  "inline-flex items-center justify-center gap-2 font-semibold rounded-button px-6 py-3 text-base transition-all duration-200 cursor-pointer";
+
+type ButtonAsButton = {
+  variant?: Variant;
   fullWidth?: boolean;
-  "aria-label"?: string;
-};
+  children: ReactNode;
+  href?: undefined;
+} & ComponentPropsWithoutRef<"button">;
 
-// design.md §6 — primary CTA + variants. Renders a Link when `href` is set, else a <button>.
-export function Button({
-  children,
-  variant = "primary",
-  href,
-  className = "",
-  fullWidth = false,
-  ...rest
-}: Props) {
-  const base = `inline-flex items-center justify-center gap-2 font-semibold rounded-button px-6 py-3 text-base transition-all duration-200 cursor-pointer ${
-    fullWidth ? "w-full" : ""
-  } ${VARIANTS[variant]} ${className}`;
+type ButtonAsLink = {
+  variant?: Variant;
+  fullWidth?: boolean;
+  children: ReactNode;
+  href: string;
+} & ComponentPropsWithoutRef<"a">;
 
-  if (href) {
+// design.md §6 — primary CTA + variants. Renders an <a> when `href` is set, else a <button>.
+export function Button(props: ButtonAsButton | ButtonAsLink) {
+  const {
+    variant = "primary",
+    fullWidth = false,
+    className = "",
+    children,
+    ...rest
+  } = props;
+  const cls = `${base} ${fullWidth ? "w-full" : ""} ${VARIANTS[variant]} ${className}`;
+
+  if ("href" in rest && rest.href !== undefined) {
     return (
-      <Link href={href} className={base} {...rest}>
+      <a className={cls} {...(rest as ComponentPropsWithoutRef<"a">)}>
         {children}
-      </Link>
+      </a>
     );
   }
   return (
-    <button type="button" className={base} {...rest}>
+    <button
+      type="button"
+      className={cls}
+      {...(rest as ComponentPropsWithoutRef<"button">)}
+    >
       {children}
     </button>
   );

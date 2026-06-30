@@ -5,30 +5,49 @@ html {
   scroll-behavior: smooth;
 }
 
-body {
-  font-family: var(--font-body);
-  color: var(--color-ink);
-  background-color: var(--color-cream);
-  letter-spacing: -0.01em;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  body {
+    font-family: var(--font-body);
+    color: var(--color-ink);
+    background-color: var(--color-cream);
+    letter-spacing: -0.01em; /* design.md §3 global tracking */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: var(--color-rust);
+    color: #fff;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--color-rust);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: 2px solid var(--color-rust);
+    outline-offset: 1px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cdbfa4;
+    border-radius: 8px;
+    border: 2px solid var(--color-cream);
+  }
 }
 
-::selection {
-  background: var(--color-rust);
-  color: #fff;
-}
-
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-select:focus-visible {
-  outline: 2px solid var(--color-rust);
-  outline-offset: 2px;
-  border-radius: 8px;
-}
-
-/* design.md §8 — motion */
+/* ── Keyframes (design.md §8; tokens in tokens.css map these to animate-*) ── */
 @keyframes marquee {
   from {
     transform: translateX(0);
@@ -46,6 +65,18 @@ select:focus-visible {
   100% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes ping2 {
+  0% {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0.55;
+  }
+  80%,
+  100% {
+    transform: translate(-50%, -50%) scale(2.4);
+    opacity: 0;
   }
 }
 

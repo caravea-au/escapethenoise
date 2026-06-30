@@ -26,6 +26,7 @@
   --color-badge-open-bg: #e6ede0;
   --color-badge-closed: #6d6e71;
   --color-badge-closed-bg: #eef0f2;
+  --color-badge-accredited-bg: #f4e8d4;
 
   /* ---- Radii (design.md §6) ---- */
   --radius-button: 12px;
@@ -36,4 +37,5 @@
   /* ---- Motion (design.md §8) ---- */
   --animate-marquee: marquee 42s linear infinite;
   --animate-pop: pop 0.24s cubic-bezier(0.2, 0.7, 0.2, 1);
+  --animate-ping2: ping2 1.6s ease-out infinite;
 }
