@@ -7,6 +7,9 @@ const PUBLIC_ACTIONS = [
   "api::header.header.find",
   "api::footer.footer.find",
   "api::home-page.home-page.find",
+  // Dealer onboarding form posts here (no token); needs upload for logo/photos.
+  "api::dealer-submission.dealer-submission.create",
+  "plugin::upload.content-api.upload",
 ];
 
 export default {

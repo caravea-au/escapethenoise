@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 // import { Button } from "@/components/ui/Button"; // hidden with search card + chips
 import { strapiMedia, type HomeHero } from "@/lib/strapi";
@@ -9,14 +10,28 @@ const FALLBACK_EYEBROW = "No better time to";
 const FALLBACK_SUBTITLE =
   "Plain-English guides that help everyday Australians choose the right van and escape the noise — at your own pace, with nothing to sell you.";
 
-// Homepage hero — autoplaying muted video under a dark-green scrim (design.md §7),
 // eyebrow + headline + sub. clamp() replaced with Tailwind breakpoint steps.
-export function Hero({ data }: { data?: HomeHero }) {
+// Content comes from Strapi (`data`) with hardcoded fallbacks; the eyebrow/
+// title/subtitle/children props let other pages — e.g. the dealer onboarding
+// thank-you — reuse the same banner with their own copy (props beat `data`).
+export function Hero({
+  data,
+  eyebrow: eyebrowProp,
+  title: titleProp,
+  subtitle: subtitleProp,
+  children,
+}: {
+  data?: HomeHero;
+  eyebrow?: ReactNode;
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  children?: ReactNode;
+} = {}) {
   const poster = strapiMedia(data?.backgroundPoster?.url) ?? FALLBACK_POSTER;
   const video = strapiMedia(data?.backgroundVideo?.url) ?? FALLBACK_VIDEO;
-  const eyebrow = data?.eyebrow ?? FALLBACK_EYEBROW;
-  const subtitle = data?.subtitle ?? FALLBACK_SUBTITLE;
-  const title = data?.title ?? null;
+  const eyebrow = eyebrowProp ?? data?.eyebrow ?? FALLBACK_EYEBROW;
+  const subtitle = subtitleProp ?? data?.subtitle ?? FALLBACK_SUBTITLE;
+  const title = titleProp ?? data?.title ?? null;
 
   return (
     <section className="relative overflow-hidden bg-[linear-gradient(165deg,#2f5238_0%,#27412E_46%,#16271C_100%)]">
@@ -49,6 +64,7 @@ export function Hero({ data }: { data?: HomeHero }) {
         <p className="mx-auto mt-6 max-w-[600px] text-[16px] font-normal leading-[1.5] text-[#c4b89b] lg:text-[18px] xl:text-[20px]">
           {subtitle}
         </p>
+        {children}
 
         {/* Hidden during design iteration — dealer-search elements (search card + chips):
         <div className="mx-auto mt-[46px] flex max-w-[680px] flex-wrap gap-3 rounded-[22px] bg-white p-3.5 shadow-[0_1px_0_rgba(255,255,255,.5)_inset,0_32px_70px_-20px_rgba(16,28,20,.7)]">
