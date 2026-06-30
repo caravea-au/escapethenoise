@@ -13,12 +13,8 @@ const STATES = [
   { src: "/brand/states/state-qld.webp", alt: "Caravanning Queensland" },
   { src: "/brand/states/state-nsw.webp", alt: "Caravan & Camping Industry Association NSW" },
   { src: "/brand/states/state-vic.webp", alt: "Caravan Industry Victoria" },
-  { src: "/brand/states/state-crpv.webp", alt: "Caravan & Residential Parks Victoria" },
   { src: "/brand/states/state-sa.webp", alt: "Caravan & Camping SA" },
-  { src: "/brand/states/state-saparks.webp", alt: "SA Parks" },
   { src: "/brand/states/state-wa.webp", alt: "Caravan & Camping Western Australia" },
-  { src: "/brand/states/state-nt.webp", alt: "Caravanning NT" },
-  { src: "/brand/states/state-tas.webp", alt: "Caravanning Tasmania" },
 ];
 
 function LogoTrack({ hidden = false }: { hidden?: boolean }) {
