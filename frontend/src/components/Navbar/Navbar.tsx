@@ -7,8 +7,9 @@ const LINKS = [
   // Hidden during design iteration — dealer-search elements:
   // { label: "Find a Dealer", href: "#" },
   // { label: "Browse by State", href: "#" },
-  { label: "Buying Guides", href: "#" },
-  { label: "Events", href: "#" },
+  { label: "Buying Guides", href: "/buying-guides" },
+  // Hidden during design iteration:
+  // { label: "Events", href: "#" },
 ];
 
 // Tier-2 — global header (design.md §4). Reversed lockup on the green band.
