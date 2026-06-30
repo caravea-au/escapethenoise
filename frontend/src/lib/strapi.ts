@@ -91,7 +91,7 @@ export async function getBuyingGuideSlugs(): Promise<string[]> {
 export type HomeStat = { value: string | null; showPlus: boolean | null; label: string | null };
 export type HomeLogo = { image: StrapiImage; alt: string | null };
 export type HomeJourneyCard = {
-  icon: "search" | "compass" | "calendar" | "van" | null;
+  icon: "compass" | "tent" | "van" | null;
   title: string | null;
   body: string | null;
   ctaLabel: string | null;
@@ -100,6 +100,7 @@ export type HomeJourneyCard = {
 };
 
 export type HomeHero = {
+  eyebrow: string | null;
   title: string | null;
   subtitle: string | null;
   backgroundVideo: StrapiImage;

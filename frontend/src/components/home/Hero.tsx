@@ -1,17 +1,20 @@
+import { Eyebrow } from "@/components/ui/Eyebrow";
 // import { Button } from "@/components/ui/Button"; // hidden with search card + chips
 import { strapiMedia, type HomeHero } from "@/lib/strapi";
 
 // Fallbacks — the current hardcoded hero content, used when Strapi has no value.
 const FALLBACK_POSTER = "/photos/hero.webp";
 const FALLBACK_VIDEO = "/photos/hero.mp4";
+const FALLBACK_EYEBROW = "No better time to";
 const FALLBACK_SUBTITLE =
-  "Australia's most trusted caravan resource — search 403+ accredited dealers near you.";
+  "Plain-English guides that help everyday Australians choose the right van and escape the noise — at your own pace, with nothing to sell you.";
 
 // Homepage hero — autoplaying muted video under a dark-green scrim (design.md §7),
-// headline, and a search card. clamp() replaced with Tailwind breakpoint steps.
+// eyebrow + headline + sub. clamp() replaced with Tailwind breakpoint steps.
 export function Hero({ data }: { data?: HomeHero }) {
   const poster = strapiMedia(data?.backgroundPoster?.url) ?? FALLBACK_POSTER;
   const video = strapiMedia(data?.backgroundVideo?.url) ?? FALLBACK_VIDEO;
+  const eyebrow = data?.eyebrow ?? FALLBACK_EYEBROW;
   const subtitle = data?.subtitle ?? FALLBACK_SUBTITLE;
   const title = data?.title ?? null;
 
@@ -31,12 +34,15 @@ export function Hero({ data }: { data?: HomeHero }) {
       <div className="absolute inset-0 z-[1] bg-[radial-gradient(95%_75%_at_50%_40%,transparent_0%,rgba(22,39,28,.5)_100%)]" />
 
       <div className="relative z-[2] mx-auto max-w-[920px] px-6 pt-[92px] pb-[112px] text-center lg:pt-[120px] lg:pb-[140px] xl:pt-[150px] xl:pb-[172px]">
-        <h1 className="m-0 whitespace-pre-line font-oswald text-[40px] font-bold uppercase leading-[.97] tracking-[-1.7px] text-white md:text-[51px] lg:text-[68px] xl:text-[78px]">
+        <Eyebrow tone="gold" className="tracking-[3px]">
+          {eyebrow}
+        </Eyebrow>
+        <h1 className="m-0 mt-3.5 whitespace-pre-line font-oswald text-[40px] font-bold uppercase leading-[.97] tracking-[-1.7px] text-white md:text-[51px] lg:text-[68px] xl:text-[78px]">
           {title ?? (
             <>
-              Find your nearest
+              Buy your caravan with
               <br />
-              <span className="text-rust">accredited</span> caravan dealer
+              <span className="text-rust">confidence</span> — not pressure
             </>
           )}
         </h1>

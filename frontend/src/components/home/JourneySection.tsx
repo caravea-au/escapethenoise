@@ -4,23 +4,16 @@ import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
 import type { HomeJourney } from "@/lib/strapi";
 
-const SearchIcon = (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="11" cy="11" r="7" />
-    <path d="m20 20-3.2-3.2" />
-    <circle cx="11" cy="11" r="2.4" />
-  </svg>
-);
 const CompassIcon = (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <circle cx="12" cy="12" r="9" />
     <path d="m15.2 8.8-2 4.4-4.4 2 2-4.4z" />
   </svg>
 );
-const CalendarIcon = (
+const TentIcon = (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="3.5" y="5" width="17" height="15" rx="2.2" />
-    <path d="M3.5 9.5h17M8 3v4M16 3v4" />
+    <path d="M12 4 2.5 19h19z" />
+    <path d="M12 4 9 19M12 4l3 15" />
   </svg>
 );
 const VanIcon = (
@@ -33,9 +26,8 @@ const VanIcon = (
 
 // Icon key → SVG. Strapi supplies the key (enum); the markup stays in the frontend.
 const ICONS = {
-  search: SearchIcon,
   compass: CompassIcon,
-  calendar: CalendarIcon,
+  tent: TentIcon,
   van: VanIcon,
 } as const;
 type IconKey = keyof typeof ICONS;
@@ -44,13 +36,12 @@ type IconKey = keyof typeof ICONS;
 const FALLBACK_EYEBROW = "Your journey starts here";
 const FALLBACK_HEADING = "What are you looking for?";
 const FALLBACK_CARDS = [
-  { icon: "search", title: "Find a Dealer", body: "Locate your nearest accredited caravan dealer by suburb, state or brand.", ctaLabel: "Search Dealers →", ctaUrl: null, featured: false },
-  { icon: "compass", title: "First Time Buyer?", body: "Start your caravan journey with our complete beginner's guide.", ctaLabel: "Start Learning →", ctaUrl: null, featured: true },
-  { icon: "calendar", title: "Upcoming Events", body: "Open Days, Shows and National Events near you.", ctaLabel: "View Events →", ctaUrl: null, featured: false },
-  { icon: "van", title: "Buying Guides", body: "Independent, jargon-free advice on van types, towing, weights and buying with confidence.", ctaLabel: "Read the Guides →", ctaUrl: "/buying-guides", featured: false },
+  { icon: "compass", title: "Education & Safety", body: "Plain-English guides on weights, towing rules and staying safe — so you set off with confidence.", ctaLabel: "Learn the basics →", ctaUrl: "/buying-guides", featured: false },
+  { icon: "tent", title: "Happy Campers", body: "Tips and real-world advice from everyday Australians who've found the right van and hit the road.", ctaLabel: "Read more →", ctaUrl: "/buying-guides", featured: false },
+  { icon: "van", title: "Towing Guide", body: "Understand tow ratings, ball weights and what your vehicle can safely handle.", ctaLabel: "Read the guide →", ctaUrl: "/buying-guides", featured: false },
 ] as const;
 
-// "What are you looking for?" — four entry-point cards (one featured in rust).
+// "What are you looking for?" — guides-first entry-point cards.
 export function JourneySection({ data }: { data?: HomeJourney }) {
   const eyebrow = data?.eyebrow ?? FALLBACK_EYEBROW;
   const heading = data?.heading ?? FALLBACK_HEADING;

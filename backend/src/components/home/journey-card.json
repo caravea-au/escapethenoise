@@ -9,7 +9,7 @@
   "attributes": {
     "icon": {
       "type": "enumeration",
-      "enum": ["search", "compass", "calendar", "van"]
+      "enum": ["compass", "tent", "van"]
     },
     "title": {
       "type": "string"
