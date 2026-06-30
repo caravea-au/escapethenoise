@@ -10,7 +10,7 @@ const STEPS = [
 // /02/ — three-step process as an editorial timeline with oversized step numerals.
 export function Process() {
   return (
-    <section className="bg-cream py-24 md:py-36">
+    <section className="bg-cream py-20 md:py-28">
       <Container>
         <div className="grid gap-8 border-b border-line pb-12 md:grid-cols-[1fr_1.1fr] md:items-end">
           <Reveal y={12}>
@@ -34,7 +34,7 @@ export function Process() {
         <div className="mt-2 grid md:grid-cols-3">
           {STEPS.map((s, i) => (
             <Reveal key={s.n} delay={i * 0.1}>
-              <div className="group h-full border-b border-line py-10 md:border-b-0 md:border-r md:px-10 md:py-12 md:last:border-r-0 md:[&:first-child]:pl-0">
+              <div className="group h-full border-b border-line py-9 md:border-b-0 md:border-r md:px-10 md:py-10 md:last:border-r-0 md:[&:first-child]:pl-0">
                 <div className="font-oswald text-[72px] font-bold leading-none text-line transition-colors duration-300 group-hover:text-rust">
                   {s.n}
                 </div>

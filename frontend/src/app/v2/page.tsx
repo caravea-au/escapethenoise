@@ -3,6 +3,7 @@ import { HeroV2 } from "@/components/home-v2/HeroV2";
 import { Manifesto } from "@/components/home-v2/Manifesto";
 import { PartnerMarquee } from "@/components/home-v2/PartnerMarquee";
 import { Process } from "@/components/home-v2/Process";
+import { ImageBand } from "@/components/home-v2/ImageBand";
 import { GuidesV2 } from "@/components/home-v2/GuidesV2";
 import { CtaBand } from "@/components/home-v2/CtaBand";
 
@@ -20,6 +21,7 @@ export default function HomeV2() {
       <Manifesto />
       <PartnerMarquee />
       <Process />
+      <ImageBand />
       <GuidesV2 />
       <CtaBand />
     </>

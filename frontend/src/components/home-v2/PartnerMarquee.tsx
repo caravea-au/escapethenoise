@@ -41,9 +41,9 @@ export function PartnerMarquee() {
                 key={s.src}
                 src={s.src}
                 alt={s.alt}
-                width={150}
-                height={96}
-                className="mx-12 h-20 w-auto object-contain opacity-80 transition-opacity duration-300 hover:opacity-100 md:mx-16 md:h-24"
+                width={140}
+                height={80}
+                className="mx-7 h-14 w-auto object-contain opacity-75 transition-opacity duration-300 hover:opacity-100 md:mx-10 md:h-[68px]"
               />
             ))}
           </Marquee>

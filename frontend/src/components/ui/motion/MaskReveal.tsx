@@ -23,6 +23,7 @@ type Props = {
 //     content is never hidden if JS doesn't run, and hydration always matches.
 export function MaskReveal({ lines, className, lineClassName, delay = 0, mode = "view" }: Props) {
   const [mounted, setMounted] = useState(false);
+  const [failsafe, setFailsafe] = useState(false);
   const reduce = useReducedMotion();
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.2 });
@@ -31,7 +32,14 @@ export function MaskReveal({ lines, className, lineClassName, delay = 0, mode = 
     if (!reduce) setMounted(true);
   }, [reduce]);
 
-  const show = mode === "load" || inView;
+  // never let a heading stay clipped if the observer somehow doesn't fire
+  useEffect(() => {
+    if (!mounted) return;
+    const t = setTimeout(() => setFailsafe(true), 2500);
+    return () => clearTimeout(t);
+  }, [mounted]);
+
+  const show = mode === "load" || inView || failsafe;
 
   return (
     <span ref={ref} className={`block ${className ?? ""}`}>
