@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/Button";
+// import { Button } from "@/components/ui/Button"; // hidden with search card + chips
 
 // Homepage hero — autoplaying muted video under a dark-green scrim (design.md §7),
 // headline, and a search card. clamp() replaced with Tailwind breakpoint steps.
@@ -28,6 +28,7 @@ export function Hero() {
           Australia&apos;s most trusted caravan resource — search 403+ accredited dealers near you.
         </p>
 
+        {/* Hidden during design iteration — dealer-search elements (search card + chips):
         <div className="mx-auto mt-[46px] flex max-w-[680px] flex-wrap gap-3 rounded-[22px] bg-white p-3.5 shadow-[0_1px_0_rgba(255,255,255,.5)_inset,0_32px_70px_-20px_rgba(16,28,20,.7)]">
           <div className="flex min-w-[220px] flex-1 items-center gap-3 rounded-[14px] border border-line bg-cream px-[18px]">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
@@ -53,6 +54,7 @@ export function Hero() {
             Browse by state
           </Button>
         </div>
+        */}
       </div>
     </section>
   );
