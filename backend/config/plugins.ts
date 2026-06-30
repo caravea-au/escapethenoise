@@ -1,27 +1,11 @@
 import type { Core } from '@strapi/strapi';
 
-const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin => ({
-  // Email over SMTP (Office365). Credentials come from backend/.env; with the
-  // placeholder dev creds the transport auth fails — sends are caught in the
-  // dealer-submission afterCreate lifecycle so a submission never fails on it.
-  email: {
-    config: {
-      provider: 'nodemailer',
-      providerOptions: {
-        host: env('SMTP_HOST', 'smtp.office365.com'),
-        port: env.int('SMTP_PORT', 587),
-        secure: false, // 587 uses STARTTLS, not implicit TLS
-        auth: {
-          user: env('SMTP_USER'),
-          pass: env('SMTP_PASSWORD'),
-        },
-      },
-      settings: {
-        defaultFrom: env('SMTP_FROM', 'noreply7@caravea.au'),
-        defaultReplyTo: env('SMTP_FROM', 'noreply7@caravea.au'),
-      },
-    },
-  },
+const config = (_params: Core.Config.Shared.ConfigParams): Core.Config.Plugin => ({
+  // SMTP credentials are no longer configured here. They live in the
+  // "SMTP Settings" single type (admin-managed, not .env) and are read at
+  // send-time by the dealer-submission afterCreate lifecycle, which builds its
+  // own nodemailer transport. See:
+  //   backend/src/api/dealer-submission/content-types/dealer-submission/lifecycles.ts
 
   // The `mcp` plugin below is disabled because no matching plugin package is
   // installed or published on npm, which prevented Strapi from booting
