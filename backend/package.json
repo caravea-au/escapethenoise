@@ -9,6 +9,7 @@
     "console": "strapi console",
     "deploy": "strapi deploy",
     "dev": "strapi develop",
+    "seed:guides": "node scripts/seed-buying-guides.mjs",
     "dev:clean": "npm run clean && strapi develop",
     "develop": "strapi develop",
     "start": "strapi start",
