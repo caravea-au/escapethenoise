@@ -35,7 +35,7 @@ Tiers (see `nextjs-component-standards`): **1** global primitive (`components/ui
 | MultiSelect | 2 | Searchable multi-select w/ removable tag chips | components/DealerOnboardingForm/MultiSelect.tsx | placeholder, options, selected, onChange, invalid | dealer-directory-onboarding |
 | TradingHours | 2 | 7-day open/closed + time grid, copy-Monday-to-weekdays | components/DealerOnboardingForm/TradingHours.tsx | hours, onChange | dealer-directory-onboarding |
 | PhotoUploader | 2 | Up to 5 image previews w/ add/remove (object URLs) | components/DealerOnboardingForm/PhotoUploader.tsx | files, onChange | dealer-directory-onboarding |
-| Hero | home | Video hero + headline + sub; copy overridable via optional eyebrow/title/subtitle/children props | components/home/Hero.tsx | eyebrow?, title?, subtitle?, children? | home, dealer-directory-onboarding/thank-you |
+| Hero | home | Video hero + headline + sub; copy overridable via optional eyebrow/title/subtitle/children props; `fullHeight` grows it to fill a flex-column parent (100svh − header/footer) | components/home/Hero.tsx | eyebrow?, title?, subtitle?, fullHeight?, children? | home, dealer-directory-onboarding/thank-you |
 | TrustBar | home | Stats + state-association logo marquee | components/home/TrustBar.tsx | — | home |
 | OpenDayCTA | home | Single highlighted event banner | components/home/OpenDayCTA.tsx | — | home |
 | JourneySection | home | "What are you looking for?" 4 entry cards | components/home/JourneySection.tsx | — | home |

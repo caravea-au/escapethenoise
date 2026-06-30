@@ -19,12 +19,16 @@ export function Hero({
   eyebrow: eyebrowProp,
   title: titleProp,
   subtitle: subtitleProp,
+  fullHeight = false,
   children,
 }: {
   data?: HomeHero;
   eyebrow?: ReactNode;
   title?: ReactNode;
   subtitle?: ReactNode;
+  // Grow to fill a flex-column parent and vertically centre the content. Used by
+  // the dealer onboarding thank-you page to fill 100svh minus the header/footer.
+  fullHeight?: boolean;
   children?: ReactNode;
 } = {}) {
   const poster = strapiMedia(data?.backgroundPoster?.url) ?? FALLBACK_POSTER;
@@ -34,7 +38,11 @@ export function Hero({
   const title = titleProp ?? data?.title ?? null;
 
   return (
-    <section className="relative overflow-hidden bg-[linear-gradient(165deg,#2f5238_0%,#27412E_46%,#16271C_100%)]">
+    <section
+      className={`relative overflow-hidden bg-[linear-gradient(165deg,#2f5238_0%,#27412E_46%,#16271C_100%)]${
+        fullHeight ? " flex flex-1 items-center" : ""
+      }`}
+    >
       <video
         autoPlay
         muted
@@ -48,7 +56,13 @@ export function Hero({
       <div className="absolute inset-0 z-[1] bg-[linear-gradient(168deg,rgba(22,39,28,.78)_0%,rgba(39,65,46,.42)_46%,rgba(22,39,28,.82)_100%)]" />
       <div className="absolute inset-0 z-[1] bg-[radial-gradient(95%_75%_at_50%_40%,transparent_0%,rgba(22,39,28,.5)_100%)]" />
 
-      <div className="relative z-[2] mx-auto max-w-[920px] px-6 pt-[92px] pb-[112px] text-center lg:pt-[120px] lg:pb-[140px] xl:pt-[150px] xl:pb-[172px]">
+      <div
+        className={`relative z-[2] mx-auto w-full max-w-[920px] px-6 text-center ${
+          fullHeight
+            ? "py-12 lg:py-16"
+            : "pt-[92px] pb-[112px] lg:pt-[120px] lg:pb-[140px] xl:pt-[150px] xl:pb-[172px]"
+        }`}
+      >
         <Eyebrow tone="gold" className="tracking-[3px]">
           {eyebrow}
         </Eyebrow>
