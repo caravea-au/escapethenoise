@@ -6,14 +6,15 @@ const PUBLIC_ACTIONS = [
   "api::buying-guide.buying-guide.findOne",
   "api::header.header.find",
   "api::footer.footer.find",
+  "api::home-page.home-page.find",
 ];
 
 export default {
   register() {},
 
-  // Ensure the Public role can read buying-guides. Permissions live in the DB
-  // (not in code), so a fresh deploy — e.g. the live server — won't have them.
-  // This grants them idempotently on every boot.
+  // Ensure the Public role can read the content the frontend needs. Permissions
+  // live in the DB (not in code), so a fresh deploy — e.g. the live server —
+  // won't have them. This grants them idempotently on every boot.
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
     const publicRole = await strapi
       .query("plugin::users-permissions.role")
