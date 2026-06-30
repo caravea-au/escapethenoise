@@ -2,7 +2,7 @@ import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Heading } from "@/components/ui/Heading";
-import { Button } from "@/components/ui/Button";
+// import { Button } from "@/components/ui/Button";
 
 // Full-bleed lifestyle band — photo under a left-to-right green scrim (design.md §7).
 export function LifestyleBand() {
@@ -31,9 +31,9 @@ export function LifestyleBand() {
             From coastal parks to outback skies, every great trip starts with the right van — and the
             right accredited dealer to set you up. Find yours and go.
           </p>
-          <Button href="#" className="mt-[26px] px-[30px] py-[15px]">
+          {/* <Button href="#" className="mt-[26px] px-[30px] py-[15px]">
             Find your nearest dealer →
-          </Button>
+          </Button> */}
         </div>
       </Container>
     </section>
