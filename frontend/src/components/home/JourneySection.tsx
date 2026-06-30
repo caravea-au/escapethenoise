@@ -3,23 +3,16 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
 
-const SearchIcon = (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="11" cy="11" r="7" />
-    <path d="m20 20-3.2-3.2" />
-    <circle cx="11" cy="11" r="2.4" />
-  </svg>
-);
 const CompassIcon = (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <circle cx="12" cy="12" r="9" />
     <path d="m15.2 8.8-2 4.4-4.4 2 2-4.4z" />
   </svg>
 );
-const CalendarIcon = (
+const TentIcon = (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="3.5" y="5" width="17" height="15" rx="2.2" />
-    <path d="M3.5 9.5h17M8 3v4M16 3v4" />
+    <path d="M12 4 2.5 19h19z" />
+    <path d="M12 4 9 19M12 4l3 15" />
   </svg>
 );
 const VanIcon = (
@@ -31,10 +24,9 @@ const VanIcon = (
 );
 
 const CARDS = [
-  { icon: SearchIcon, title: "Find a Dealer", body: "Locate your nearest accredited caravan dealer by suburb, state or brand.", cta: "Search Dealers →", featured: false },
-  { icon: CompassIcon, title: "First Time Buyer?", body: "Start your caravan journey with our complete beginner's guide.", cta: "Start Learning →", featured: true },
-  { icon: CalendarIcon, title: "Upcoming Events", body: "Open Days, Shows and National Events near you.", cta: "View Events →", featured: false },
-  { icon: VanIcon, title: "Buying Guides", body: "Independent, jargon-free advice on van types, towing, weights and buying with confidence.", cta: "Read the Guides →", href: "/buying-guides", featured: false },
+  { icon: CompassIcon, title: "Education & Safety", body: "Plain-English guides on weights, towing rules and staying safe — so you set off with confidence.", cta: "Learn the basics →", href: "/buying-guides" },
+  { icon: TentIcon, title: "Happy Campers", body: "Tips and real-world advice from everyday Australians who've found the right van and hit the road.", cta: "Read more →", href: "/buying-guides" },
+  { icon: VanIcon, title: "Towing Guide", body: "Understand tow ratings, ball weights and what your vehicle can safely handle.", cta: "Read the guide →", href: "/buying-guides" },
 ];
 
 // "What are you looking for?" — four entry-point cards (one featured in rust).
