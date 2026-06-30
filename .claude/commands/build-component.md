@@ -36,6 +36,11 @@ abstraction, dead flexibility **before** the gate. Aim: the shortest diff that m
   the section, and compare against the design (the exported HTML rendered, or `design.md`). Report each
   breakpoint ✅/⚠️ with what differs. (Playwright MCP must be loaded — `/preflight` confirms it; if it isn't,
   fall back to a human checklist and say so. Don't claim visual parity Claude didn't verify.)
+- **Design critique (taste pass)** — run the **`frontend-design`** skill against those screenshots. Verifying
+  "it reflows" is NOT enough; look for taste-level breakage: nav/links **colliding or wrapping** instead of
+  collapsing to a menu, **orphaned dividers/borders** when a grid restacks, crowding, mis-alignment, type that
+  doesn't scale. A nav with 3+ links MUST collapse to a disclosure menu on mobile, not `flex-wrap`. Fix what it
+  flags before the gate is green.
 - Green → continue. Red → fix and re-run (≤3 tries); still red → write a short failure note and stop.
 
 ## 5. Register + report

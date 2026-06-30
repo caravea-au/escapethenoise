@@ -2,6 +2,7 @@ import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
+import { Reveal } from "@/components/ui/Reveal";
 
 const SearchIcon = (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -47,10 +48,10 @@ export function JourneySection() {
       </Heading>
 
       <div className="mt-[42px] grid grid-cols-[repeat(auto-fit,minmax(232px,1fr))] gap-5 text-left">
-        {CARDS.map((card) => (
+        {CARDS.map((card, i) => (
+          <Reveal key={card.title} delay={i * 0.08} className="flex">
           <div
-            key={card.title}
-            className={`flex flex-col rounded-[18px] bg-white p-7 transition-transform duration-[400ms] hover:-translate-y-1.5 ${
+            className={`flex w-full flex-col rounded-[18px] bg-white p-7 transition-transform duration-[400ms] hover:-translate-y-1.5 ${
               card.featured
                 ? "border-[1.5px] border-rust shadow-[0_22px_50px_-16px_rgba(193,124,44,.30)]"
                 : "border border-line shadow-[0_16px_44px_-18px_rgba(22,39,28,.11)]"
@@ -74,6 +75,7 @@ export function JourneySection() {
               {card.cta}
             </Button>
           </div>
+          </Reveal>
         ))}
       </div>
     </Container>

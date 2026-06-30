@@ -20,6 +20,7 @@ type Props = {
   href?: string;
   className?: string;
   fullWidth?: boolean;
+  onClick?: () => void;
   "aria-label"?: string;
 };
 

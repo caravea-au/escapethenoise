@@ -4,6 +4,7 @@ import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
+import { Reveal } from "@/components/ui/Reveal";
 
 const GUIDES = [
   {
@@ -46,11 +47,11 @@ export function BuyingGuides() {
       </div>
 
       <div className="mt-[30px] grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-[22px]">
-        {GUIDES.map((g) => (
+        {GUIDES.map((g, i) => (
+          <Reveal key={g.title} delay={i * 0.1} className="flex">
           <Link
-            key={g.title}
             href="#"
-            className="flex flex-col overflow-hidden rounded-[18px] border border-line bg-white shadow-[0_16px_44px_-16px_rgba(22,39,28,.11)] transition-transform duration-[400ms] hover:-translate-y-1.5"
+            className="flex w-full flex-col overflow-hidden rounded-[18px] border border-line bg-white shadow-[0_16px_44px_-16px_rgba(22,39,28,.11)] transition-transform duration-[400ms] hover:-translate-y-1.5"
           >
             <div className="relative h-[190px] overflow-hidden">
               <Image src={g.image} alt={g.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
@@ -67,6 +68,7 @@ export function BuyingGuides() {
               </div>
             </div>
           </Link>
+          </Reveal>
         ))}
       </div>
     </Container>

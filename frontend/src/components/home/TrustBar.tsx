@@ -61,10 +61,17 @@ export function TrustBar() {
           </Heading>
         </div>
 
-        <div className="mt-12 grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-5">
+        <div className="mt-12 grid grid-cols-1 gap-y-8 sm:grid-cols-3 sm:gap-5">
           {STATS.map((s, i) => (
-            <div key={s.label} className={`text-center ${i > 0 ? "border-l border-cream-deep/[.14]" : ""}`}>
-              <div className="font-oswald text-[54px] font-bold leading-[.85] tracking-[-2px] text-cream-deep lg:text-[72px] xl:text-[82px]">
+            <div
+              key={s.label}
+              className={`text-center ${
+                i > 0
+                  ? "border-t border-cream-deep/[.14] pt-8 sm:border-t-0 sm:border-l sm:pt-0"
+                  : ""
+              }`}
+            >
+              <div className="font-oswald text-[48px] font-bold leading-[.85] tracking-[-2px] text-cream-deep sm:text-[54px] lg:text-[72px] xl:text-[82px]">
                 {s.value}
                 {s.plus && <span className="text-gold">+</span>}
               </div>
