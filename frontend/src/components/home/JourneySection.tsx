@@ -34,7 +34,7 @@ const CARDS = [
   { icon: SearchIcon, title: "Find a Dealer", body: "Locate your nearest accredited caravan dealer by suburb, state or brand.", cta: "Search Dealers →", featured: false },
   { icon: CompassIcon, title: "First Time Buyer?", body: "Start your caravan journey with our complete beginner's guide.", cta: "Start Learning →", featured: true },
   { icon: CalendarIcon, title: "Upcoming Events", body: "Open Days, Shows and National Events near you.", cta: "View Events →", featured: false },
-  { icon: VanIcon, title: "Buying Guides", body: "Independent, jargon-free advice on van types, towing, weights and buying with confidence.", cta: "Read the Guides →", featured: false },
+  { icon: VanIcon, title: "Buying Guides", body: "Independent, jargon-free advice on van types, towing, weights and buying with confidence.", cta: "Read the Guides →", href: "/buying-guides", featured: false },
 ];
 
 // "What are you looking for?" — four entry-point cards (one featured in rust).
@@ -50,29 +50,32 @@ export function JourneySection() {
         {CARDS.map((card) => (
           <div
             key={card.title}
-            className={`flex flex-col rounded-[18px] bg-white p-7 transition-transform duration-[400ms] hover:-translate-y-1.5 ${
-              card.featured
-                ? "border-[1.5px] border-rust shadow-[0_22px_50px_-16px_rgba(193,124,44,.30)]"
-                : "border border-line shadow-[0_16px_44px_-18px_rgba(22,39,28,.11)]"
-            }`}
+            className="group flex flex-col rounded-[18px] border-[1.5px] border-line bg-white p-7 shadow-[0_16px_44px_-18px_rgba(22,39,28,.11)] transition-all duration-[400ms] hover:-translate-y-1.5 hover:border-rust hover:shadow-[0_22px_50px_-16px_rgba(193,124,44,.30)]"
           >
-            <div
-              className={`flex h-[54px] w-[54px] items-center justify-center rounded-[14px] ${
-                card.featured ? "bg-rust text-white" : "bg-green text-gold"
-              }`}
-            >
+            <div className="flex h-[54px] w-[54px] items-center justify-center rounded-[14px] bg-green text-gold transition-colors duration-[400ms] group-hover:bg-rust group-hover:text-white">
               {card.icon}
             </div>
             <h3 className="mt-[18px] font-oswald text-[19px] font-bold text-green">{card.title}</h3>
             <p className="mt-2 min-h-[62px] text-sm leading-[1.55] text-muted">{card.body}</p>
-            <Button
-              href="#"
-              variant={card.featured ? "primary" : "secondary"}
-              fullWidth
-              className="mt-4 rounded-[9px] py-3 text-sm"
-            >
-              {card.cta}
-            </Button>
+            {card.href ? (
+              <Button
+                href={card.href}
+                variant="secondary"
+                fullWidth
+                className="mt-4 rounded-[9px] py-3 text-sm group-hover:border-rust group-hover:bg-rust group-hover:text-white"
+              >
+                {card.cta}
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                fullWidth
+                disabled
+                className="mt-4 cursor-not-allowed rounded-[9px] py-3 text-sm opacity-60 group-hover:border-rust group-hover:bg-rust group-hover:text-white"
+              >
+                {card.cta}
+              </Button>
+            )}
           </div>
         ))}
       </div>

@@ -40,7 +40,7 @@ export function BuyingGuides() {
             Latest Buying Guides
           </Heading>
         </div>
-        <Button href="#" variant="outline" className="rounded-[9px] px-[18px] py-[11px] text-sm">
+        <Button href="/buying-guides" variant="outline" className="rounded-[9px] px-[18px] py-[11px] text-sm">
           View Buying Guides →
         </Button>
       </div>

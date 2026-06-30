@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Block, InlineNode } from "@/lib/strapi";
+import { strapiMedia, type Block, type InlineNode } from "@/lib/strapi";
 
 // Renders Strapi "blocks" rich-text for a buying guide. design.md §3/§5/§6:
 // paragraphs 17px/1.72, green Oswald H2s, rust-dot lists, and a cream tip callout.
@@ -93,6 +93,24 @@ export function ArticleBody({ blocks }: { blocks: Block[] }) {
                 <Inline nodes={children} />
               </TipCallout>
             );
+          case "image": {
+            const img = (block as { image?: { url?: string; alternativeText?: string } }).image;
+            const src = strapiMedia(img?.url);
+            if (!src) return null;
+            const caption = img?.alternativeText;
+            return (
+              <figure key={i} className="my-8">
+                {/* Plain <img>: body images may be remote URLs not whitelisted for next/image. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt={caption ?? ""} className="w-full rounded-xl" />
+                {caption ? (
+                  <figcaption className="mt-2.5 text-[14px] leading-[1.5] text-ink/60">
+                    {caption}
+                  </figcaption>
+                ) : null}
+              </figure>
+            );
+          }
           case "paragraph":
           default:
             return (
