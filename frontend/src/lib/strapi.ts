@@ -55,6 +55,16 @@ export function readTime(content: Block[] | null | undefined): string {
   return `${Math.max(1, Math.round(words / 200))} min read`;
 }
 
+/** Extract a YouTube video id from any common URL form, else null. */
+export function youtubeId(url: string): string | null {
+  const m = url
+    .trim()
+    .match(
+      /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
+    );
+  return m ? m[1] : null;
+}
+
 /** Resolve a Strapi media path to an absolute URL. */
 export function strapiMedia(url?: string | null): string | null {
   if (!url) return null;
