@@ -1,5 +1,6 @@
-# Claude Code / skills installer (this repo targets Cursor)
-.claude/
+# Claude Code — track the kit (commands, skills, CLAUDE rules), ignore only local/secret files
+.claude/settings.local.json
+.claude/*.local.json
 
 # Dependencies (workspaces hoist to root)
 node_modules/
@@ -54,3 +55,8 @@ frontend/.env
 
 #Deployed files
 frontend/.deploy
+
+# Design exports — referenced by Claude, never tracked. Drop exports in design-input/.
+# The README stays tracked so the drop-zone (and its instructions) travel with the repo.
+/design-input/*
+!/design-input/README.md

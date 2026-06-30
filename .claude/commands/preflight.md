@@ -1,0 +1,46 @@
+---
+description: Pre-flight health-check of the escape-the-noise Claude setup (MCPs, Node, build, lint, kit) before working. Read-only.
+argument-hint: (none) — run /preflight at the start of a session
+---
+
+Verify the kit actually works **in this session**. Read-only — change nothing. Print a clear ✅/❌
+table and, for every ❌, the exact fix command. Be honest: a tool the CLI lists but that you cannot
+call here is **❌ not connected**, not ✅. (Named `/preflight`, not `/doctor`, to avoid clashing with
+Claude Code's built-in `/doctor`, which checks the *Claude Code install* — a different thing.)
+
+## 1. MCP servers — test the REAL in-session connection
+For each, attempt one cheap call. If its tools aren't available this session, mark
+❌ "not loaded — reload the window / approve the server" (do NOT trust `claude mcp list` alone).
+
+- **strapi** → list content types (e.g. `strapi_list_servers` / `strapi_get_content_types`). Expect a response.
+  If Strapi isn't running, that's a ⚠️ (start it: `npm run dev:backend`), not a kit failure.
+- **next-devtools** → a cheap call (e.g. `nextjs_index` / `nextjs_docs`). Expect a response.
+- **playwright** → confirm its tool namespace is loaded (do NOT open a browser). If absent, it was just added
+  to `.mcp.json` — **reload the IDE window and approve it**; until then the visual gate falls back to a human check.
+
+> These three are wired in `.mcp.json`. The extra `.cursor/mcp.json` servers (Figma) are for the Cursor
+> editor, not Claude Code — do not check them here.
+
+## 2. Toolchain (PowerShell)
+Run and report each:
+- `node -v` (engine range >=20 <=24; prefer 20 or 22)
+- `npm run lint` runs (ESLint 9 flat config at `frontend/eslint.config.mjs`; `next lint` is gone in Next 16).
+  Pre-existing baseplate `<a>`→`<Link>` errors in `layout.tsx`/`not-found.tsx` are expected until `/project-setup`
+  replaces those files — note them, don't treat as a kit failure.
+- `npm run build` is runnable (you may report "not run" if it's slow — just confirm the script exists)
+- `sharp` is installed in `frontend/` (needed by `npm run optimize:image`) — `npm ls sharp -w frontend`.
+- If `better-sqlite3` errors with `NODE_MODULE_VERSION`: fix = `npm rebuild better-sqlite3` from `backend/`.
+
+## 3. Kit & inputs present
+- `.claude/skills/` has `nextjs-component-standards`, `caveman`, `ponytail`, `ponytail-review`.
+- `.claude/COMPONENTS.md` exists (the registry).
+- `design-input/` exists and is git-ignored (`git check-ignore design-input/anything` should print a path).
+- At least one export folder under `design-input/<export>/` with `design.md` + a `*Tailwind.html` (else ⚠️ "drop an export first").
+
+## 4. Report
+Print a table: **Component | Status | Fix if ❌**. End with a one-line verdict:
+- ✅ "Setup healthy — safe to /project-setup → /criteria → /build-component."
+- ❌ "N issues — fix before building," then the smallest set of commands to green it.
+
+After any MCP change, remind the user: **reload the IDE window** and **approve** the `.mcp.json`
+servers on first prompt (one-time).
