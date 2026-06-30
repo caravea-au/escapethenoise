@@ -12,23 +12,35 @@
   },
   "pluginOptions": {},
   "attributes": {
-    "heroTitle": {
-      "type": "string",
-      "required": true
-    },
-    "heroSubtitle": {
-      "type": "text"
-    },
-    "heroCta": {
+    "hero": {
       "type": "component",
       "repeatable": false,
-      "component": "shared.link"
+      "component": "home.hero"
     },
-    "heroImage": {
-      "type": "media",
-      "multiple": false,
-      "required": false,
-      "allowedTypes": ["images"]
+    "trustBar": {
+      "type": "component",
+      "repeatable": false,
+      "component": "home.trust-bar"
+    },
+    "openDay": {
+      "type": "component",
+      "repeatable": false,
+      "component": "home.open-day-cta"
+    },
+    "journey": {
+      "type": "component",
+      "repeatable": false,
+      "component": "home.journey"
+    },
+    "buyingGuidesHeader": {
+      "type": "component",
+      "repeatable": false,
+      "component": "home.section-header"
+    },
+    "lifestyle": {
+      "type": "component",
+      "repeatable": false,
+      "component": "home.lifestyle-band"
     },
     "seo": {
       "type": "component",

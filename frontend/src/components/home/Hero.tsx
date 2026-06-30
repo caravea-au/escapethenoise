@@ -1,27 +1,38 @@
 import type { ReactNode } from "react";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 // import { Button } from "@/components/ui/Button"; // hidden with search card + chips
+import { strapiMedia, type HomeHero } from "@/lib/strapi";
 
-// Homepage hero — autoplaying muted video under a dark-green scrim (design.md §7),
+// Fallbacks — the current hardcoded hero content, used when Strapi has no value.
+const FALLBACK_POSTER = "/photos/hero.webp";
+const FALLBACK_VIDEO = "/photos/hero.mp4";
+const FALLBACK_EYEBROW = "No better time to";
+const FALLBACK_SUBTITLE =
+  "Plain-English guides that help everyday Australians choose the right van and escape the noise — at your own pace, with nothing to sell you.";
+
 // eyebrow + headline + sub. clamp() replaced with Tailwind breakpoint steps.
-// Copy is overridable (optional props) so other pages — e.g. the dealer
-// onboarding thank-you — can reuse the same banner; defaults are the home copy.
+// Content comes from Strapi (`data`) with hardcoded fallbacks; the eyebrow/
+// title/subtitle/children props let other pages — e.g. the dealer onboarding
+// thank-you — reuse the same banner with their own copy (props beat `data`).
 export function Hero({
-  eyebrow = "No better time to",
-  title,
-  subtitle = (
-    <>
-      Plain-English guides that help everyday Australians choose the right van and escape the
-      noise — at your own pace, with nothing to sell you.
-    </>
-  ),
+  data,
+  eyebrow: eyebrowProp,
+  title: titleProp,
+  subtitle: subtitleProp,
   children,
 }: {
+  data?: HomeHero;
   eyebrow?: ReactNode;
   title?: ReactNode;
   subtitle?: ReactNode;
   children?: ReactNode;
 } = {}) {
+  const poster = strapiMedia(data?.backgroundPoster?.url) ?? FALLBACK_POSTER;
+  const video = strapiMedia(data?.backgroundVideo?.url) ?? FALLBACK_VIDEO;
+  const eyebrow = eyebrowProp ?? data?.eyebrow ?? FALLBACK_EYEBROW;
+  const subtitle = subtitleProp ?? data?.subtitle ?? FALLBACK_SUBTITLE;
+  const title = titleProp ?? data?.title ?? null;
+
   return (
     <section className="relative overflow-hidden bg-[linear-gradient(165deg,#2f5238_0%,#27412E_46%,#16271C_100%)]">
       <video
@@ -29,10 +40,10 @@ export function Hero({
         muted
         loop
         playsInline
-        poster="/photos/hero.webp"
+        poster={poster}
         className="absolute inset-0 z-0 h-full w-full object-cover"
       >
-        <source src="/photos/hero.mp4" type="video/mp4" />
+        <source src={video} type="video/mp4" />
       </video>
       <div className="absolute inset-0 z-[1] bg-[linear-gradient(168deg,rgba(22,39,28,.78)_0%,rgba(39,65,46,.42)_46%,rgba(22,39,28,.82)_100%)]" />
       <div className="absolute inset-0 z-[1] bg-[radial-gradient(95%_75%_at_50%_40%,transparent_0%,rgba(22,39,28,.5)_100%)]" />
@@ -41,7 +52,7 @@ export function Hero({
         <Eyebrow tone="gold" className="tracking-[3px]">
           {eyebrow}
         </Eyebrow>
-        <h1 className="m-0 mt-3.5 font-oswald text-[40px] font-bold uppercase leading-[.97] tracking-[-1.7px] text-white md:text-[51px] lg:text-[68px] xl:text-[78px]">
+        <h1 className="m-0 mt-3.5 whitespace-pre-line font-oswald text-[40px] font-bold uppercase leading-[.97] tracking-[-1.7px] text-white md:text-[51px] lg:text-[68px] xl:text-[78px]">
           {title ?? (
             <>
               Buy your caravan with

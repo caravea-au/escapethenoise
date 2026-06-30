@@ -1,0 +1,23 @@
+{
+  "collectionName": "components_home_section_headers",
+  "info": {
+    "displayName": "Section Header",
+    "icon": "bulletList",
+    "description": "A section header — eyebrow, heading and an optional CTA link"
+  },
+  "options": {},
+  "attributes": {
+    "eyebrow": {
+      "type": "string"
+    },
+    "heading": {
+      "type": "string"
+    },
+    "ctaLabel": {
+      "type": "string"
+    },
+    "ctaUrl": {
+      "type": "string"
+    }
+  }
+}
