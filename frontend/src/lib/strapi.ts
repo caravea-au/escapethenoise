@@ -83,3 +83,95 @@ export async function getBuyingGuideSlugs(): Promise<string[]> {
   );
   return json.data.map((g) => g.slug);
 }
+
+// ── Home page single type ────────────────────────────────────────────────────
+// Every field is nullable: the frontend keeps its hardcoded content as a fallback
+// and only overrides where Strapi has a value (getHomePage returns null on error).
+
+export type HomeStat = { value: string | null; showPlus: boolean | null; label: string | null };
+export type HomeLogo = { image: StrapiImage; alt: string | null };
+export type HomeJourneyCard = {
+  icon: "compass" | "tent" | "van" | null;
+  title: string | null;
+  body: string | null;
+  ctaLabel: string | null;
+  ctaUrl: string | null;
+  featured: boolean | null;
+};
+
+export type HomeHero = {
+  eyebrow: string | null;
+  title: string | null;
+  subtitle: string | null;
+  backgroundVideo: StrapiImage;
+  backgroundPoster: StrapiImage;
+  searchPlaceholder: string | null;
+  searchCtaLabel: string | null;
+  locationChipLabel: string | null;
+  stateChipLabel: string | null;
+} | null;
+
+export type HomeTrustBar = {
+  eyebrow: string | null;
+  heading: string | null;
+  stats: HomeStat[] | null;
+  partnersEyebrow: string | null;
+  partnersHeading: string | null;
+  stateLogos: HomeLogo[] | null;
+  ciaaLabel: string | null;
+  ciaaLogo: StrapiImage;
+} | null;
+
+export type HomeJourney = {
+  eyebrow: string | null;
+  heading: string | null;
+  cards: HomeJourneyCard[] | null;
+} | null;
+
+export type HomeSectionHeader = {
+  eyebrow: string | null;
+  heading: string | null;
+  ctaLabel: string | null;
+  ctaUrl: string | null;
+} | null;
+
+export type HomeLifestyle = {
+  eyebrow: string | null;
+  heading: string | null;
+  body: string | null;
+  backgroundImage: StrapiImage;
+  ctaLabel: string | null;
+  ctaUrl: string | null;
+} | null;
+
+export type HomePage = {
+  hero: HomeHero;
+  trustBar: HomeTrustBar;
+  journey: HomeJourney;
+  buyingGuidesHeader: HomeSectionHeader;
+  lifestyle: HomeLifestyle;
+};
+
+// Explicit deep populate — Strapi 5's `populate=*` stops at the first level and
+// won't reach nested component media (e.g. each stateLogo's image).
+const HOME_POPULATE = [
+  "populate[hero][populate]=*",
+  "populate[trustBar][populate][stats]=true",
+  "populate[trustBar][populate][stateLogos][populate]=*",
+  "populate[trustBar][populate][ciaaLogo]=true",
+  "populate[journey][populate][cards]=true",
+  "populate[buyingGuidesHeader]=true",
+  "populate[lifestyle][populate]=*",
+  "populate[openDay]=true",
+  "populate[seo][populate]=*",
+].join("&");
+
+/** Home page content, or null if unset / Strapi is unreachable (frontend falls back). */
+export async function getHomePage(): Promise<HomePage | null> {
+  try {
+    const json = await strapiFetch<{ data: HomePage | null }>(`/api/home-page?${HOME_POPULATE}`);
+    return json.data ?? null;
+  } catch {
+    return null;
+  }
+}

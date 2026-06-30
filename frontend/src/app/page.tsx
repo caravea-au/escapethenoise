@@ -4,15 +4,20 @@ import { Hero } from "@/components/home/Hero";
 import { JourneySection } from "@/components/home/JourneySection";
 import { BuyingGuides } from "@/components/home/BuyingGuides";
 // import { LifestyleBand } from "@/components/home/LifestyleBand"; // hidden during design iteration — Open Road is Calling section
+import { getHomePage } from "@/lib/strapi";
 
-export default function HomePage() {
+export default async function HomePage() {
+  // One fetch for the whole page; each section falls back to hardcoded content
+  // when its slice (or any field) is missing.
+  const home = await getHomePage();
+
   return (
     <>
-      <Hero />
+      <Hero data={home?.hero} />
       {/* <TrustBar /> hidden during design iteration — National Standard section */}
       {/* <OpenDayCTA /> hidden during design iteration — Open Day banner */}
-      <JourneySection />
-      <BuyingGuides />
+      <JourneySection data={home?.journey} />
+      <BuyingGuides header={home?.buyingGuidesHeader} />
       {/* <LifestyleBand /> hidden during design iteration — Open Road is Calling section */}
     </>
   );

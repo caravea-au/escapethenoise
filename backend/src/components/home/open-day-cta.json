@@ -1,0 +1,23 @@
+{
+  "collectionName": "components_home_open_day_ctas",
+  "info": {
+    "displayName": "Open Day CTA",
+    "icon": "calendar",
+    "description": "Open Day banner — date/location badge, heading and a CTA link"
+  },
+  "options": {},
+  "attributes": {
+    "badge": {
+      "type": "string"
+    },
+    "heading": {
+      "type": "string"
+    },
+    "ctaLabel": {
+      "type": "string"
+    },
+    "ctaUrl": {
+      "type": "string"
+    }
+  }
+}

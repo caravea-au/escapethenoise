@@ -1,0 +1,22 @@
+{
+  "collectionName": "components_home_journeys",
+  "info": {
+    "displayName": "Journey",
+    "icon": "compass",
+    "description": "\"What are you looking for?\" — eyebrow, heading and entry-point cards"
+  },
+  "options": {},
+  "attributes": {
+    "eyebrow": {
+      "type": "string"
+    },
+    "heading": {
+      "type": "string"
+    },
+    "cards": {
+      "type": "component",
+      "repeatable": true,
+      "component": "home.journey-card"
+    }
+  }
+}

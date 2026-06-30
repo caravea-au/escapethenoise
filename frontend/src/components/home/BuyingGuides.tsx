@@ -4,24 +4,37 @@ import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
-import { getBuyingGuides, strapiMedia } from "@/lib/strapi";
+import { getBuyingGuides, strapiMedia, type HomeSectionHeader } from "@/lib/strapi";
+
+// Fallbacks — the current hardcoded section header, used when Strapi has no value.
+const FALLBACK_EYEBROW = "Learn before you buy";
+const FALLBACK_HEADING = "Latest Buying Guides";
+const FALLBACK_CTA_LABEL = "View Buying Guides →";
+const FALLBACK_CTA_URL = "/buying-guides";
 
 // Latest buying guides — first three guides from Strapi (design.md §6 card pattern).
-export async function BuyingGuides() {
+// The cards come from the buying-guide collection; the band header falls back to
+// hardcoded copy when the home-page single type has no value.
+export async function BuyingGuides({ header }: { header?: HomeSectionHeader }) {
   const guides = (await getBuyingGuides()).slice(0, 3);
   if (guides.length === 0) return null;
+
+  const eyebrow = header?.eyebrow ?? FALLBACK_EYEBROW;
+  const heading = header?.heading ?? FALLBACK_HEADING;
+  const ctaLabel = header?.ctaLabel ?? FALLBACK_CTA_LABEL;
+  const ctaUrl = header?.ctaUrl ?? FALLBACK_CTA_URL;
 
   return (
     <Container className="pt-[88px] pb-[116px]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Eyebrow>Learn before you buy</Eyebrow>
+          <Eyebrow>{eyebrow}</Eyebrow>
           <Heading as="h2" className="mt-2 text-[26px] text-green md:text-[27px] lg:text-[36px]">
-            Latest Buying Guides
+            {heading}
           </Heading>
         </div>
-        <Button href="/buying-guides" variant="outline" className="rounded-[9px] px-[18px] py-[11px] text-sm">
-          View Buying Guides →
+        <Button href={ctaUrl} variant="outline" className="rounded-[9px] px-[18px] py-[11px] text-sm">
+          {ctaLabel}
         </Button>
       </div>
 
