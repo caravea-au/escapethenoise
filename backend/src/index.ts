@@ -4,6 +4,8 @@ import type { Core } from "@strapi/strapi";
 const PUBLIC_ACTIONS = [
   "api::buying-guide.buying-guide.find",
   "api::buying-guide.buying-guide.findOne",
+  "api::header.header.find",
+  "api::footer.footer.find",
   "api::home-page.home-page.find",
 ];
 
