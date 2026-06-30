@@ -32,13 +32,28 @@ export type BuyingGuide = {
   slug: string;
   category: string | null;
   excerpt: string | null;
-  readTime: string | null;
   featured: boolean;
   author: string | null;
   cardImage: StrapiImage;
   heroImage: StrapiImage;
   content: Block[];
 };
+
+/** Estimated reading time from blocks content, e.g. "5 min read" (~200 wpm). */
+export function readTime(content: Block[] | null | undefined): string {
+  let words = 0;
+  const walk = (node: { text?: string; children?: unknown[] }) => {
+    if (!node) return;
+    if (typeof node.text === "string") {
+      words += node.text.trim().split(/\s+/).filter(Boolean).length;
+    }
+    if (Array.isArray(node.children)) {
+      node.children.forEach((c) => walk(c as { text?: string; children?: unknown[] }));
+    }
+  };
+  (content ?? []).forEach((b) => walk(b as { text?: string; children?: unknown[] }));
+  return `${Math.max(1, Math.round(words / 200))} min read`;
+}
 
 /** Resolve a Strapi media path to an absolute URL. */
 export function strapiMedia(url?: string | null): string | null {

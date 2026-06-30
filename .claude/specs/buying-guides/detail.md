@@ -27,7 +27,7 @@ callout, inline video links), closing with a footer row: back-to-listing link + 
   • Meta row + back-links layout → inline **Tier-3** (small flex rows, not registered).
 
 ## CONTENT
-- **Strapi** (`getBuyingGuideBySlug`): title, slug, category, readTime, author, heroImage, content (blocks).
+- **Strapi** (`getBuyingGuideBySlug`): title, slug, category, author, heroImage, content (blocks). Read time is auto-computed from `content` via `readTime()` (not a Strapi field).
 - **Static UI copy (from export HTML):** "Back to Buying Guides", "All Buying Guides", "Find your nearest dealer →".
 - ❓missing copy: none. (Note: inline diagram images from the source were seeded as their caption text; YouTube clips render as labelled links — flagged simplifications, not missing copy.)
 

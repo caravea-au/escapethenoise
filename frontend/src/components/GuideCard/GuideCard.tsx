@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { BuyingGuide } from "@/lib/strapi";
-import { strapiMedia } from "@/lib/strapi";
+import { readTime, strapiMedia } from "@/lib/strapi";
 import { CategoryBadge } from "@/components/CategoryBadge/CategoryBadge";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
@@ -36,7 +36,7 @@ export function GuideCard({ guide }: { guide: BuyingGuide }) {
           </Text>
         )}
         <div className="mt-auto flex items-center justify-between pt-2">
-          {guide.readTime && <Text variant="meta">{guide.readTime}</Text>}
+          <Text variant="meta">{readTime(guide.content)}</Text>
           <span
             aria-hidden
             className="text-rust transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"

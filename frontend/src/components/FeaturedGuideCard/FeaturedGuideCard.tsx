@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { BuyingGuide } from "@/lib/strapi";
-import { strapiMedia } from "@/lib/strapi";
+import { readTime, strapiMedia } from "@/lib/strapi";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -40,11 +40,9 @@ export function FeaturedGuideCard({ guide }: { guide: BuyingGuide }) {
           <Button href={`/buying-guides/${guide.slug}`} variant="primary">
             Read the guide →
           </Button>
-          {guide.readTime && (
-            <Text variant="meta" className="font-medium">
-              {guide.readTime}
-            </Text>
-          )}
+          <Text variant="meta" className="font-medium">
+            {readTime(guide.content)}
+          </Text>
         </div>
       </div>
     </div>

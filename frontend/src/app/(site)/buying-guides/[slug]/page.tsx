@@ -10,6 +10,7 @@ import { ArticleBody } from "@/components/ArticleBody/ArticleBody";
 import {
   getBuyingGuideBySlug,
   getBuyingGuideSlugs,
+  readTime,
   strapiMedia,
 } from "@/lib/strapi";
 
@@ -81,15 +82,13 @@ export default async function BuyingGuideDetailPage({
                 {guide.author}
               </span>
             )}
-            {guide.readTime && (
-              <span className="inline-flex items-center gap-[7px]">
-                <svg aria-hidden width="15" height="15" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-                  <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                </svg>
-                {guide.readTime}
-              </span>
-            )}
+            <span className="inline-flex items-center gap-[7px]">
+              <svg aria-hidden width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+                <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+              {readTime(guide.content)}
+            </span>
           </div>
         </Container>
       </section>

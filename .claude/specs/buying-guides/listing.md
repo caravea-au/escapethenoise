@@ -35,7 +35,7 @@ guide cards — all driven by the Strapi `buying-guide` collection.
   • Section bands / vertical rhythm → plain `<section>` with explicit padding (hero uses a custom gradient, so **not** the cream/green `Section` primitive here).
 
 ## CONTENT
-- **Strapi** (`getBuyingGuides`, `getFeaturedGuide`): title, slug, category, excerpt, readTime, featured, cardImage. Categories for chips are derived from the returned guides.
+- **Strapi** (`getBuyingGuides`, `getFeaturedGuide`): title, slug, category, excerpt, featured, cardImage. Read time is auto-computed from `content` via `readTime()` (not a Strapi field). Categories for chips are derived from the returned guides.
 - **Static UI copy (from the export HTML, not invented):** eyebrow "Education"; H1 "Buying Guides & Caravan Advice"; subhead "Independent, jargon-free guidance from the Caravan Industry Association — so you buy with confidence."; "Featured guide"; "Read the guide →"; "All Topics".
 - ❓missing copy: none.
 
