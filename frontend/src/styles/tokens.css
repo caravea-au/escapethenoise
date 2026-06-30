@@ -1,70 +1,39 @@
 @theme {
-  /* --font-display / --font-body: set by next/font on <html> only */
-  /*
-   * Responsive sizing step used by existing clamp() formulas.
-   * The viewport-math version broke on older iOS Safari, so the value is now
-   * assigned explicitly through media-query tiers below.
-   */
-  --fluid-progress: 0;
+  /* --font-display / --font-body: set by next/font on <html> (see lib/fonts.ts) */
 
-  --color-brand-primary: #f56024;
-  --color-brand-primary-dark: #bf3700;
-  --color-brand-ink: #151515;
-  /* Promo / hero charcoal starter surface */
-  --color-surface-dark: #151515;
-  --color-surface-base: #ffffff;
-  --color-surface-tint: #f4fcee;
-  --color-surface-muted: #f9f9f9;
-  --color-text-muted: #808080;
-  --color-text-muted-strong: #636363;
-  --color-accent: #53c507;
-  --color-accent-soft: #c8ffa3;
-  --color-accent-mid: #a3e379;
-  --color-brand-gradient-start: #f56024;
-  --color-brand-gradient-end: #ffc869;
+  /* ── Brand colour palette (design.md §2 — single source of truth) ──────── */
+  /* Core */
+  --color-green: #27412e; /* Forest — header, footer, headings, dark surfaces */
+  --color-green-dark: #16271c; /* Deepest — hero/section gradient ends, overlays */
+  --color-green-mid: #2f5238; /* Gradient starts on hero / education / events */
+  --color-rust: #c17c2c; /* Accent + primary CTA, links, map pins, active */
+  --color-rust-dark: #a8691f; /* CTA hover */
+  --color-cream: #f6f1e4; /* Page background, input fills */
+  --color-cream-deep: #efe7d2; /* Logo-rail card, large stat numerals */
+  --color-gold: #e5c079; /* Highlight on dark — eyebrows, featured badges */
 
-  --radius-button: 38px;
-  --radius-card: 15px;
-  --radius-input: 8px;
+  /* Neutrals & support */
+  --color-ink: #2b2a25; /* Body text on light */
+  --color-muted: #6d6e71; /* Secondary text, meta */
+  --color-sand: #ded4bb; /* Footer body text / inactive nav */
+  --color-line: #e8dfcf; /* Hairline borders, card outlines */
+  --color-tag: #54514a; /* Chip / tag labels */
+  --color-star: #f4b400; /* Review stars only */
+  --color-service-pin: #3a7d4e; /* Map: service / rental pin variant */
+  --color-badge-open: #27412e; /* "Open now" text */
+  --color-badge-open-bg: #e6ede0; /* "Open now" fill */
+  --color-badge-closed: #6d6e71; /* "Closed" text */
+  --color-badge-closed-bg: #eef0f2; /* "Closed" fill */
+  --color-badge-accredited-bg: #f4e8d4; /* "✓ Accredited" fill (rust text) */
+
+  /* ── Radii (design.md §6) ──────────────────────────────────────────────── */
+  --radius-card: 16px; /* cards 16–18px */
+  --radius-button: 12px; /* buttons 9–14px */
+  --radius-input: 12px; /* inputs 9–14px */
+  --radius-chip: 30px; /* filter pills */
+
+  /* ── Motion (design.md §8) — keyframes defined in globals.css ──────────── */
+  --animate-marquee: marquee 42s linear infinite;
+  --animate-pop: pop 0.24s cubic-bezier(0.2, 0.7, 0.2, 1);
+  --animate-ping2: ping2 1.6s ease-out infinite;
 }
-
-:root {
-  /*
-   * Breakpoint-based approximation of the old 680px -> 1440px fluid scale.
-   * Values map to representative widths inside each tier so existing
-   * `clamp(min, calc(min + delta * var(--fluid-progress)), max)` formulas
-   * continue to scale smoothly enough without relying on unsupported viewport math.
-   */
-  --fluid-progress: 0;
-}
-
-@media (min-width: 680px) {
-  :root {
-    --fluid-progress: 0.06;
-  }
-}
-
-@media (min-width: 768px) {
-  :root {
-    --fluid-progress: 0.28;
-  }
-}
-
-@media (min-width: 1024px) {
-  :root {
-    --fluid-progress: 0.62;
-  }
-}
-
-@media (min-width: 1280px) {
-  :root {
-    --fluid-progress: 0.89;
-  }
-}
-
-@media (min-width: 1440px) {
-  :root {
-    --fluid-progress: 1;
-  }
-}
-
