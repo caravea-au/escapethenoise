@@ -3,6 +3,9 @@
 
 html {
   scroll-behavior: smooth;
+  /* Offset programmatic scroll/anchor/focus targets by the sticky navbar height
+     (Navbar is h-[90px]) so route-change scroll-to-top doesn't tuck content under it. */
+  scroll-padding-top: 90px;
 }
 
 @layer base {
