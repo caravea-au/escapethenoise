@@ -1,10 +1,13 @@
 /**
  * dealer-submission lifecycles
  *
- * On create, email the team a summary of the new dealership listing. The send
- * is best-effort: any failure (e.g. placeholder SMTP creds in dev) is caught
- * and logged so it never fails the submission itself.
+ * On create, email the team a summary of the new dealership listing. SMTP
+ * credentials come from the "SMTP Settings" single type (managed in the admin,
+ * not .env). The send is best-effort: any failure (missing/placeholder creds)
+ * is caught and logged so it never fails the submission itself.
  */
+
+import nodemailer from 'nodemailer';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -61,19 +64,81 @@ function buildSummary(d: AnyRecord): string {
 export default {
   async afterCreate(event: { result: AnyRecord }) {
     const d = event.result;
-    const to =
-      process.env.LEADS_NOTIFY_EMAIL || process.env.SMTP_FROM || 'noreply7@caravea.au';
 
     try {
-      await strapi.plugin('email').service('email').send({
-        to,
-        subject: `New dealership listing — ${d.dealershipName ?? 'Unknown'}`,
-        text: buildSummary(d),
+      const cfg = (await strapi
+        .documents('api::smtp-setting.smtp-setting')
+        .findFirst()) as AnyRecord | null;
+
+      if (!cfg || cfg.enabled === false || !cfg.host) {
+        strapi.log.warn(
+          '[dealer-submission] SMTP Settings not configured (or disabled); skipping notification email. Submission still saved.',
+        );
+        return;
+      }
+
+      const fromEmail = (cfg.fromEmail as string) || 'noreply7@caravea.au';
+      const from = cfg.fromName ? `"${cfg.fromName}" <${fromEmail}>` : fromEmail;
+      const receiver = (cfg.notifyEmail as string) || fromEmail;
+
+      const transporter = nodemailer.createTransport({
+        host: cfg.host as string,
+        port: (cfg.port as number) ?? 587,
+        secure: (cfg.secure as boolean) ?? false, // 587 uses STARTTLS, not implicit TLS
+        auth: cfg.username
+          ? { user: cfg.username as string, pass: (cfg.password as string) ?? '' }
+          : undefined,
+        // Keep a misconfigured SMTP host from hanging the submission request.
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 15_000,
       });
-      strapi.log.info(`[dealer-submission] notification emailed to ${to}`);
+
+      // Each send is independent: one failing must not stop the other.
+      const send = async (
+        label: string,
+        opts: { to: string; subject: string; text: string },
+      ) => {
+        try {
+          await transporter.sendMail({ from, replyTo: fromEmail, ...opts });
+          strapi.log.info(`[dealer-submission] ${label} emailed to ${opts.to}`);
+        } catch (err) {
+          strapi.log.error(
+            `[dealer-submission] ${label} email failed (submission still saved): ${
+              (err as Error)?.message ?? err
+            }`,
+          );
+        }
+      };
+
+      const dealership = (d.dealershipName as string) ?? 'Unknown';
+
+      // 1. Alert the admin / receiver that a new submission came in.
+      await send('admin notification', {
+        to: receiver,
+        subject: `New dealership listing — ${dealership}`,
+        text: `A new dealership listing has been received from the Escape the Noise site.\n\n${buildSummary(d)}`,
+      });
+
+      // 2. Confirm receipt to the person who filled in the form.
+      const submitterEmail = (d.submitterEmail as string)?.trim();
+      if (submitterEmail) {
+        const submitterName = (d.submitterName as string)?.trim() || 'there';
+        await send('submitter confirmation', {
+          to: submitterEmail,
+          subject: "We've received your dealership listing",
+          text: `Hi ${submitterName},
+
+Thanks for submitting ${dealership} to Escape the Noise. We've received your details and our team will review them shortly — your listing will be live on nobettertime.com.au soon.
+
+We'll be in touch using the contact details provided.
+
+— The Escape the Noise team`,
+        });
+      }
     } catch (err) {
       strapi.log.error(
-        `[dealer-submission] notification email failed (submission still saved): ${
+        `[dealer-submission] notification email setup failed (submission still saved): ${
           (err as Error)?.message ?? err
         }`,
       );

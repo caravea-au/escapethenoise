@@ -1,0 +1,52 @@
+{
+  "kind": "singleType",
+  "collectionName": "smtp_settings",
+  "info": {
+    "singularName": "smtp-setting",
+    "pluralName": "smtp-settings",
+    "displayName": "SMTP Settings",
+    "description": "Outgoing email (SMTP) credentials for dealer-submission notifications. Managed here in the admin instead of .env. The password is stored as plain text (not encrypted) by design."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "host": {
+      "type": "string",
+      "required": true,
+      "default": "smtp.office365.com"
+    },
+    "port": {
+      "type": "integer",
+      "required": true,
+      "default": 587
+    },
+    "secure": {
+      "type": "boolean",
+      "default": false
+    },
+    "username": {
+      "type": "string"
+    },
+    "password": {
+      "type": "string"
+    },
+    "fromEmail": {
+      "type": "string",
+      "default": "noreply7@caravea.au"
+    },
+    "fromName": {
+      "type": "string",
+      "default": "Escape The Noise"
+    },
+    "notifyEmail": {
+      "type": "string",
+      "default": "noreply7@caravea.au"
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}
