@@ -1,7 +1,8 @@
+import { Eyebrow } from "@/components/ui/Eyebrow";
 // import { Button } from "@/components/ui/Button"; // hidden with search card + chips
 
 // Homepage hero — autoplaying muted video under a dark-green scrim (design.md §7),
-// headline, and a search card. clamp() replaced with Tailwind breakpoint steps.
+// eyebrow + headline + sub. clamp() replaced with Tailwind breakpoint steps.
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-[linear-gradient(165deg,#2f5238_0%,#27412E_46%,#16271C_100%)]">
@@ -19,13 +20,17 @@ export function Hero() {
       <div className="absolute inset-0 z-[1] bg-[radial-gradient(95%_75%_at_50%_40%,transparent_0%,rgba(22,39,28,.5)_100%)]" />
 
       <div className="relative z-[2] mx-auto max-w-[920px] px-6 pt-[92px] pb-[112px] text-center lg:pt-[120px] lg:pb-[140px] xl:pt-[150px] xl:pb-[172px]">
-        <h1 className="m-0 font-oswald text-[40px] font-bold uppercase leading-[.97] tracking-[-1.7px] text-white md:text-[51px] lg:text-[68px] xl:text-[78px]">
-          Find your nearest
+        <Eyebrow tone="gold" className="tracking-[3px]">
+          No better time to
+        </Eyebrow>
+        <h1 className="m-0 mt-3.5 font-oswald text-[40px] font-bold uppercase leading-[.97] tracking-[-1.7px] text-white md:text-[51px] lg:text-[68px] xl:text-[78px]">
+          Buy your caravan with
           <br />
-          <span className="text-rust">accredited</span> caravan dealer
+          <span className="text-rust">confidence</span> — not pressure
         </h1>
         <p className="mx-auto mt-6 max-w-[600px] text-[16px] font-normal leading-[1.5] text-[#c4b89b] lg:text-[18px] xl:text-[20px]">
-          Australia&apos;s most trusted caravan resource — search 403+ accredited dealers near you.
+          Plain-English guides that help everyday Australians choose the right van and escape the
+          noise — at your own pace, with nothing to sell you.
         </p>
 
         {/* Hidden during design iteration — dealer-search elements (search card + chips):

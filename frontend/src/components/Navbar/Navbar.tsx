@@ -7,7 +7,10 @@ const LINKS = [
   // Hidden during design iteration — dealer-search elements:
   // { label: "Find a Dealer", href: "#" },
   // { label: "Browse by State", href: "#" },
-  { label: "Buying Guides", href: "/buying-guides" },
+  // All guide topics route to the Buying Guides listing for now (no per-topic routes yet).
+  { label: "Education & Safety", href: "/buying-guides" },
+  { label: "Happy Campers", href: "/buying-guides" },
+  { label: "Towing Guide", href: "/buying-guides" },
   // Hidden during design iteration:
   // { label: "Events", href: "#" },
 ];
@@ -16,7 +19,7 @@ const LINKS = [
 export function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-green">
-      <Container className="flex h-[90px] items-center gap-7">
+      <Container className="flex min-h-[90px] flex-wrap items-center gap-x-7 gap-y-2 py-3">
         <Link href="/" className="flex shrink-0 items-center">
           <Image
             src="/brand/lockup-horizontal-reversed.svg"
