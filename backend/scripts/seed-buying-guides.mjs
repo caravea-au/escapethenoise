@@ -180,7 +180,6 @@ async function main() {
       slug: a.id,
       category: a.cat ?? null,
       excerpt: a.excerpt ?? null,
-      readTime: a.read ?? null,
       featured: Boolean(a.featured),
       author: a.author ?? null,
       cardImage,

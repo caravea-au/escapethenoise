@@ -4,7 +4,7 @@ import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
-import { getBuyingGuides, strapiMedia, type HomeSectionHeader } from "@/lib/strapi";
+import { getBuyingGuides, readTime, strapiMedia, type HomeSectionHeader } from "@/lib/strapi";
 
 // Fallbacks — the current hardcoded section header, used when Strapi has no value.
 const FALLBACK_EYEBROW = "Learn before you buy";
@@ -61,7 +61,7 @@ export async function BuyingGuides({ header }: { header?: HomeSectionHeader }) {
                 <h3 className="font-oswald text-[18.5px] font-bold leading-[1.25] text-green">{g.title}</h3>
                 {g.excerpt && <p className="text-sm leading-[1.55] text-muted">{g.excerpt}</p>}
                 <div className="mt-auto flex items-center justify-between pt-1.5">
-                  {g.readTime && <span className="text-[12.5px] font-medium text-[#a59a7d]">{g.readTime}</span>}
+                  <span className="text-[12.5px] font-medium text-[#a59a7d]">{readTime(g.content)}</span>
                   <span className="text-[13.5px] font-semibold text-rust">Read article →</span>
                 </div>
               </div>

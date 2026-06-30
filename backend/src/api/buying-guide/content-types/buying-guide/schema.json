@@ -28,9 +28,6 @@
       "type": "text",
       "maxLength": 300
     },
-    "readTime": {
-      "type": "string"
-    },
     "featured": {
       "type": "boolean",
       "default": false
