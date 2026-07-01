@@ -74,6 +74,33 @@ export function strapiMedia(url?: string | null): string | null {
   return url.startsWith("http") ? url : `${STRAPI_URL}${url}`;
 }
 
+// Placeholder pool (WebP derived from existing guide photos) for guides that
+// have no image of their own. See public/photos/guides/.
+const GUIDE_PLACEHOLDERS = [
+  "/photos/guides/placeholder-1.webp",
+  "/photos/guides/placeholder-2.webp",
+  "/photos/guides/placeholder-3.webp",
+  "/photos/guides/placeholder-4.webp",
+  "/photos/guides/placeholder-5.webp",
+];
+
+/** Deterministic placeholder for a guide with no image (stable by slug — no SSR/CSR drift). */
+export function guidePlaceholder(slug: string): string {
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) | 0;
+  return GUIDE_PLACEHOLDERS[Math.abs(h) % GUIDE_PLACEHOLDERS.length];
+}
+
+/** Card image: own card → own hero → placeholder. Always returns a URL. */
+export function guideCardImage(g: BuyingGuide): string {
+  return strapiMedia(g.cardImage?.url) ?? strapiMedia(g.heroImage?.url) ?? guidePlaceholder(g.slug);
+}
+
+/** Hero image: own hero → own card → placeholder. Always returns a URL. */
+export function guideHeroImage(g: BuyingGuide): string {
+  return strapiMedia(g.heroImage?.url) ?? strapiMedia(g.cardImage?.url) ?? guidePlaceholder(g.slug);
+}
+
 async function strapiFetch<T>(path: string): Promise<T> {
   const res = await fetch(`${STRAPI_URL}${path}`, {
     headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {},

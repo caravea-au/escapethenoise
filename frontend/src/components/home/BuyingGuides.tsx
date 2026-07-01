@@ -4,7 +4,7 @@ import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
-import { getBuyingGuides, readTime, strapiMedia, type HomeSectionHeader } from "@/lib/strapi";
+import { getBuyingGuides, readTime, guideCardImage, type HomeSectionHeader } from "@/lib/strapi";
 
 // Fallbacks — the current hardcoded section header, used when Strapi has no value.
 const FALLBACK_EYEBROW = "Learn before you buy";
@@ -40,7 +40,7 @@ export async function BuyingGuides({ header }: { header?: HomeSectionHeader }) {
 
       <div className="mt-[30px] grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-[22px]">
         {guides.map((g) => {
-          const img = strapiMedia(g.cardImage?.url);
+          const img = guideCardImage(g);
           return (
             <Link
               key={g.slug}

@@ -10,7 +10,7 @@ import {
   getBuyingGuideBySlug,
   getBuyingGuideSlugs,
   readTime,
-  strapiMedia,
+  guideHeroImage,
 } from "@/lib/strapi";
 
 export async function generateStaticParams() {
@@ -38,7 +38,7 @@ export default async function BuyingGuideDetailPage({
   const guide = await getBuyingGuideBySlug(slug);
   if (!guide) notFound();
 
-  const hero = strapiMedia(guide.heroImage?.url);
+  const hero = guideHeroImage(guide);
 
   return (
     <article>
