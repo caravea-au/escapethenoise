@@ -1,0 +1,33 @@
+{
+  "collectionName": "components_vehicle_list_items",
+  "info": {
+    "displayName": "List Item",
+    "icon": "check",
+    "description": "A single bullet / feature line, with an optional icon (used for card features, why-choose bullets and spec-section items)"
+  },
+  "options": {},
+  "attributes": {
+    "text": {
+      "type": "string",
+      "required": true
+    },
+    "icon": {
+      "type": "enumeration",
+      "enum": [
+        "check",
+        "kitchen",
+        "fridge",
+        "aircon",
+        "water",
+        "awning",
+        "battery",
+        "solar",
+        "power",
+        "storage",
+        "bed",
+        "license",
+        "road"
+      ]
+    }
+  }
+}
