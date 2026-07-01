@@ -2,6 +2,11 @@
 // design export (dealer-directory-onboarding-formv5.html `OPTIONS`). Hardcoded
 // by decision (no CMS sourcing).
 
+// Max size for any single uploaded file (logo or photo). Mirrors the Strapi
+// upload sizeLimit in backend/config/plugins.ts.
+export const MAX_FILE_MB = 50;
+export const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+
 export const SERVICES = [
   "New sales",
   "Used sales",

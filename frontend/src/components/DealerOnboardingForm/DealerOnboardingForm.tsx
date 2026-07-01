@@ -20,6 +20,8 @@ import { TradingHours, defaultHours, type Hours } from "./TradingHours";
 import {
   BRANDS,
   DMS_SYSTEMS,
+  MAX_FILE_BYTES,
+  MAX_FILE_MB,
   PRODUCT_TYPES,
   SERVICES,
   STATE_ASSOCIATIONS,
@@ -186,19 +188,22 @@ export function DealerOnboardingForm({
         });
       }
 
-      // Strapi 5 no longer allows uploading files during entry creation, so
-      // upload the media first and reference the returned ids on the entry.
-      const upload = async (list: File[]): Promise<number[]> => {
+      // Upload the files first (Strapi routes them to the DigitalOcean Space),
+      // then store the returned public URLs directly on the entry — logo as a
+      // string, photos as a JSON array of URLs.
+      const upload = async (list: File[]): Promise<string[]> => {
         if (!list.length) return [];
         const fd = new FormData();
         list.forEach((f) => fd.append("files", f, f.name));
         const r = await fetch(`${STRAPI_URL}/api/upload`, { method: "POST", body: fd });
         if (!r.ok) throw new Error(`upload ${r.status}`);
-        const out = (await r.json()) as { id: number }[];
-        return out.map((u) => u.id);
+        const out = (await r.json()) as { url: string }[];
+        // DO Spaces URLs are absolute; the local dev provider returns a relative
+        // /uploads path, so make those absolute too.
+        return out.map((u) => (u.url.startsWith("http") ? u.url : `${STRAPI_URL}${u.url}`));
       };
-      const [logoId] = await upload(logo ? [logo] : []);
-      const photoIds = await upload(photos);
+      const [logoUrl] = await upload(logo ? [logo] : []);
+      const photoUrls = await upload(photos);
 
       const data = {
         ...fields,
@@ -209,8 +214,8 @@ export function DealerOnboardingForm({
         brands,
         productTypes,
         tradingHours: hours,
-        logo: logoId ?? null,
-        photos: photoIds,
+        logo: logoUrl ?? null,
+        photos: photoUrls,
         submittedAt: new Date().toISOString(),
         ...(recaptchaToken ? { recaptchaToken } : {}),
       };
@@ -421,17 +426,25 @@ export function DealerOnboardingForm({
               <Textarea id="description" maxLength={320} value={fields.description} onChange={(e) => set("description", e.target.value)} aria-invalid={!!errors.description} placeholder="e.g. Family-owned since 1998, we stock Australia's leading off-road vans with a full service workshop on site." />
               <span className="-mt-0.5 text-right text-[12px] text-muted">{fields.description.length} / 320</span>
             </Field>
-            <Field full label="Dealership logo" required hint="Appears at the top of your listing." error={errors.logo}>
+            <Field full label="Dealership logo" required hint={`Appears at the top of your listing. Max ${MAX_FILE_MB}MB.`} error={errors.logo}>
               <span data-field="logo" />
               <div className="flex flex-wrap items-center gap-3.5">
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-input bg-badge-open-bg px-4 py-2.5 text-[14px] font-semibold text-green-dark hover:bg-sand/50">
                   Upload logo
-                  <input type="file" accept="image/png,image/jpeg,image/svg+xml" className="absolute h-px w-px overflow-hidden opacity-0" onChange={(e) => setLogo(e.target.files?.[0] ?? null)} />
+                  <input type="file" accept="image/png,image/jpeg,image/svg+xml" className="absolute h-px w-px overflow-hidden opacity-0" onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    if (f && f.size > MAX_FILE_BYTES) {
+                      setErrors((prev) => ({ ...prev, logo: `Logo must be ${MAX_FILE_MB}MB or smaller.` }));
+                      return;
+                    }
+                    setErrors((prev) => ({ ...prev, logo: "" }));
+                    setLogo(f);
+                  }} />
                 </label>
                 <span className="text-[13px] text-muted">{logo ? logo.name : "PNG, JPG or SVG"}</span>
               </div>
             </Field>
-            <Field full label="Dealership photos" required hint="Add at least one — up to 5. Your yard, showroom or vans on display (your logo stays separate)." error={errors.photos}>
+            <Field full label="Dealership photos" required hint={`Add at least one — up to 5. Your yard, showroom or vans on display (your logo stays separate). Max ${MAX_FILE_MB}MB per photo.`} error={errors.photos}>
               <span data-field="photos" />
               <PhotoUploader files={photos} onChange={setPhotos} />
             </Field>

@@ -30,6 +30,20 @@ if (strapiUrl) {
   }
 }
 
+// Uploads live in a DigitalOcean Space, so Strapi returns absolute Spaces URLs
+// on a different host than the API. Allow that host for next/image. Set to the
+// bucket/CDN base URL, e.g. https://nobettertime.syd1.digitaloceanspaces.com
+const uploadsUrl = process.env.NEXT_PUBLIC_UPLOADS_URL;
+if (uploadsUrl) {
+  const { protocol, hostname, port } = new URL(uploadsUrl);
+  remotePatterns.push({
+    protocol: protocol.replace(":", "") as "http" | "https",
+    hostname,
+    port,
+    pathname: "/**",
+  });
+}
+
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, ".."),
