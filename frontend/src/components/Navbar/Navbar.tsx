@@ -7,7 +7,8 @@ import { getHeader, strapiMedia, type StrapiLink } from "@/lib/strapi";
 
 // Fallback menu when Strapi is unset/unreachable. Guides-first nav (#10) —
 // each topic deep-links to the Buying Guides listing with a category hash that
-// auto-activates the matching filter chip (matched by slugified category name).
+// auto-activates the matching filter chip and scrolls to the grid (matched by
+// slugified category name; see BuyingGuidesExplorer).
 const FALLBACK_MENU: StrapiLink[] = [
   { label: "Education & Safety", url: "/buying-guides#education-safety" },
   { label: "Happy Campers", url: "/buying-guides#happy-campers" },

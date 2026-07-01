@@ -21,11 +21,13 @@ const auth = { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/js
 const link = (label, url) => ({ label, url });
 
 const HEADER = {
-  // Guides-first nav (#10) — topics route to the Buying Guides listing for now.
+  // Guides-first nav (#10) — topics route to the Buying Guides listing; the
+  // hash is the category slug (BuyingGuidesExplorer.slugify) so the listing
+  // filters to that category and scrolls to the grid.
   menuItems: [
-    link("Education & Safety", "/buying-guides"),
-    link("Happy Campers", "/buying-guides"),
-    link("Towing Guide", "/buying-guides"),
+    link("Education & Safety", "/buying-guides#education-safety"),
+    link("Happy Campers", "/buying-guides#happy-campers"),
+    link("Towing Guide", "/buying-guides#towing-guide"),
   ],
   ctaButton: link("Visit a Dealer →", "#"),
 };
