@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
@@ -31,6 +31,23 @@ const STRAPI_URL =
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// reCAPTCHA v3 action name (shows in the reCAPTCHA admin console).
+const RECAPTCHA_ACTION = "dealer_submit";
+
+declare global {
+  interface Window {
+    grecaptcha?: {
+      ready: (cb: () => void) => void;
+      execute: (siteKey: string, opts: { action: string }) => Promise<string>;
+    };
+  }
+}
+
+type DealerOnboardingFormProps = {
+  recaptchaEnabled?: boolean;
+  recaptchaSiteKey?: string | null;
+};
+
 // Scalar string fields (camelCase = Strapi attribute names).
 type Fields = Record<string, string>;
 const INITIAL_FIELDS: Fields = {
@@ -59,8 +76,12 @@ const REQUIRED: string[] = [
 ];
 const PROGRESS_TOTAL = REQUIRED.length + 5; // 3 option groups + logo + photos
 
-export function DealerOnboardingForm() {
+export function DealerOnboardingForm({
+  recaptchaEnabled = false,
+  recaptchaSiteKey = null,
+}: DealerOnboardingFormProps = {}) {
   const router = useRouter();
+  const recaptchaActive = recaptchaEnabled && !!recaptchaSiteKey;
   const [fields, setFields] = useState<Fields>(INITIAL_FIELDS);
   const [flags, setFlags] = useState<Flags>(INITIAL_FLAGS);
   const [stockCondition, setStockCondition] = useState("Both");
@@ -74,8 +95,18 @@ export function DealerOnboardingForm() {
   const [consentError, setConsentError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const honeypotRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Load the reCAPTCHA v3 script once when protection is enabled.
+  useEffect(() => {
+    if (!recaptchaActive) return;
+    const src = `https://www.google.com/recaptcha/api.js?render=${recaptchaSiteKey}`;
+    if (document.querySelector(`script[src="${src}"]`)) return;
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    document.head.appendChild(script);
+  }, [recaptchaActive, recaptchaSiteKey]);
 
   const set = (name: string, value: string) =>
     setFields((f) => ({ ...f, [name]: value }));
@@ -138,10 +169,23 @@ export function DealerOnboardingForm() {
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    if (honeypotRef.current?.value) return; // bot
 
     setSubmitting(true);
     try {
+      // Get a fresh reCAPTCHA v3 token (verified server-side on create).
+      let recaptchaToken: string | undefined;
+      if (recaptchaActive) {
+        if (!window.grecaptcha) throw new Error("recaptcha not loaded");
+        recaptchaToken = await new Promise<string>((resolve, reject) => {
+          window.grecaptcha!.ready(() => {
+            window
+              .grecaptcha!.execute(recaptchaSiteKey!, { action: RECAPTCHA_ACTION })
+              .then(resolve)
+              .catch(reject);
+          });
+        });
+      }
+
       // Strapi 5 no longer allows uploading files during entry creation, so
       // upload the media first and reference the returned ids on the entry.
       const upload = async (list: File[]): Promise<number[]> => {
@@ -168,6 +212,7 @@ export function DealerOnboardingForm() {
         logo: logoId ?? null,
         photos: photoIds,
         submittedAt: new Date().toISOString(),
+        ...(recaptchaToken ? { recaptchaToken } : {}),
       };
       const res = await fetch(`${STRAPI_URL}/api/dealer-submissions`, {
         method: "POST",
@@ -440,11 +485,6 @@ export function DealerOnboardingForm() {
           </div>
         </FormSection>
 
-        {/* Honeypot */}
-        <div className="absolute left-[-9999px] h-px w-px overflow-hidden" aria-hidden="true">
-          <label>Leave this blank<input ref={honeypotRef} type="text" tabIndex={-1} autoComplete="off" /></label>
-        </div>
-
         <Button variant="primary" fullWidth type="submit" disabled={submitting} className="text-green-dark">
           {submitting ? "Sending…" : "List my dealership"}
         </Button>
@@ -454,6 +494,15 @@ export function DealerOnboardingForm() {
         <p className="mt-3.5 text-center text-[12.5px] text-muted">
           We&apos;ll review your details and have your listing live shortly.
         </p>
+        {recaptchaActive && (
+          <p className="mt-2 text-center text-[11px] text-muted">
+            This site is protected by reCAPTCHA and the Google{" "}
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="underline">Privacy Policy</a>{" "}
+            and{" "}
+            <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="underline">Terms of Service</a>{" "}
+            apply.
+          </p>
+        )}
         <p className="mt-7 text-center text-[12px] text-muted">
           Powered by <b className="font-semibold text-green">Caravea</b>
         </p>
