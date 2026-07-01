@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
+import { MobileMenu } from "@/components/Navbar/MobileMenu";
 import { getHeader, strapiMedia, type StrapiLink } from "@/lib/strapi";
 
 // Fallback menu when Strapi is unset/unreachable. Guides-first nav (#10) —
@@ -23,7 +24,7 @@ export async function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-green">
-      <Container className="flex min-h-[90px] flex-wrap items-center gap-x-7 gap-y-2 py-3">
+      <Container className="flex min-h-[90px] items-center gap-x-7 gap-y-2 py-3">
         <Link href="/" className="flex shrink-0 items-center">
           <Image
             src={logoSrc}
@@ -34,7 +35,7 @@ export async function Navbar() {
             priority
           />
         </Link>
-        <nav className="ml-3.5 flex flex-wrap items-center gap-0.5">
+        <nav className="ml-3.5 hidden flex-wrap items-center gap-0.5 md:flex">
           {menu.map((l) => (
             <Link
               key={l.label}
@@ -48,11 +49,12 @@ export async function Navbar() {
         {cta?.label && (
           <Button
             href={cta.url}
-            className="ml-auto shrink-0 whitespace-nowrap rounded-[9px] px-[19px] py-[11px] text-sm"
+            className="ml-auto hidden shrink-0 whitespace-nowrap rounded-[9px] px-[19px] py-[11px] text-sm md:inline-flex"
           >
             {cta.label}
           </Button>
         )}
+        <MobileMenu menu={menu} cta={cta ?? null} />
       </Container>
     </header>
   );
