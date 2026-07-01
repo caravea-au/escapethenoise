@@ -7,6 +7,18 @@
 export const MAX_FILE_MB = 50;
 export const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
+// Only real raster images are accepted for the logo and photos. SVG is
+// deliberately excluded — it can embed <script> and is an XSS vector. This list
+// is the client-side UX gate; the Strapi upload plugin re-checks by magic bytes
+// server-side (backend/config/plugins.ts → upload.config.security.allowedTypes).
+export const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
+export const ACCEPT_ATTR = ACCEPTED_IMAGE_TYPES.join(",");
+
+// MIME-only check keeps it simple and avoids false-rejecting extension-less
+// files; the server is the authoritative gate regardless.
+export const isAllowedImage = (file: File): boolean =>
+  ACCEPTED_IMAGE_TYPES.includes(file.type);
+
 export const SERVICES = [
   "New sales",
   "Used sales",

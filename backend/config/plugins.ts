@@ -15,6 +15,16 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
   upload: {
     config: {
       sizeLimit: MAX_UPLOAD_BYTES,
+      // Only real image files may be uploaded. Strapi validates by MAGIC BYTES
+      // (via the bundled file-type lib), not the client-supplied Content-Type,
+      // so a renamed/spoofed file is rejected with a ValidationError. Enforced
+      // on both the public content API (/api/upload, used by the dealer
+      // onboarding form) and the admin media library. SVG is deliberately
+      // excluded — it can embed <script>. If an editor later needs to upload
+      // SVG/PDF via the admin, widen this list.
+      security: {
+        allowedTypes: ['image/png', 'image/jpeg', 'image/webp'],
+      },
       ...(env('DO_SPACE_ENDPOINT')
         ? {
             provider: 'aws-s3',

@@ -24,6 +24,30 @@ export default factories.createCoreController(
       // recaptchaToken is not a schema field — never persist it.
       if (body?.data) delete body.data.recaptchaToken;
 
+      // Sanitize every submitted string so no stored value can later be parsed
+      // as HTML/script by a future consumer (a directory listing, CSV export,
+      // etc.). We HTML-entity-encode angle brackets rather than strip them: this
+      // is LOSSLESS, so legitimate copy like "vans < 3.5 tonne" survives while
+      // any "<script>" becomes inert "&lt;script&gt;". Recurses into the json
+      // fields (services/brands/productTypes arrays, tradingHours object) and
+      // leaves numbers/booleans untouched.
+      // NOTE: no SQL-keyword filtering — Strapi parameterizes all queries
+      // (SQLite here), and stripping keywords would corrupt legitimate values
+      // like a dealership named "Select Caravans".
+      const encodeAngles = (v: unknown): unknown =>
+        typeof v === 'string'
+          ? v.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          : Array.isArray(v)
+            ? v.map(encodeAngles)
+            : v && typeof v === 'object'
+              ? Object.fromEntries(
+                  Object.entries(v).map(([k, x]) => [k, encodeAngles(x)]),
+                )
+              : v;
+      if (body?.data) {
+        body.data = encodeAngles(body.data) as Record<string, unknown>;
+      }
+
       const cfg = (await strapi
         .documents('api::smtp-setting.smtp-setting')
         .findFirst()) as Record<string, unknown> | null;

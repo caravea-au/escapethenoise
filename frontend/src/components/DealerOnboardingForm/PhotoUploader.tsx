@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MAX_FILE_BYTES, MAX_FILE_MB } from "./options";
+import { ACCEPT_ATTR, isAllowedImage, MAX_FILE_BYTES, MAX_FILE_MB } from "./options";
 
 const MAX = 5;
 
@@ -16,6 +16,7 @@ export function PhotoUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [urls, setUrls] = useState<string[]>([]);
   const [sizeError, setSizeError] = useState(false);
+  const [typeError, setTypeError] = useState(false);
 
   useEffect(() => {
     const next = files.map((f) => URL.createObjectURL(f));
@@ -26,7 +27,11 @@ export function PhotoUploader({
   function addFiles(list: FileList | null) {
     if (!list) return;
     const room = MAX - files.length;
-    const images = Array.from(list).filter((f) => f.type.startsWith("image/"));
+    const all = Array.from(list);
+    // Only real raster images — no SVG (XSS vector). The Strapi upload plugin
+    // re-enforces this by magic bytes server-side.
+    const images = all.filter(isAllowedImage);
+    setTypeError(all.length > images.length);
     setSizeError(images.some((f) => f.size > MAX_FILE_BYTES));
     const incoming = images
       .filter((f) => f.size <= MAX_FILE_BYTES)
@@ -73,12 +78,17 @@ export function PhotoUploader({
       <input
         ref={inputRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp"
+        accept={ACCEPT_ATTR}
         multiple
         onChange={(e) => addFiles(e.target.files)}
         className="absolute h-px w-px overflow-hidden opacity-0"
         tabIndex={-1}
       />
+      {typeError && (
+        <p className="mt-2 text-[12.5px] font-medium text-[#b4452f]">
+          Only PNG, JPG or WebP images are allowed.
+        </p>
+      )}
       {sizeError && (
         <p className="mt-2 text-[12.5px] font-medium text-[#b4452f]">
           Each photo must be {MAX_FILE_MB}MB or smaller.
