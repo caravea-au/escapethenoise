@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { BuyingGuide } from "@/lib/strapi";
-import { readTime, strapiMedia } from "@/lib/strapi";
+import { readTime, guideCardImage } from "@/lib/strapi";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 
 // Large two-column promoted guide at the top of the listing.
 export function FeaturedGuideCard({ guide }: { guide: BuyingGuide }) {
-  const img = strapiMedia(guide.cardImage?.url);
+  const img = guideCardImage(guide);
   return (
     <div className="mb-10 grid grid-cols-1 overflow-hidden rounded-card border border-line bg-white shadow-[0_22px_54px_-24px_rgba(22,39,28,.18)] md:grid-cols-2">
       <div className="relative min-h-[220px] md:min-h-[300px]">

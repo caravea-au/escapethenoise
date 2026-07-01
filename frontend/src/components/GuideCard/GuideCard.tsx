@@ -1,14 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { BuyingGuide } from "@/lib/strapi";
-import { readTime, strapiMedia } from "@/lib/strapi";
+import { readTime, guideCardImage } from "@/lib/strapi";
 import { CategoryBadge } from "@/components/CategoryBadge/CategoryBadge";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
 
 // Article card for the Buying Guides grid. Whole card links to the guide.
 export function GuideCard({ guide }: { guide: BuyingGuide }) {
-  const img = strapiMedia(guide.cardImage?.url);
+  const img = guideCardImage(guide);
   return (
     <Link
       href={`/buying-guides/${guide.slug}`}
