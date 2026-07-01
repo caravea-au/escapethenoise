@@ -18,8 +18,10 @@ import { MultiSelect } from "./MultiSelect";
 import { PhotoUploader } from "./PhotoUploader";
 import { TradingHours, defaultHours, type Hours } from "./TradingHours";
 import {
+  ACCEPT_ATTR,
   BRANDS,
   DMS_SYSTEMS,
+  isAllowedImage,
   MAX_FILE_BYTES,
   MAX_FILE_MB,
   PRODUCT_TYPES,
@@ -431,8 +433,12 @@ export function DealerOnboardingForm({
               <div className="flex flex-wrap items-center gap-3.5">
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-input bg-badge-open-bg px-4 py-2.5 text-[14px] font-semibold text-green-dark hover:bg-sand/50">
                   Upload logo
-                  <input type="file" accept="image/png,image/jpeg,image/svg+xml" className="absolute h-px w-px overflow-hidden opacity-0" onChange={(e) => {
+                  <input type="file" accept={ACCEPT_ATTR} className="absolute h-px w-px overflow-hidden opacity-0" onChange={(e) => {
                     const f = e.target.files?.[0] ?? null;
+                    if (f && !isAllowedImage(f)) {
+                      setErrors((prev) => ({ ...prev, logo: "Logo must be a PNG, JPG or WebP image." }));
+                      return;
+                    }
                     if (f && f.size > MAX_FILE_BYTES) {
                       setErrors((prev) => ({ ...prev, logo: `Logo must be ${MAX_FILE_MB}MB or smaller.` }));
                       return;
@@ -441,7 +447,7 @@ export function DealerOnboardingForm({
                     setLogo(f);
                   }} />
                 </label>
-                <span className="text-[13px] text-muted">{logo ? logo.name : "PNG, JPG or SVG"}</span>
+                <span className="text-[13px] text-muted">{logo ? logo.name : "PNG, JPG or WebP"}</span>
               </div>
             </Field>
             <Field full label="Dealership photos" required hint={`Add at least one — up to 5. Your yard, showroom or vans on display (your logo stays separate). Max ${MAX_FILE_MB}MB per photo.`} error={errors.photos}>
