@@ -1,14 +1,49 @@
+import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { getFooter, strapiMedia, type StrapiLink } from "@/lib/strapi";
+
+// Linkify the two known tokens in the copyright line: the phone number → tel:
+// link, and "Caravea" → the Caravea site. The copyright itself stays a plain
+// Strapi string; this is presentation only.
+function renderCopyright(text: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  const regex = /(1300 555 000|Caravea)/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    parts.push(
+      m[0] === "Caravea" ? (
+        <a
+          key={key++}
+          href="https://caravea.au/"
+          target="_blank"
+          rel="noopener"
+          className="underline hover:text-white"
+        >
+          Caravea
+        </a>
+      ) : (
+        <a key={key++} href="tel:1300555000" className="hover:text-white">
+          1300 555 000
+        </a>
+      ),
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
 
 // Fallbacks when Strapi is unset/unreachable.
 const FALLBACK_HEADING = "Find a Dealer";
 const FALLBACK_CONTENT =
   "No better time to\nBuy your caravan with confidence — not pressure";
 const FALLBACK_COPYRIGHT =
-  "© 2026 Caravan Industry Association of Australia · escapethenoise.com.au · 1300 555 000";
+  "© 2026 Caravan Industry Association of Australia · escapethenoise.com.au · 1300 555 000 | Powered by Caravea";
 const FALLBACK_LEGAL: StrapiLink[] = [
   { label: "Privacy", url: "#" },
   { label: "Terms", url: "#" },
@@ -80,7 +115,7 @@ export async function Footer() {
 
       <Container>
         <div className="flex flex-wrap justify-between gap-3.5 border-t border-white/10 pt-[18px] pb-1 text-xs text-[#9c9277]">
-          <span>{copyright}</span>
+          <span>{renderCopyright(copyright)}</span>
           <span className="flex gap-4">
             {legal.map((l) => (
               <Link key={l.label} href={l.url} className="hover:text-white">
