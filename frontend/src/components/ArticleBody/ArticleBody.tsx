@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { strapiMedia, youtubeId, type Block, type InlineNode } from "@/lib/strapi";
+import { strapiMedia, youtubeEmbedSrc, type Block, type InlineNode } from "@/lib/strapi";
 
 // Renders Strapi "blocks" rich-text for a buying guide. design.md §3/§5/§6:
 // paragraphs 17px/1.72, green Oswald H2s, rust-dot lists, and a cream tip callout.
@@ -33,24 +33,24 @@ function Inline({ nodes }: { nodes: InlineNode[] }) {
   );
 }
 
-// A paragraph whose entire content is a single YouTube URL becomes an embed.
-// Concatenate child text + any link urls; if the whole trimmed string is one
-// YouTube URL, return its id. URLs inside prose return null (stay normal links).
-function paragraphYoutubeId(nodes: InlineNode[]): string | null {
+// A paragraph whose entire content is a single YouTube video/playlist URL becomes
+// an embed. Concatenate child text + any link urls; if the whole trimmed string is
+// one YouTube URL, return its embed src. URLs inside prose return null (stay links).
+function paragraphYoutubeSrc(nodes: InlineNode[]): string | null {
   const text = nodes
     .map((n) => (n.type === "link" ? n.url : n.text))
     .join("")
     .trim();
-  return /\s/.test(text) ? null : youtubeId(text);
+  return /\s/.test(text) ? null : youtubeEmbedSrc(text);
 }
 
-function YouTubeEmbed({ id }: { id: string }) {
+function YouTubeEmbed({ src }: { src: string }) {
   return (
     <figure className="my-8">
       <div className="aspect-video w-full overflow-hidden rounded-xl">
         <iframe
-          src={`https://www.youtube-nocookie.com/embed/${id}`}
-          title="YouTube video"
+          src={src}
+          title="YouTube player"
           loading="lazy"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
@@ -140,8 +140,8 @@ export function ArticleBody({ blocks }: { blocks: Block[] }) {
             );
           }
           case "paragraph": {
-            const videoId = paragraphYoutubeId(children);
-            if (videoId) return <YouTubeEmbed key={i} id={videoId} />;
+            const videoSrc = paragraphYoutubeSrc(children);
+            if (videoSrc) return <YouTubeEmbed key={i} src={videoSrc} />;
             return (
               <p key={i} className="mb-[22px] text-[17px] leading-[1.72] text-ink">
                 <Inline nodes={children} />
