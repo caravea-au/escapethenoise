@@ -55,18 +55,8 @@
 
     "website": { "type": "string" },
     "description": { "type": "text", "maxLength": 320 },
-    "logo": {
-      "type": "media",
-      "multiple": false,
-      "required": false,
-      "allowedTypes": ["images"]
-    },
-    "photos": {
-      "type": "media",
-      "multiple": true,
-      "required": false,
-      "allowedTypes": ["images"]
-    },
+    "logo": { "type": "string" },
+    "photos": { "type": "json" },
     "facebook": { "type": "string" },
     "instagram": { "type": "string" },
     "youtube": { "type": "string" },

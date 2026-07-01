@@ -1,15 +1,22 @@
 import type { Core } from '@strapi/strapi';
 
+// Hard cap on any single uploaded file, enforced server-side (the form's
+// client-side check is bypassable). Keep in sync with the note shown on the
+// dealer-directory-onboarding form.
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50 MB
+
 const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin => ({
-  // File uploads are stored in a DigitalOcean Space (S3-compatible) instead of
-  // the app server's local disk, which was filling up. Configured via env in
-  // backend/.env — see DO_SPACE_* keys. With a blank DO_SPACE_ENDPOINT this
-  // block is omitted and Strapi falls back to the local provider, so dev
-  // without Spaces credentials still works.
-  ...(env('DO_SPACE_ENDPOINT')
-    ? {
-        upload: {
-          config: {
+  // Uploads are capped at 50 MB per file and stored in a DigitalOcean Space
+  // (S3-compatible) instead of the app server's local disk, which was filling
+  // up. The Space is configured via env in backend/.env — see DO_SPACE_* keys.
+  // With a blank DO_SPACE_ENDPOINT the provider block is omitted and Strapi
+  // falls back to the local provider, so dev without Spaces credentials still
+  // works; the size limit applies eitherway.
+  upload: {
+    config: {
+      sizeLimit: MAX_UPLOAD_BYTES,
+      ...(env('DO_SPACE_ENDPOINT')
+        ? {
             provider: 'aws-s3',
             providerOptions: {
               // Public URL Strapi stores for each file. Defaults to the S3
@@ -35,10 +42,10 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
               uploadStream: {},
               delete: {},
             },
-          },
-        },
-      }
-    : {}),
+          }
+        : {}),
+    },
+  },
 
   // SMTP credentials are no longer configured here. They live in the
   // "SMTP Settings" single type (admin-managed, not .env) and are read at

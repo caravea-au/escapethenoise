@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { MAX_FILE_BYTES, MAX_FILE_MB } from "./options";
 
 const MAX = 5;
 
@@ -14,6 +15,7 @@ export function PhotoUploader({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [urls, setUrls] = useState<string[]>([]);
+  const [sizeError, setSizeError] = useState(false);
 
   useEffect(() => {
     const next = files.map((f) => URL.createObjectURL(f));
@@ -24,8 +26,10 @@ export function PhotoUploader({
   function addFiles(list: FileList | null) {
     if (!list) return;
     const room = MAX - files.length;
-    const incoming = Array.from(list)
-      .filter((f) => f.type.startsWith("image/"))
+    const images = Array.from(list).filter((f) => f.type.startsWith("image/"));
+    setSizeError(images.some((f) => f.size > MAX_FILE_BYTES));
+    const incoming = images
+      .filter((f) => f.size <= MAX_FILE_BYTES)
       .slice(0, room);
     if (incoming.length) onChange([...files, ...incoming]);
     if (inputRef.current) inputRef.current.value = "";
@@ -75,6 +79,11 @@ export function PhotoUploader({
         className="absolute h-px w-px overflow-hidden opacity-0"
         tabIndex={-1}
       />
+      {sizeError && (
+        <p className="mt-2 text-[12.5px] font-medium text-[#b4452f]">
+          Each photo must be {MAX_FILE_MB}MB or smaller.
+        </p>
+      )}
     </>
   );
 }
