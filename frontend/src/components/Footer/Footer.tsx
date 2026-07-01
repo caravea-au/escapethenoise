@@ -6,7 +6,7 @@ import { getFooter, strapiMedia, type StrapiLink } from "@/lib/strapi";
 // Fallbacks when Strapi is unset/unreachable.
 const FALLBACK_HEADING = "Find a Dealer";
 const FALLBACK_CONTENT =
-  "The official dealer directory of the Caravan Industry Association of Australia.";
+  "No better time to\nBuy your caravan with confidence — not pressure";
 const FALLBACK_COPYRIGHT =
   "© 2026 Caravan Industry Association of Australia · escapethenoise.com.au · 1300 555 000";
 const FALLBACK_LEGAL: StrapiLink[] = [
@@ -26,45 +26,22 @@ export async function Footer() {
   const states = footer?.states ?? [];
   const statesLabel = footer?.statesLabel ?? "Browse by state:";
   const legal = footer?.legalLinks?.length ? footer.legalLinks : FALLBACK_LEGAL;
-  const logoUrl = strapiMedia(footer?.logo?.url);
+  // Match the header: same reversed lockup when Strapi has no footer logo set.
+  const logoSrc =
+    strapiMedia(footer?.logo?.url) ?? "/brand/lockup-horizontal-reversed.svg";
 
   return (
     <footer className="bg-green text-sand">
       <Container className="grid grid-cols-1 gap-9 pt-14 pb-[30px] sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr]">
         <div className="min-w-[200px]">
-          <div className="flex items-center gap-3">
-            {logoUrl ? (
-              <Image
-                src={logoUrl}
-                alt={heading}
-                width={40}
-                height={40}
-                className="h-10 w-10 shrink-0"
-              />
-            ) : (
-              <svg width="40" height="40" viewBox="0 0 220 220" className="shrink-0" aria-hidden="true">
-                <defs>
-                  <clipPath id="ftrClip">
-                    <circle cx="110" cy="110" r="86" />
-                  </clipPath>
-                </defs>
-                <g clipPath="url(#ftrClip)">
-                  <path d="M24,150 Q70,108 120,144 Q160,172 196,148 L196,196 L24,196 Z" fill="#EFE7D2" />
-                </g>
-                <circle cx="110" cy="118" r="33" fill="none" stroke="#EFE7D2" strokeWidth="4" />
-                <g stroke="#EFE7D2" strokeWidth="4" strokeLinecap="round">
-                  <line x1="110" y1="68" x2="110" y2="57" />
-                  <line x1="80" y1="76" x2="73" y2="67" />
-                  <line x1="140" y1="76" x2="147" y2="67" />
-                </g>
-                <circle cx="110" cy="110" r="86" fill="none" stroke="#EFE7D2" strokeWidth="4" />
-              </svg>
-            )}
-            <div className="font-oswald text-[19px] font-semibold uppercase tracking-[1px] text-white">
-              {heading}
-            </div>
-          </div>
-          <p className="mt-3.5 max-w-[280px] text-[13px] leading-[1.6] text-[#b3a98d]">
+          <Image
+            src={logoSrc}
+            alt={heading}
+            width={210}
+            height={64}
+            className="h-14 w-auto"
+          />
+          <p className="mt-3.5 max-w-[280px] whitespace-pre-line text-[13px] leading-[1.6] text-[#b3a98d]">
             {content}
           </p>
         </div>

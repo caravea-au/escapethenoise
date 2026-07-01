@@ -1,10 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { BuyingGuide } from "@/lib/strapi";
 import { GuideCard } from "@/components/GuideCard/GuideCard";
 
 const ALL = "All Topics";
+
+// URL-safe form of a category name, e.g. "Education & Safety" -> "education-safety".
+// Header nav links use this slug as a hash (#education-safety) to deep-link a filter.
+const slug = (s: string) =>
+  s.toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 // Category chips + the grid they filter. Client island for the listing page.
 export function BuyingGuidesExplorer({ guides }: { guides: BuyingGuide[] }) {
@@ -18,6 +23,22 @@ export function BuyingGuidesExplorer({ guides }: { guides: BuyingGuide[] }) {
     [guides],
   );
   const [active, setActive] = useState(ALL);
+
+  // Deep-link support: activate the category whose slug matches the URL hash
+  // (e.g. /buying-guides#towing-safety). Re-runs on hashchange so clicking a
+  // nav link while already on this page updates the filter too.
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = slug(decodeURIComponent(window.location.hash.slice(1)));
+      if (!hash) return;
+      const match = categories.find((c) => c !== ALL && slug(c) === hash);
+      setActive(match ?? ALL);
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, [categories]);
+
   const visible = active === ALL ? guides : guides.filter((g) => g.category === active);
 
   return (
