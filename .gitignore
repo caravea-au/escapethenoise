@@ -54,3 +54,6 @@ frontend/.env
 
 #Deployed files
 frontend/.deploy
+
+# Design exports — referenced by the workflow, never tracked
+/design-input/
