@@ -60,3 +60,6 @@ frontend/.deploy
 # The README stays tracked so the drop-zone (and its instructions) travel with the repo.
 /design-input/*
 !/design-input/README.md
+
+.claude/worktrees
+.playwright-mcp

@@ -35,6 +35,10 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, ".."),
   images: {
     remotePatterns,
+    // Dev only: local Strapi serves uploads from localhost (a private IP), which
+    // Next 16 blocks by default (SSRF guard). Production uses a public CMS host,
+    // so this stays off there.
+    dangerouslyAllowLocalIP: process.env.NODE_ENV !== "production",
     dangerouslyAllowSVG: true,
     contentDispositionType: "attachment",
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",

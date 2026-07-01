@@ -1,0 +1,42 @@
+{
+  "collectionName": "components_home_trust_bars",
+  "info": {
+    "displayName": "Trust Bar",
+    "icon": "shield",
+    "description": "Trust bar — stats and the state-association partnership logos"
+  },
+  "options": {},
+  "attributes": {
+    "eyebrow": {
+      "type": "string"
+    },
+    "heading": {
+      "type": "text"
+    },
+    "stats": {
+      "type": "component",
+      "repeatable": true,
+      "component": "home.stat"
+    },
+    "partnersEyebrow": {
+      "type": "string"
+    },
+    "partnersHeading": {
+      "type": "text"
+    },
+    "stateLogos": {
+      "type": "component",
+      "repeatable": true,
+      "component": "home.logo"
+    },
+    "ciaaLabel": {
+      "type": "string"
+    },
+    "ciaaLogo": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    }
+  }
+}

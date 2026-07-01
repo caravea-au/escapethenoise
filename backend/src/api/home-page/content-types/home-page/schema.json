@@ -1,0 +1,51 @@
+{
+  "kind": "singleType",
+  "collectionName": "home_pages",
+  "info": {
+    "singularName": "home-page",
+    "pluralName": "home-pages",
+    "displayName": "Home Page",
+    "description": "The site home page content"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "hero": {
+      "type": "component",
+      "repeatable": false,
+      "component": "home.hero"
+    },
+    "trustBar": {
+      "type": "component",
+      "repeatable": false,
+      "component": "home.trust-bar"
+    },
+    "openDay": {
+      "type": "component",
+      "repeatable": false,
+      "component": "home.open-day-cta"
+    },
+    "journey": {
+      "type": "component",
+      "repeatable": false,
+      "component": "home.journey"
+    },
+    "buyingGuidesHeader": {
+      "type": "component",
+      "repeatable": false,
+      "component": "home.section-header"
+    },
+    "lifestyle": {
+      "type": "component",
+      "repeatable": false,
+      "component": "home.lifestyle-band"
+    },
+    "seo": {
+      "type": "component",
+      "repeatable": false,
+      "component": "shared.seo"
+    }
+  }
+}

@@ -32,12 +32,10 @@ Run and report each:
 - If `better-sqlite3` errors with `NODE_MODULE_VERSION`: fix = `npm rebuild better-sqlite3` from `backend/`.
 
 ## 3. Kit & inputs present
-- `.claude/skills/` has `nextjs-component-standards`, `motion-standards`, `caveman`, `ponytail`, `ponytail-review`.
-- `motion` + `lenis` installed in `frontend/` (`npm ls motion lenis -w frontend`) — needed by the motion kit.
-- Kit docs exist: `.claude/COMPONENTS.md` · `.claude/QUALITY-BAR.md` · `.claude/PROJECT-PLAN.md` · `.claude/design-brief.md`.
+- `.claude/skills/` has `nextjs-component-standards`, `caveman`, `ponytail`, `ponytail-review`.
+- `.claude/COMPONENTS.md` exists (the registry).
 - `design-input/` exists and is git-ignored (`git check-ignore design-input/anything` should print a path).
-- At least one export under `design-input/<export>/` with the structured shape (`tokens/` + `pages/`),
-  or an older flat `design.md` + `*Tailwind.html` (else ⚠️ "drop an export first").
+- At least one export folder under `design-input/<export>/` with `design.md` + a `*Tailwind.html` (else ⚠️ "drop an export first").
 
 ## 4. Report
 Print a table: **Component | Status | Fix if ❌**. End with a one-line verdict:

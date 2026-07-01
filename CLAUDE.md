@@ -34,9 +34,9 @@ If `better-sqlite3` throws `NODE_MODULE_VERSION` errors, run `npm rebuild better
 frontend/src/app/             ← Next.js App Router route files
 frontend/src/components/ui/    ← Tier-1 global primitives (Button, Container, Section…)
 frontend/src/components/<Name>/ ← Tier-2 shared patterns (Card, Navbar…)
-frontend/src/components/ui/motion/ ← motion primitives (Reveal, MaskReveal, Parallax…)
 frontend/src/styles/          ← tokens.css + global CSS
 frontend/src/lib/fonts.ts
+frontend/src/pages/_error.tsx  ← Next.js compat shim
 frontend/public/              ← static assets
 ```
 
@@ -55,45 +55,22 @@ Do not pre-build Tier-2/3 abstractions before reuse exists. Every Tier-1/Tier-2 
 - Layout priority: document flow → flexbox → CSS grid → `position: absolute` (last resort, only for overlays, badges, decorative elements that cannot participate in flow). Use `gap`, not margin-based inline spacing.
 - Images: `next/image`, WebP format, ≤200 KB desktop / ≤100 KB mobile.
 
-## AI Build Workflow (Claude) — premium pipeline
+## AI Build Workflow (Claude)
 
-The premium floor is guaranteed by: **locked tokens + an art-direction spec + our own motion kit +
-a machine/taste gate** — not by any component library. Taste is set ONCE (design phase, you approve);
-conversion **composes + conforms**, it does not improvise.
-
-**Design phase (before this repo):** ask Claude-design to produce the export by uploading
-`.claude/design-brief.md`. It returns a **structured** export: `tokens/` · `art-direction.md` ·
-`pages/<page>/{<page>.html, <page>.motion.md}` · `components/` · `content/` · `assets/`.
-
-**Conversion loop** (commands in `.claude/commands/`):
+Building pages from a Claude design export follows a fixed loop (commands in `.claude/commands/`):
 
 ```
-/preflight        MCP (strapi, next-devtools, playwright) + node + build + lint + kit
-/project-setup <export>   ONCE:
-   Phase 0  INTAKE interview → .claude/PROJECT-PLAN.md
-            (sitemap · Strapi content model · infra readiness) — foundation-first
-   Phase 0b create planned Strapi content types (via strapi MCP)
-   Phase 1  brand foundation: tokens (from tokens/) · fonts · global CSS · Tier-1 · MOTION KIT
+/preflight        check MCP (strapi, next-devtools) + node + build + lint + kit
+/project-setup <export>      ONCE: brand tokens, fonts, global CSS, Tier-1 primitives
 ─ per page/section ─
-/criteria <page>/<section>   read pages/ + motion spec → build spec (+ reuse & motion map) → you approve
-/build-component <page>/<section>   compose from kit → GATE (QUALITY-BAR) → register → stop
+/criteria <page>/<section>   read design → fidelity spec + reuse map → you approve
+/build-component <page>/<section>   reuse-first build → light gate → register → stop
 /commit                      small local commits, never push
 ```
 
-- **Foundation-first:** the data (Strapi content types) and servers (Strapi + staging) a page needs must be
-  ready **before** that page is built. `/criteria` + `/build-component` wait until `PROJECT-PLAN.md`'s infra
-  checklist is green.
-
-- **Exports go in `design-input/<export>/`** (git-ignored). **`tokens/` + `art-direction.md` are the source of
-  truth**; if the HTML disagrees, follow them. (Older flat exports: fall back to `design.md`.)
-- **NEVER reference `design-input/` from committed code** — it's git-ignored and excluded from the deploy
-  package. Copy/optimize assets into `frontend/public/`; read design files only at authoring time.
-- **Motion:** Motion (`motion/react`) + Lenis, via our reusable primitives — see the **`motion-standards`** skill
-  (fail-safe reveals, Lenis-aware nav, parallax coverage, reduced-motion). Never re-roll motion per section.
-- **The gate:** every build must pass **`.claude/QUALITY-BAR.md`** (machine checks @ 4 breakpoints + conformance
-  to the art direction + a taste audit). "Done" = gate green + your sign-off.
-- Reuse skills: **`ponytail`** / **`ponytail-review`** (simplest, no duplication) and **`caveman`** (terse prose /
-  compress memory). Component/CSS rules: **`nextjs-component-standards`**. All live in `.claude/skills/`.
+- **Exports go in `design-input/<export>/`** (git-ignored, drop-zone). **`design.md` is the brand source of truth**; if it disagrees with the exported HTML, follow `design.md`.
+- **NEVER reference `design-input/` from committed code.** It is git-ignored and excluded from the deploy package, so any import/`src`/`url()`/path pointing into `design-input/` breaks the build/deploy. Copy assets into `frontend/public/` and reference them from there; read design files only at authoring time, never at runtime.
+- Reuse skills: **`ponytail`** / **`ponytail-review`** (simplest, no duplication) and **`caveman`** (terse prose / compress memory) live in `.claude/skills/`.
 
 ## Strapi (Backend)
 

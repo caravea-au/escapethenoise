@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "build:synergy": "npm run build && node scripts/package-synergy.mjs",
     "verify:synergy": "node scripts/verify-synergy-deploy.mjs",
     "archive:synergy": "node scripts/archive-synergy.mjs",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "optimize:image": "node scripts/optimize-image.mjs"
   },
   "dependencies": {
     "next": "^16.2.9",
@@ -23,6 +24,7 @@
     "@types/react-dom": "^19.1.2",
     "eslint": "^9.25.1",
     "eslint-config-next": "^15.3.1",
+    "sharp": "^0.33.5",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3"
   }
