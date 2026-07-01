@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/Button";
 import { getHeader, strapiMedia, type StrapiLink } from "@/lib/strapi";
 
 // Fallback menu when Strapi is unset/unreachable. Guides-first nav (#10) —
-// all guide topics route to the Buying Guides listing for now (no per-topic routes yet).
+// topics route to the Buying Guides listing, hash = category slug (see
+// BuyingGuidesExplorer.slugify) so the listing filters + scrolls to the grid.
 const FALLBACK_MENU: StrapiLink[] = [
-  { label: "Education & Safety", url: "/buying-guides" },
-  { label: "Happy Campers", url: "/buying-guides" },
-  { label: "Towing Guide", url: "/buying-guides" },
+  { label: "Education & Safety", url: "/buying-guides#education-safety" },
+  { label: "Happy Campers", url: "/buying-guides#happy-campers" },
+  { label: "Towing Guide", url: "/buying-guides#towing-guide" },
 ];
 
 // Tier-2 — global header (design.md §4). Reversed lockup on the green band.
