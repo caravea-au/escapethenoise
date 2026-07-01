@@ -20,7 +20,7 @@ npm run dev:backend      # Strapi dev server
 npm run dev:backend:clean  # clean generated output, then Strapi dev
 npm run build            # Next.js production build
 npm run build:backend    # Strapi production build
-npm run lint             # ESLint via next lint
+npm run lint             # ESLint 9 flat config (eslint .) — next lint removed in Next 16
 npm start                # production server (node app.js)
 ```
 
