@@ -4,40 +4,33 @@ import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { getFooter, strapiMedia, type StrapiLink } from "@/lib/strapi";
 
-// Linkify the two known tokens in the copyright line: the phone number → tel:
-// link, and "Caravea" → the Caravea site. The copyright itself stays a plain
-// Strapi string; this is presentation only.
+// Linkify "Caravea" in the copyright line → the Caravea site. The copyright
+// itself stays a plain Strapi string; this is presentation only.
 function renderCopyright(text: string): ReactNode[] {
   const parts: ReactNode[] = [];
-  const regex = /(1300 555 000|Caravea)/g;
+  const regex = /Caravea/g;
   let last = 0;
   let key = 0;
   let m: RegExpExecArray | null;
   while ((m = regex.exec(text)) !== null) {
     if (m.index > last) parts.push(text.slice(last, m.index));
     parts.push(
-      m[0] === "Caravea" ? (
-        <a
-          key={key++}
-          href="https://caravea.au/"
-          target="_blank"
-          rel="noopener"
-          className="inline-flex items-center gap-1 align-middle hover:text-white"
-        >
-          <Image
-            src="/brand/caravea-icon.svg"
-            alt=""
-            width={14}
-            height={14}
-            className="inline-block"
-          />
-          <span className="underline">Caravea</span>
-        </a>
-      ) : (
-        <a key={key++} href="tel:1300555000" className="hover:text-white">
-          1300 555 000
-        </a>
-      ),
+      <a
+        key={key++}
+        href="https://caravea.au/"
+        target="_blank"
+        rel="noopener"
+        className="inline-flex items-center gap-1 align-middle hover:text-white"
+      >
+        <Image
+          src="/brand/caravea-icon.svg"
+          alt=""
+          width={14}
+          height={14}
+          className="inline-block"
+        />
+        <span className="underline">Caravea</span>
+      </a>,
     );
     last = m.index + m[0].length;
   }
