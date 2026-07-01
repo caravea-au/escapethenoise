@@ -22,9 +22,16 @@ function renderCopyright(text: string): ReactNode[] {
           href="https://caravea.au/"
           target="_blank"
           rel="noopener"
-          className="underline hover:text-white"
+          className="inline-flex items-center gap-1 align-middle hover:text-white"
         >
-          Caravea
+          <Image
+            src="/brand/caravea-icon.svg"
+            alt=""
+            width={14}
+            height={14}
+            className="inline-block"
+          />
+          <span className="underline">Caravea</span>
         </a>
       ) : (
         <a key={key++} href="tel:1300555000" className="hover:text-white">
