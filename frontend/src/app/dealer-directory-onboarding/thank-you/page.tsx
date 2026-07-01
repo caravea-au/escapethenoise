@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 export const metadata: Metadata = {
   title: "You're on the map",
   description: "Thanks — your dealership details are in.",
+  robots: { index: false, follow: false },
 };
 
 export default function DealerOnboardingThankYouPage() {

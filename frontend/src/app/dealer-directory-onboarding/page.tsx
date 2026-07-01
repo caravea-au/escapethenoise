@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "List your dealership",
   description:
     "List your dealership on nobettertime.com.au and get found by the caravan and RV travellers searching for their next escape.",
+  robots: { index: false, follow: false },
 };
 
 export default function DealerDirectoryOnboardingPage() {
