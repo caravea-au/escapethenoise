@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://nobettertime.com.au"),
   title: {
     default: "Find a Dealer | Caravan Industry Association of Australia",
-    template: "%s | Find a Dealer",
+    template: "%s | No Better Time To Escape The Noise",
   },
   description:
     "Australia's most trusted caravan resource — search 403+ accredited dealers near you. The official dealer directory of the Caravan Industry Association of Australia.",

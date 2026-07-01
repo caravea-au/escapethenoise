@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Find a Dealer",
     locale: "en_AU",
-    title: "List your dealership | Find a Dealer",
+    title: "List your dealership | No Better Time To Escape The Noise",
     description: DESCRIPTION,
     images: [
       {
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "List your dealership | Find a Dealer",
+    title: "List your dealership | No Better Time To Escape The Noise",
     description: DESCRIPTION,
     images: ["/og-image.png"],
   },
