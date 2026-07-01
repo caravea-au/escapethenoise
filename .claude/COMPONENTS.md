@@ -28,6 +28,7 @@ Tiers (see `nextjs-component-standards`): **1** global primitive (`components/ui
 | Footer | 2 | Global green footer — link columns, states, legal | components/Footer/Footer.tsx | — | layout (all pages) |
 | CategoryBadge | 2 | Category pill — `card` (rust on cream) / `hero` (green on gold) | components/CategoryBadge/CategoryBadge.tsx | tone, children | buying-guides/listing, buying-guides/detail |
 | GuideCard | 2 | Buying-guide grid card (image + badge + title + excerpt + meta); whole-card link | components/GuideCard/GuideCard.tsx | guide | buying-guides/listing |
+| VehicleListingCard | 2 | Vehicle-finder grid card (image + title + price range + feature bullets + Watch video / Read more buttons) | components/VehicleListingCard/VehicleListingCard.tsx | vehicle | vehicle-listings/listing |
 | FeaturedGuideCard | 2 | Two-column promoted guide card | components/FeaturedGuideCard/FeaturedGuideCard.tsx | guide | buying-guides/listing |
 | BuyingGuidesExplorer | 2 | Client island: category chips + filtered grid of GuideCard | components/BuyingGuidesExplorer/BuyingGuidesExplorer.tsx | guides | buying-guides/listing |
 | ArticleBody | 2 | Renders Strapi `blocks` (¶/H2/list/tip callout/links) for a guide | components/ArticleBody/ArticleBody.tsx | blocks | buying-guides/detail |
