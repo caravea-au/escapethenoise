@@ -516,8 +516,23 @@ export function DealerOnboardingForm({
             apply.
           </p>
         )}
-        <p className="mt-7 text-center text-[12px] text-muted">
-          Powered by <b className="font-semibold text-green">Caravea</b>
+        <p className="mt-7 flex items-center justify-center gap-1 text-[12px] text-muted">
+          Powered by
+          <a
+            href="https://caravea.au/"
+            target="_blank"
+            rel="noopener"
+            className="group inline-flex items-center gap-1 font-semibold text-green"
+          >
+            <Image
+              src="/brand/caravea-icon-form.svg"
+              alt=""
+              width={14}
+              height={14}
+              className="inline-block"
+            />
+            <span className="group-hover:underline">Caravea</span>
+          </a>
         </p>
       </form>
     </div>
