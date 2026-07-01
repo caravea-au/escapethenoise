@@ -157,6 +157,25 @@ export async function getFooter(): Promise<FooterData> {
   }
 }
 
+// ── Privacy policy single type ───────────────────────────────────────────────
+export type PrivacyPolicy = {
+  title: string | null;
+  lastUpdated: string | null;
+  content: Block[] | null;
+};
+
+/** Privacy policy content, or null if unset / Strapi is unreachable. */
+export async function getPrivacyPolicy(): Promise<PrivacyPolicy | null> {
+  try {
+    const json = await strapiFetch<{ data: PrivacyPolicy | null }>(
+      "/api/privacy-policy?populate=*",
+    );
+    return json.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Home page single type ────────────────────────────────────────────────────
 // Every field is nullable: the frontend keeps its hardcoded content as a fallback
 // and only overrides where Strapi has a value (getHomePage returns null on error).

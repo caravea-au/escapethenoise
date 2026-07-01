@@ -45,9 +45,7 @@ const FALLBACK_CONTENT =
 const FALLBACK_COPYRIGHT =
   "© 2026 Caravan Industry Association of Australia | Powered by Caravea";
 const FALLBACK_LEGAL: StrapiLink[] = [
-  { label: "Privacy", url: "#" },
-  { label: "Terms", url: "#" },
-  { label: "Accessibility", url: "#" },
+  { label: "Privacy", url: "/privacy-policy" },
 ];
 
 // Tier-2 — global footer (design.md §4). Content comes from the Strapi `footer`
