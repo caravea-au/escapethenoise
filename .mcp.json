@@ -7,6 +7,10 @@
     "strapi": {
       "command": "npx",
       "args": ["-y", "@bschauer/strapi-mcp-server@2.6.0"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
     }
   }
 }
