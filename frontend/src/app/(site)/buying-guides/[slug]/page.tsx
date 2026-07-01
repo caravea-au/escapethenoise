@@ -4,7 +4,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { Heading } from "@/components/ui/Heading";
-import { Button } from "@/components/ui/Button";
 import { CategoryBadge } from "@/components/CategoryBadge/CategoryBadge";
 import { ArticleBody } from "@/components/ArticleBody/ArticleBody";
 import {
@@ -104,9 +103,6 @@ export default async function BuyingGuideDetailPage({
           >
             ← All Buying Guides
           </Link>
-          <Button href="/" variant="tertiary">
-            Find your nearest dealer →
-          </Button>
         </div>
       </Container>
     </article>
