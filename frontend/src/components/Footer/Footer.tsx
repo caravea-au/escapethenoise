@@ -6,7 +6,7 @@ import { getFooter, strapiMedia, type StrapiLink } from "@/lib/strapi";
 // Fallbacks when Strapi is unset/unreachable.
 const FALLBACK_HEADING = "Find a Dealer";
 const FALLBACK_CONTENT =
-  "No better time to\nBuy your caravan with\nconfidence — not pressure";
+  "No better time to\nBuy your caravan with confidence — not pressure";
 const FALLBACK_COPYRIGHT =
   "© 2026 Caravan Industry Association of Australia · escapethenoise.com.au · 1300 555 000";
 const FALLBACK_LEGAL: StrapiLink[] = [
