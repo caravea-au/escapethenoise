@@ -23,7 +23,8 @@ Tiers (see `nextjs-component-standards`): **1** global primitive (`components/ui
 | Input | 1 | Text input — cream fill, line border, rust focus | components/ui/Input.tsx | (native input props) | dealer-directory-onboarding |
 | Section | 1 | Cream / dark-green band + vertical rhythm | components/ui/Section.tsx | tone, children | — |
 | Text | 1 | Hanken body (body/lead/eyebrow/meta) | components/ui/Text.tsx | as, variant, children | buying-guides/listing |
-| Navbar | 2 | Global green header w/ reversed lockup + nav + CTA | components/Navbar/Navbar.tsx | — | layout (all pages) |
+| Navbar | 2 | Global green header w/ reversed lockup + nav + CTA; desktop nav/CTA `hidden md:flex`, collapses behind MobileMenu below md | components/Navbar/Navbar.tsx | — | layout (all pages) |
+| MobileMenu | 2 | Client island: `md:hidden` hamburger toggle + dropdown panel of nav links + CTA for < md | components/Navbar/MobileMenu.tsx | menu, cta | navbar |
 | Footer | 2 | Global green footer — link columns, states, legal | components/Footer/Footer.tsx | — | layout (all pages) |
 | CategoryBadge | 2 | Category pill — `card` (rust on cream) / `hero` (green on gold) | components/CategoryBadge/CategoryBadge.tsx | tone, children | buying-guides/listing, buying-guides/detail |
 | GuideCard | 2 | Buying-guide grid card (image + badge + title + excerpt + meta); whole-card link | components/GuideCard/GuideCard.tsx | guide | buying-guides/listing |
