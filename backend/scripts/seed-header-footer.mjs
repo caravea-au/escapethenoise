@@ -69,7 +69,7 @@ const FOOTER = {
   states: ["NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"].map((s) => link(s, "#")),
   legalLinks: [link("Privacy", "#"), link("Terms", "#"), link("Accessibility", "#")],
   copyright:
-    "© 2026 Caravan Industry Association of Australia · escapethenoise.com.au · 1300 555 000",
+    "© 2026 Caravan Industry Association of Australia · escapethenoise.com.au · 1300 555 000 | Powered by Caravea",
 };
 
 /** PUT a single type (no id) with `{ data }`. */

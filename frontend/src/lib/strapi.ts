@@ -55,6 +55,19 @@ export function readTime(content: Block[] | null | undefined): string {
   return `${Math.max(1, Math.round(words / 200))} min read`;
 }
 
+/** Build a youtube-nocookie embed URL from any common video/playlist URL, else null. */
+export function youtubeEmbedSrc(url: string): string | null {
+  const u = url.trim();
+  const base = "https://www.youtube-nocookie.com/embed/";
+  const video = u.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
+  )?.[1];
+  const list = u.match(/[?&]list=([A-Za-z0-9_-]+)/)?.[1];
+  if (video) return `${base}${video}${list ? `?list=${list}` : ""}`;
+  if (list) return `${base}videoseries?list=${list}`;
+  return null;
+}
+
 /** Resolve a Strapi media path to an absolute URL. */
 export function strapiMedia(url?: string | null): string | null {
   if (!url) return null;

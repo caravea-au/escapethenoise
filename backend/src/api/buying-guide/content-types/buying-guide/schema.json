@@ -19,7 +19,7 @@
     "slug": {
       "type": "uid",
       "targetField": "title",
-      "required": true
+      "required": false
     },
     "category": {
       "type": "string"

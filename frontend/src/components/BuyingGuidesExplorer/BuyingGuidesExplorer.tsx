@@ -6,14 +6,11 @@ import { GuideCard } from "@/components/GuideCard/GuideCard";
 
 const ALL = "All Topics";
 
-// "Education & Safety" → "education-safety". Must match the hashes used in the
-// navbar menu links (Navbar.tsx / seed-header-footer.mjs).
-const slugify = (s: string) =>
-  s
-    .toLowerCase()
-    .replace(/&/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+// URL-safe form of a category name, e.g. "Education & Safety" -> "education-safety".
+// Header nav links use this slug as a hash (#education-safety) to deep-link a filter,
+// so it must match the slugs used in Navbar.tsx / seed-header-footer.mjs.
+const slug = (s: string) =>
+  s.toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 // Category chips + the grid they filter. Client island for the listing page.
 export function BuyingGuidesExplorer({ guides }: { guides: BuyingGuide[] }) {
@@ -30,7 +27,7 @@ export function BuyingGuidesExplorer({ guides }: { guides: BuyingGuide[] }) {
   // slug → category, for resolving a URL hash to a filter.
   const bySlug = useMemo(() => {
     const m = new Map<string, string>();
-    for (const c of categories) if (c !== ALL) m.set(slugify(c), c);
+    for (const c of categories) if (c !== ALL) m.set(slug(c), c);
     return m;
   }, [categories]);
 
@@ -43,8 +40,8 @@ export function BuyingGuidesExplorer({ guides }: { guides: BuyingGuide[] }) {
   // `hashchange` to react to repeated nav clicks.
   useEffect(() => {
     const applyHash = () => {
-      const slug = window.location.hash.replace(/^#/, "");
-      const cat = slug ? bySlug.get(slug) : undefined;
+      const hash = slug(decodeURIComponent(window.location.hash.slice(1)));
+      const cat = hash ? bySlug.get(hash) : undefined;
       setActive(cat ?? ALL);
       if (cat) listingRef.current?.scrollIntoView({ behavior: "smooth" });
     };
@@ -60,7 +57,7 @@ export function BuyingGuidesExplorer({ guides }: { guides: BuyingGuide[] }) {
   const select = (cat: string) => {
     setActive(cat);
     const url =
-      cat === ALL ? window.location.pathname + window.location.search : `#${slugify(cat)}`;
+      cat === ALL ? window.location.pathname + window.location.search : `#${slug(cat)}`;
     window.history.replaceState(null, "", url);
   };
 
