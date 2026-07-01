@@ -50,7 +50,7 @@ const FALLBACK_HEADING = "Find a Dealer";
 const FALLBACK_CONTENT =
   "No better time to\nBuy your caravan with confidence — not pressure";
 const FALLBACK_COPYRIGHT =
-  "© 2026 Caravan Industry Association of Australia · escapethenoise.com.au · 1300 555 000 | Powered by Caravea";
+  "© 2026 Caravan Industry Association of Australia | Powered by Caravea";
 const FALLBACK_LEGAL: StrapiLink[] = [
   { label: "Privacy", url: "#" },
   { label: "Terms", url: "#" },
