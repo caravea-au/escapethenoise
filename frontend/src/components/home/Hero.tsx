@@ -8,7 +8,11 @@ const FALLBACK_POSTER = "/photos/hero.webp";
 const FALLBACK_VIDEO = "/photos/hero.mp4";
 const FALLBACK_EYEBROW = "No better time to";
 const FALLBACK_SUBTITLE =
-  "Plain-English guides that help everyday Australians choose the right van and escape the noise — at your own pace, with nothing to sell you.";
+  "Plain-English guides that help everyday Australians choose the right van and escape the noise.";
+
+// Shared <h1> styling — used by both the HTML (Strapi) and JSX (prop/fallback) branches.
+const H1_CLASS =
+  "m-0 mt-3.5 whitespace-pre-line font-oswald text-[40px] font-bold uppercase leading-[.97] tracking-[-1.7px] text-white md:text-[51px] lg:text-[68px] xl:text-[78px]";
 
 // eyebrow + headline + sub. clamp() replaced with Tailwind breakpoint steps.
 // Content comes from Strapi (`data`) with hardcoded fallbacks; the eyebrow/
@@ -35,7 +39,12 @@ export function Hero({
   const video = strapiMedia(data?.backgroundVideo?.url) ?? FALLBACK_VIDEO;
   const eyebrow = eyebrowProp ?? data?.eyebrow ?? FALLBACK_EYEBROW;
   const subtitle = subtitleProp ?? data?.subtitle ?? FALLBACK_SUBTITLE;
-  const title = titleProp ?? data?.title ?? null;
+  // The Strapi title is a plain string that may contain HTML (e.g. a
+  // `<span class="text-rust">` to colour a word), so render it via
+  // dangerouslySetInnerHTML. A `titleProp` ReactNode (other pages) and the
+  // hardcoded fallback stay on the normal children path.
+  const strapiTitle =
+    titleProp == null && typeof data?.title === "string" ? data.title : null;
 
   return (
     <section
@@ -66,15 +75,19 @@ export function Hero({
         <Eyebrow tone="gold" className="tracking-[3px]">
           {eyebrow}
         </Eyebrow>
-        <h1 className="m-0 mt-3.5 whitespace-pre-line font-oswald text-[40px] font-bold uppercase leading-[.97] tracking-[-1.7px] text-white md:text-[51px] lg:text-[68px] xl:text-[78px]">
-          {title ?? (
-            <>
-              Buy your caravan with
-              <br />
-              <span className="text-rust">confidence</span> — not pressure
-            </>
-          )}
-        </h1>
+        {strapiTitle != null ? (
+          <h1 className={H1_CLASS} dangerouslySetInnerHTML={{ __html: strapiTitle }} />
+        ) : (
+          <h1 className={H1_CLASS}>
+            {titleProp ?? (
+              <>
+                Buy your caravan with
+                <br />
+                <span className="text-rust">confidence</span>
+              </>
+            )}
+          </h1>
+        )}
         <p className="mx-auto mt-6 max-w-[600px] text-[16px] font-normal leading-[1.5] text-[#c4b89b] lg:text-[18px] xl:text-[20px]">
           {subtitle}
         </p>
