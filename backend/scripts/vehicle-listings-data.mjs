@@ -15,6 +15,7 @@ export const VEHICLES = [
     order: 1,
     priceFrom: 18000,
     videoId: "qbio3YLoB8U",
+    cardImage: "https://www.letsgocaravanandcamping.com.au/wp-content/uploads/2025/06/camper-trailer.jpg",
     overviewHeading: "Overview",
     overview: [
       "Camper trailers are one of the most budget-friendly and versatile ways to experience the freedom of camping. Compact and packed with smart features, they’re ideal for solo travellers, couples, and even larger families who want to enjoy the great outdoors with added comfort.",
@@ -57,6 +58,7 @@ export const VEHICLES = [
     order: 2,
     priceFrom: 100000,
     videoId: "ARsSl3QMKmg",
+    cardImage: "https://www.letsgocaravanandcamping.com.au/wp-content/uploads/2025/06/campervan.jpg",
     overviewHeading: "Overview",
     overview: [
       "Ready to hit the road in comfort and style? Campervans are one of the most versatile and compact ways to explore Australia. Whether you're travelling solo, as a couple, or with a small family, campervans offer the perfect mix of holiday, lifestyle and transport—all rolled into one sleek, easy-to-drive vehicle.",
@@ -101,6 +103,7 @@ export const VEHICLES = [
     order: 3,
     priceFrom: 150000,
     videoId: "niuVQQjxWyo",
+    cardImage: "https://www.letsgocaravanandcamping.com.au/wp-content/uploads/2025/06/motorhome.jpg",
     overviewHeading: "Overview",
     overview: [
       "Motorhomes are the ultimate in no-fuss, luxury travel—like having a spacious apartment on wheels. Built on sturdy truck chassis and up to 40 feet long, they offer self-drive convenience without the need for towing, and most can be driven on a standard car licence.",
@@ -159,6 +162,7 @@ export const VEHICLES = [
     order: 4,
     priceFrom: 70000,
     videoId: "Rq_Y8A0p83I",
+    cardImage: "https://www.letsgocaravanandcamping.com.au/wp-content/uploads/2025/06/large-caravan.jpg",
     overviewHeading: "Overview",
     overview: [
       "Large caravans are a true home away from home. With lengths of up to 26 feet and built on dual or even triple axles for enhanced stability, they offer generous indoor living spaces, packed with the modern comforts travellers love. Whether you’re touring the country or enjoying a long weekend away, large caravans deliver the perfect mix of space, luxury and convenience.",
@@ -210,6 +214,7 @@ export const VEHICLES = [
     order: 5,
     priceFrom: 30000,
     videoId: "F70wStbI0_o",
+    cardImage: "https://www.letsgocaravanandcamping.com.au/wp-content/uploads/2025/06/hybrid-pop-top.jpg",
     overviewHeading: "Overview",
     overview: [
       "Hybrid and pop top caravans have exploded in popularity—and it’s easy to see why. Perfect for couples and small families, these compact RVs are packed with comfort, smart design, and modern features.",
@@ -273,6 +278,7 @@ export const VEHICLES = [
     order: 6,
     priceFrom: 55000,
     videoId: "BPfai678dNU",
+    cardImage: "https://www.letsgocaravanandcamping.com.au/wp-content/uploads/2025/06/small-caravan.jpg",
     overviewHeading: "Overview",
     overview: [
       "Small single axle caravans are the perfect choice for couples, solo travellers and small families. Don’t be fooled by their size—at up to 19 feet long, these caravans are cleverly designed to include all the creature comforts of larger models while offering a more compact, towable, and affordable alternative.",

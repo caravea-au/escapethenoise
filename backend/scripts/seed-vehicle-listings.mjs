@@ -4,12 +4,16 @@
 //   STRAPI_TOKEN=<token> npm run seed:vehicles                 # local (default URL)
 //   STRAPI_URL=https://cms-... STRAPI_TOKEN=<token> npm run seed:vehicles   # live
 //
-// Idempotent: skips any vehicle whose slug already exists. Pass --reset to
-// delete every existing vehicle-listing first (DESTRUCTIVE).
+// Idempotent: skips any vehicle whose slug already exists (but backfills the
+// card/hero image onto an existing entry that has none). Pass --reset to delete
+// every existing vehicle-listing first (DESTRUCTIVE).
 //
-// Images are intentionally not seeded (hero/card art is supplied by the client
-// in the CMS). Uses Node 20+ global fetch.
+// Each vehicle's `cardImage` (a source photo URL) is DOWNLOADED and re-uploaded
+// into Strapi media, then attached as both cardImage and heroImage — the stored
+// value is a Strapi media relation, never a link to the source page. Uses
+// Node 20+ global fetch/FormData/Blob + sharp.
 
+import sharp from "sharp";
 import { VEHICLES } from "./vehicle-listings-data.mjs";
 
 const STRAPI_URL = (process.env.STRAPI_URL ?? "http://localhost:1337").replace(/\/$/, "");
@@ -22,6 +26,29 @@ if (!TOKEN) {
 }
 
 const auth = { Authorization: `Bearer ${TOKEN}` };
+const UA = "Mozilla/5.0 (seed-vehicle-listings)";
+const MAX_BYTES = 900_000; // keep under the live nginx upload cap
+
+/** Download a source photo, downscale, upload to Strapi media → file id. */
+async function uploadImage(url, name) {
+  const res = await fetch(url, { headers: { "User-Agent": UA } });
+  if (!res.ok) throw new Error(`fetch image ${url} → ${res.status}`);
+  const src = Buffer.from(await res.arrayBuffer());
+  const isPng = /\.png$/i.test(url);
+  const encode = (w, q) => {
+    const p = sharp(src, { failOn: "none" }).rotate().resize({ width: w, withoutEnlargement: true });
+    return (isPng ? p.png({ compressionLevel: 9 }) : p.jpeg({ quality: q, mozjpeg: true })).toBuffer();
+  };
+  let out = await encode(1600, 80);
+  if (out.length > MAX_BYTES) out = await encode(1200, 68);
+  const filename = `vehicle-${name}.${isPng ? "png" : "jpg"}`;
+  const form = new FormData();
+  form.append("files", new Blob([out]), filename);
+  const up = await fetch(`${STRAPI_URL}/api/upload`, { method: "POST", headers: auth, body: form });
+  if (!up.ok) throw new Error(`upload ${filename} → ${up.status} ${await up.text()}`);
+  const [file] = await up.json();
+  return file.id;
+}
 
 // ── transforms ───────────────────────────────────────────────────────────────
 
@@ -80,7 +107,7 @@ async function existingVehicles() {
   const out = [];
   for (const status of ["published", "draft"]) {
     const res = await fetch(
-      `${STRAPI_URL}/api/vehicle-listings?fields[0]=slug&pagination[pageSize]=100&status=${status}`,
+      `${STRAPI_URL}/api/vehicle-listings?fields[0]=slug&populate[cardImage]=true&pagination[pageSize]=100&status=${status}`,
       { headers: auth },
     );
     if (!res.ok) throw new Error(`list vehicles → ${res.status} ${await res.text()}`);
@@ -107,22 +134,48 @@ async function main() {
     existing = [];
   }
 
-  const have = new Set(existing.map((g) => g.slug));
+  const bySlug = new Map(existing.map((g) => [g.slug, g]));
   let created = 0;
+  let updated = 0;
   let skipped = 0;
 
   for (const v of VEHICLES) {
-    if (have.has(v.slug)) {
-      console.log(`  skip  ${v.slug} (already exists)`);
+    const ex = bySlug.get(v.slug);
+
+    if (ex && ex.cardImage) {
+      console.log(`  skip  ${v.slug} (exists, has image)`);
       skipped++;
       continue;
     }
-    process.stdout.write(`  seed  ${v.slug} … `);
 
+    // Upload the card/hero photo (download → downscale → Strapi media).
+    const imageId = v.cardImage ? await uploadImage(v.cardImage, v.slug) : null;
+
+    if (ex) {
+      // Backfill image onto an existing entry (partial update; ensureSlug leaves
+      // the slug alone because the payload carries no title/slug).
+      process.stdout.write(`  image ${v.slug} … `);
+      const res = await fetch(`${STRAPI_URL}/api/vehicle-listings/${ex.documentId}`, {
+        method: "PUT",
+        headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify({ data: { cardImage: imageId, heroImage: imageId } }),
+      });
+      if (!res.ok) throw new Error(`update ${v.slug} → ${res.status} ${await res.text()}`);
+      console.log("ok");
+      updated++;
+      continue;
+    }
+
+    process.stdout.write(`  seed  ${v.slug} … `);
+    const data = toPayload(v);
+    if (imageId) {
+      data.cardImage = imageId;
+      data.heroImage = imageId;
+    }
     const res = await fetch(`${STRAPI_URL}/api/vehicle-listings?status=published`, {
       method: "POST",
       headers: { ...auth, "Content-Type": "application/json" },
-      body: JSON.stringify({ data: toPayload(v) }),
+      body: JSON.stringify({ data }),
     });
     if (!res.ok) throw new Error(`create ${v.slug} → ${res.status} ${await res.text()}`);
     console.log("ok");
@@ -134,7 +187,7 @@ async function main() {
     `${STRAPI_URL}/api/vehicle-listings?fields[0]=slug&pagination[pageSize]=100`,
   ).then((r) => r.json());
   console.log(
-    `\nDone. created=${created} skipped=${skipped}. Public API now returns ${pub.data.length} published vehicle(s).`,
+    `\nDone. created=${created} updated=${updated} skipped=${skipped}. Public API now returns ${pub.data.length} published vehicle(s).`,
   );
 }
 
