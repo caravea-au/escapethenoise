@@ -28,16 +28,18 @@ Tiers (see `nextjs-component-standards`): **1** global primitive (`components/ui
 | Footer | 2 | Global green footer — link columns, states, legal | components/Footer/Footer.tsx | — | layout (all pages) |
 | CategoryBadge | 2 | Category pill — `card` (rust on cream) / `hero` (green on gold) | components/CategoryBadge/CategoryBadge.tsx | tone, children | buying-guides/listing, buying-guides/detail |
 | GuideCard | 2 | Buying-guide grid card (image + badge + title + excerpt + meta); whole-card link | components/GuideCard/GuideCard.tsx | guide | buying-guides/listing |
+| VehicleListingCard | 2 | Vehicle-finder grid card (image + title + price range + feature bullets + Watch video / Read more buttons) | components/VehicleListingCard/VehicleListingCard.tsx | vehicle | vehicle-listings/listing |
 | FeaturedGuideCard | 2 | Two-column promoted guide card | components/FeaturedGuideCard/FeaturedGuideCard.tsx | guide | buying-guides/listing |
 | BuyingGuidesExplorer | 2 | Client island: category chips + filtered grid of GuideCard | components/BuyingGuidesExplorer/BuyingGuidesExplorer.tsx | guides | buying-guides/listing |
-| ArticleBody | 2 | Renders Strapi `blocks` (¶/H2/list/tip callout/links) for a guide | components/ArticleBody/ArticleBody.tsx | blocks | buying-guides/detail |
+| ArticleBody | 2 | Renders Strapi `blocks` (¶/H2/list/tip callout/links) for a guide; exports `YouTubeEmbed` (responsive nocookie iframe) | components/ArticleBody/ArticleBody.tsx | blocks | buying-guides/detail |
+| LogoMarquee | 2 | Infinite seamless horizontal marquee of logo images (optionally linked via `href`); caller owns the container; optional edge `fadeColor` | components/LogoMarquee/LogoMarquee.tsx | items, gapClassName?, imageClassName?, fadeColor? | home (TrustBar), vehicle-listings/detail |
 | DealerOnboardingForm | 2 | Client island: full dealership onboarding form — sticky progress rail, masthead, 7 sections, validation, multipart submit → Strapi | components/DealerOnboardingForm/DealerOnboardingForm.tsx | — | dealer-directory-onboarding |
 | FormSection | 2 | Numbered onboarding card (badge + title + subtitle) | components/DealerOnboardingForm/Controls.tsx | num, title, subtitle | dealer-directory-onboarding |
 | MultiSelect | 2 | Searchable multi-select w/ removable tag chips | components/DealerOnboardingForm/MultiSelect.tsx | placeholder, options, selected, onChange, invalid | dealer-directory-onboarding |
 | TradingHours | 2 | 7-day open/closed + time grid, copy-Monday-to-weekdays | components/DealerOnboardingForm/TradingHours.tsx | hours, onChange | dealer-directory-onboarding |
 | PhotoUploader | 2 | Up to 5 image previews w/ add/remove (object URLs) | components/DealerOnboardingForm/PhotoUploader.tsx | files, onChange | dealer-directory-onboarding |
 | Hero | home | Video hero + headline + sub; copy overridable via optional eyebrow/title/subtitle/children props; `fullHeight` grows it to fill a flex-column parent (100svh − header/footer) | components/home/Hero.tsx | eyebrow?, title?, subtitle?, fullHeight?, children? | home, dealer-directory-onboarding/thank-you |
-| TrustBar | home | Stats + state-association logo marquee | components/home/TrustBar.tsx | — | home |
+| TrustBar | home | Stats + state-association logo marquee (via LogoMarquee) | components/home/TrustBar.tsx | data?: HomeTrustBar | home |
 | OpenDayCTA | home | Single highlighted event banner | components/home/OpenDayCTA.tsx | — | home |
 | JourneySection | home | "What are you looking for?" 4 entry cards | components/home/JourneySection.tsx | — | home |
 | BuyingGuides | home | Latest guides — 3 article cards | components/home/BuyingGuides.tsx | — | home |

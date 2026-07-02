@@ -1,0 +1,23 @@
+{
+  "collectionName": "components_vehicle_spec_sections",
+  "info": {
+    "displayName": "Spec Section",
+    "icon": "bulletList",
+    "description": "A labelled section on the vehicle detail page (e.g. Priced From, Amenities). Use body for prose, items for a bullet / icon grid."
+  },
+  "options": {},
+  "attributes": {
+    "label": {
+      "type": "string",
+      "required": true
+    },
+    "body": {
+      "type": "text"
+    },
+    "items": {
+      "type": "component",
+      "repeatable": true,
+      "component": "vehicle.list-item"
+    }
+  }
+}

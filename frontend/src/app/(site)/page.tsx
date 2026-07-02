@@ -1,5 +1,5 @@
 import { Hero } from "@/components/home/Hero";
-// import { TrustBar } from "@/components/home/TrustBar"; // hidden during design iteration — National Standard section
+import { TrustBar } from "@/components/home/TrustBar";
 // import { OpenDayCTA } from "@/components/home/OpenDayCTA"; // hidden — Open Day banner
 import { JourneySection } from "@/components/home/JourneySection";
 import { BuyingGuides } from "@/components/home/BuyingGuides";
@@ -14,7 +14,7 @@ export default async function HomePage() {
   return (
     <>
       <Hero data={home?.hero} />
-      {/* <TrustBar /> hidden during design iteration — National Standard section */}
+      <TrustBar data={home?.trustBar} />
       {/* <OpenDayCTA /> hidden during design iteration — Open Day banner */}
       <JourneySection data={home?.journey} />
       <BuyingGuides header={home?.buyingGuidesHeader} />

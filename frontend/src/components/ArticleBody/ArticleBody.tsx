@@ -44,7 +44,7 @@ function paragraphYoutubeSrc(nodes: InlineNode[]): string | null {
   return /\s/.test(text) ? null : youtubeEmbedSrc(text);
 }
 
-function YouTubeEmbed({ src }: { src: string }) {
+export function YouTubeEmbed({ src }: { src: string }) {
   return (
     <figure className="my-8">
       <div className="aspect-video w-full overflow-hidden rounded-xl">

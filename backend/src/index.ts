@@ -4,10 +4,13 @@ import type { Core } from "@strapi/strapi";
 const PUBLIC_ACTIONS = [
   "api::buying-guide.buying-guide.find",
   "api::buying-guide.buying-guide.findOne",
+  "api::vehicle-listing.vehicle-listing.find",
+  "api::vehicle-listing.vehicle-listing.findOne",
   "api::header.header.find",
   "api::footer.footer.find",
   "api::home-page.home-page.find",
   "api::privacy-policy.privacy-policy.find",
+  "api::industry-partners.industry-partners.find",
   // Dealer onboarding form posts here (no token); needs upload for logo/photos.
   "api::dealer-submission.dealer-submission.create",
   "plugin::upload.content-api.upload",

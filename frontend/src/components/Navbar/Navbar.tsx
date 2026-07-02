@@ -10,6 +10,7 @@ import { getHeader, strapiMedia, type StrapiLink } from "@/lib/strapi";
 // auto-activates the matching filter chip and scrolls to the grid (matched by
 // slugified category name; see BuyingGuidesExplorer).
 const FALLBACK_MENU: StrapiLink[] = [
+  { label: "Find a Vehicle", url: "/vehicle-listings" },
   { label: "Education & Safety", url: "/buying-guides#education-safety" },
   { label: "Happy Campers", url: "/buying-guides#happy-campers" },
   { label: "Towing Guide", url: "/buying-guides#towing-guide" },

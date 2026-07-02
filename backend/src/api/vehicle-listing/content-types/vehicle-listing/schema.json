@@ -1,0 +1,80 @@
+{
+  "kind": "collectionType",
+  "collectionName": "vehicle_listings",
+  "info": {
+    "singularName": "vehicle-listing",
+    "pluralName": "vehicle-listings",
+    "displayName": "Vehicle Listing",
+    "description": "RV / caravan vehicle types shown in the vehicle finder (listing grid + detail page)"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": false
+    },
+    "order": {
+      "type": "integer",
+      "default": 0
+    },
+    "featured": {
+      "type": "boolean",
+      "default": false
+    },
+    "priceFrom": {
+      "type": "integer"
+    },
+    "priceTo": {
+      "type": "integer"
+    },
+    "watchVideoUrl": {
+      "type": "string"
+    },
+    "cardImage": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "heroImage": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "cardFeatures": {
+      "type": "component",
+      "repeatable": true,
+      "component": "vehicle.list-item"
+    },
+    "whyChoose": {
+      "type": "component",
+      "repeatable": true,
+      "component": "vehicle.list-item"
+    },
+    "overviewHeading": {
+      "type": "string"
+    },
+    "overviewBody": {
+      "type": "blocks"
+    },
+    "specSections": {
+      "type": "component",
+      "repeatable": true,
+      "component": "vehicle.spec-section"
+    },
+    "seo": {
+      "type": "component",
+      "repeatable": false,
+      "component": "shared.seo"
+    }
+  }
+}

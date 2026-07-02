@@ -139,6 +139,112 @@ export async function getBuyingGuideSlugs(): Promise<string[]> {
   return json.data.map((g) => g.slug);
 }
 
+// ── Vehicle listing collection type (RV finder) ──────────────────────────────
+// Mirrors buying-guide: a collection type with an index grid + [slug] detail.
+// The detail body is modelled with structured components (spec sections + icon
+// items) — `blocks` isn't allowed inside a Strapi component, so per-section
+// `body` is plain text; only `overviewBody` (a content-type field) is blocks.
+
+export type VehicleIcon =
+  | "check"
+  | "kitchen"
+  | "fridge"
+  | "aircon"
+  | "water"
+  | "awning"
+  | "battery"
+  | "solar"
+  | "power"
+  | "storage"
+  | "bed"
+  | "license"
+  | "road";
+
+export type VehicleListItem = { text: string; icon: VehicleIcon | null };
+
+export type VehicleSpecSection = {
+  label: string;
+  body: string | null;
+  items: VehicleListItem[] | null;
+};
+
+export type VehicleSeo = { metaTitle: string | null; metaDescription: string | null } | null;
+
+export type VehicleListing = {
+  id: number;
+  documentId: string;
+  title: string;
+  slug: string;
+  order: number | null;
+  featured: boolean;
+  priceFrom: number | null;
+  priceTo: number | null;
+  watchVideoUrl: string | null;
+  cardImage: StrapiImage;
+  heroImage: StrapiImage;
+  cardFeatures: VehicleListItem[] | null;
+  whyChoose: VehicleListItem[] | null;
+  overviewHeading: string | null;
+  overviewBody: Block[] | null;
+  specSections: VehicleSpecSection[] | null;
+  seo: VehicleSeo;
+};
+
+// Explicit populate — `populate=*` stops at level 1 and `populate=deep` is not
+// available in Strapi 5 core, so nested component items (specSections.items)
+// and the seo media must be named explicitly.
+const VEHICLE_POPULATE = [
+  "populate[cardFeatures]=true",
+  "populate[whyChoose]=true",
+  "populate[specSections][populate][items]=true",
+  "populate[cardImage]=true",
+  "populate[heroImage]=true",
+  "populate[seo][populate]=*",
+].join("&");
+
+/** All listings, ordered by `order` then title. */
+export async function getVehicleListings(): Promise<VehicleListing[]> {
+  const json = await strapiFetch<{ data: VehicleListing[] }>(
+    `/api/vehicle-listings?${VEHICLE_POPULATE}&pagination[pageSize]=100&sort[0]=order:asc&sort[1]=title:asc`,
+  );
+  return json.data;
+}
+
+/** One listing by slug, or null if not found. */
+export async function getVehicleListingBySlug(slug: string): Promise<VehicleListing | null> {
+  const json = await strapiFetch<{ data: VehicleListing[] }>(
+    `/api/vehicle-listings?filters[slug][$eq]=${encodeURIComponent(slug)}&${VEHICLE_POPULATE}`,
+  );
+  return json.data[0] ?? null;
+}
+
+/** All slugs, for generateStaticParams. */
+export async function getVehicleListingSlugs(): Promise<string[]> {
+  const json = await strapiFetch<{ data: { slug: string }[] }>(
+    "/api/vehicle-listings?fields[0]=slug&pagination[pageSize]=100",
+  );
+  return json.data.map((v) => v.slug);
+}
+
+// ── Industry partners single type (site-wide partner logos) ──────────────────
+export type IndustryPartner = { name: string; url: string | null; logo: StrapiImage };
+export type IndustryPartners = {
+  heading: string | null;
+  partners: IndustryPartner[] | null;
+} | null;
+
+/** Key industry partners (logo + link), or null if unset / Strapi is unreachable. */
+export async function getIndustryPartners(): Promise<IndustryPartners> {
+  try {
+    const json = await strapiFetch<{ data: IndustryPartners }>(
+      "/api/industry-partners?populate[partners][populate]=logo",
+    );
+    return json.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Header / Footer single types (global chrome) ─────────────────────────────
 // A label + URL pair (Strapi `shared.link` component).
 export type StrapiLink = { label: string; url: string };

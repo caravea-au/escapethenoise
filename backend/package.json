@@ -11,6 +11,8 @@
     "dev": "strapi develop",
     "seed:guides": "node scripts/seed-buying-guides.mjs",
     "seed:header-footer": "node scripts/seed-header-footer.mjs",
+    "seed:vehicles": "node scripts/seed-vehicle-listings.mjs",
+    "seed:industry-partners": "node scripts/seed-industry-partners.mjs",
     "dev:clean": "npm run clean && strapi develop",
     "develop": "strapi develop",
     "start": "strapi start",
