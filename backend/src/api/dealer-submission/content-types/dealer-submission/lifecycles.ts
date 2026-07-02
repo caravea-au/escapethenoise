@@ -26,6 +26,8 @@ function buildSummary(d: AnyRecord): string {
     line('DMS', d.dmsOther || d.dms) +
     '\n' +
     line('Address', [d.street, d.suburb, d.state, d.postcode].filter(Boolean).join(', ')) +
+    line('Motor Dealer Licence name', d.motorDealerLicenceName) +
+    line('Motor Dealer Licence number', d.motorDealerLicenceNumber) +
     line('Multiple locations', d.multipleLocations ? 'Yes' : 'No') +
     '\n' +
     line('Phone', d.phone) +
