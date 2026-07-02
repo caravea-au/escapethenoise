@@ -400,3 +400,44 @@ export async function getHomePage(): Promise<HomePage | null> {
     return null;
   }
 }
+
+// ── Vehicle listings page single type ────────────────────────────────────────
+// Page-level chrome (hero / quiz CTA / SEO) for the /vehicle-listings index.
+// The vehicle cards themselves come from getVehicleListings() — this is only the
+// surrounding copy. Every field is nullable: the page keeps its hardcoded copy as
+// a fallback and getVehicleListingsPage returns null on error.
+
+// Shared SEO component (shared.seo), incl. the ogImage that VehicleSeo omits.
+export type Seo = {
+  metaTitle: string | null;
+  metaDescription: string | null;
+  ogImage: StrapiImage;
+} | null;
+
+export type VehicleListingsPage = {
+  heroEyebrow: string | null;
+  heroHeading: string | null;
+  heroLead: string | null;
+  surveyUrl: string | null;
+  quizButtonLabel: string | null;
+  emptyStateText: string | null;
+  ctaHeading: string | null;
+  ctaLead: string | null;
+  ctaButtonLabel: string | null;
+  seo: Seo;
+};
+
+// Explicit populate — Strapi 5's `populate=*` won't reach the seo component's ogImage media.
+const VEHICLE_LISTINGS_PAGE_POPULATE = "populate[seo][populate]=*";
+
+/** Vehicle-listings page content, or null if unset / Strapi is unreachable (frontend falls back). */
+export async function getVehicleListingsPage(): Promise<VehicleListingsPage | null> {
+  try {
+    const json = await strapiFetch<{ data: VehicleListingsPage | null }>(
+      `/api/vehicle-listings-page?${VEHICLE_LISTINGS_PAGE_POPULATE}`,
+    );
+    return json.data ?? null;
+  } catch {
+    return null;
+  }
+}

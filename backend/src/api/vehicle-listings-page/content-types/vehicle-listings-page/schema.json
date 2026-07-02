@@ -1,0 +1,48 @@
+{
+  "kind": "singleType",
+  "collectionName": "vehicle_listings_pages",
+  "info": {
+    "singularName": "vehicle-listings-page",
+    "pluralName": "vehicle-listings-pages",
+    "displayName": "Vehicle Listings Page",
+    "description": "Page-level content and SEO for the vehicle-listings (RV finder) index page. The vehicle cards themselves come from the Vehicle Listing collection type."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "heroEyebrow": {
+      "type": "string"
+    },
+    "heroHeading": {
+      "type": "string"
+    },
+    "heroLead": {
+      "type": "text"
+    },
+    "surveyUrl": {
+      "type": "string"
+    },
+    "quizButtonLabel": {
+      "type": "string"
+    },
+    "emptyStateText": {
+      "type": "string"
+    },
+    "ctaHeading": {
+      "type": "string"
+    },
+    "ctaLead": {
+      "type": "text"
+    },
+    "ctaButtonLabel": {
+      "type": "string"
+    },
+    "seo": {
+      "type": "component",
+      "repeatable": false,
+      "component": "shared.seo"
+    }
+  }
+}
