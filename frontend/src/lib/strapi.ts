@@ -199,6 +199,25 @@ export async function getVehicleListingSlugs(): Promise<string[]> {
   return json.data.map((v) => v.slug);
 }
 
+// ── Industry partners single type (site-wide partner logos) ──────────────────
+export type IndustryPartner = { name: string; url: string | null; logo: StrapiImage };
+export type IndustryPartners = {
+  heading: string | null;
+  partners: IndustryPartner[] | null;
+} | null;
+
+/** Key industry partners (logo + link), or null if unset / Strapi is unreachable. */
+export async function getIndustryPartners(): Promise<IndustryPartners> {
+  try {
+    const json = await strapiFetch<{ data: IndustryPartners }>(
+      "/api/industry-partners?populate[partners][populate]=logo",
+    );
+    return json.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Header / Footer single types (global chrome) ─────────────────────────────
 // A label + URL pair (Strapi `shared.link` component).
 export type StrapiLink = { label: string; url: string };

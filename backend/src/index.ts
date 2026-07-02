@@ -10,6 +10,7 @@ const PUBLIC_ACTIONS = [
   "api::footer.footer.find",
   "api::home-page.home-page.find",
   "api::privacy-policy.privacy-policy.find",
+  "api::industry-partners.industry-partners.find",
   // Dealer onboarding form posts here (no token); needs upload for logo/photos.
   "api::dealer-submission.dealer-submission.create",
   "plugin::upload.content-api.upload",

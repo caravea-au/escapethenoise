@@ -1,0 +1,24 @@
+{
+  "kind": "singleType",
+  "collectionName": "industry_partners",
+  "info": {
+    "singularName": "industry-partners",
+    "pluralName": "industry-partnerses",
+    "displayName": "Industry Partners",
+    "description": "Key industry partner logos shown site-wide (e.g. on vehicle listing detail pages)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "heading": {
+      "type": "string"
+    },
+    "partners": {
+      "type": "component",
+      "repeatable": true,
+      "component": "shared.partner"
+    }
+  }
+}

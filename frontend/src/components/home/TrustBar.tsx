@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Heading } from "@/components/ui/Heading";
+import { LogoMarquee } from "@/components/LogoMarquee/LogoMarquee";
 import { strapiMedia, type HomeTrustBar } from "@/lib/strapi";
 
 // Fallbacks — the current hardcoded trust-bar content, used when Strapi has no value.
@@ -28,23 +29,6 @@ const FALLBACK_STATES = [
 ];
 
 type LogoItem = { src: string; alt: string };
-
-function LogoTrack({ logos, hidden = false }: { logos: LogoItem[]; hidden?: boolean }) {
-  return (
-    <div className="flex items-center gap-[88px] px-11" aria-hidden={hidden || undefined}>
-      {logos.map((s, i) => (
-        <Image
-          key={`${s.src}-${i}`}
-          src={s.src}
-          alt={hidden ? "" : s.alt}
-          width={140}
-          height={104}
-          className="block h-[104px] w-auto shrink-0 object-contain"
-        />
-      ))}
-    </div>
-  );
-}
 
 // Trust bar — stats + an infinite state-association logo marquee (design.md §8).
 export function TrustBar({ data }: { data?: HomeTrustBar }) {
@@ -110,12 +94,7 @@ export function TrustBar({ data }: { data?: HomeTrustBar }) {
           </div>
 
           <div className="relative overflow-hidden rounded-[20px] bg-cream-deep py-[30px] shadow-[0_24px_56px_-26px_rgba(0,0,0,.7),inset_0_1px_0_rgba(255,255,255,.5)]">
-            <div className="flex w-max animate-marquee">
-              <LogoTrack logos={logos} />
-              <LogoTrack logos={logos} hidden />
-            </div>
-            <div className="pointer-events-none absolute top-0 bottom-0 left-0 w-[90px] bg-[linear-gradient(to_right,#EFE7D2,rgba(239,231,210,0))]" />
-            <div className="pointer-events-none absolute top-0 bottom-0 right-0 w-[90px] bg-[linear-gradient(to_left,#EFE7D2,rgba(239,231,210,0))]" />
+            <LogoMarquee items={logos} fadeColor="#EFE7D2" />
           </div>
 
           <div className="mt-[30px] flex flex-col items-center gap-4">
