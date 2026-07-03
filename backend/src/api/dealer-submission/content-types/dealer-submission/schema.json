@@ -26,6 +26,8 @@
       "enum": ["VIC", "NSW", "QLD", "SA", "WA", "TAS", "NT", "ACT"]
     },
     "postcode": { "type": "string", "required": true },
+    "motorDealerLicenceName": { "type": "string" },
+    "motorDealerLicenceNumber": { "type": "string" },
     "multipleLocations": { "type": "boolean", "default": false },
 
     "phone": { "type": "string", "required": true },

@@ -57,6 +57,7 @@ type Fields = Record<string, string>;
 const INITIAL_FIELDS: Fields = {
   dealershipName: "", legalName: "", abn: "", established: "", dms: "", dmsOther: "",
   street: "", suburb: "", state: "", postcode: "",
+  motorDealerLicenceName: "", motorDealerLicenceNumber: "",
   phone: "", leadsEmail: "", smsNumber: "", contactName: "", contactRole: "", enquiriesEmail: "",
   servicesOther: "", brandsOther: "", productsOther: "",
   website: "", description: "",
@@ -79,6 +80,9 @@ const REQUIRED: string[] = [
   "submitterEmail",
 ];
 const PROGRESS_TOTAL = REQUIRED.length + 5; // 3 option groups + logo + photos
+
+// Conditionally required for NSW dealers only (NSW Motor Dealer Licence law).
+const NSW_LICENCE_FIELDS = ["motorDealerLicenceName", "motorDealerLicenceNumber"];
 
 export function DealerOnboardingForm({
   recaptchaEnabled = false,
@@ -120,26 +124,42 @@ export function DealerOnboardingForm({
   const groupHas = (arr: string[], other: string) =>
     arr.length > 0 || other.trim().length > 0;
 
+  // NSW motor dealers must display their Motor Dealer Licence name + number
+  // (mandatory by NSW law). These two fields only appear — and are only
+  // required — when the dealership's state is NSW.
+  const nswLicenceRequired = fields.state === "NSW";
+
   // Live progress.
   const done = useMemo(() => {
     let n = 0;
     REQUIRED.forEach((k) => {
       if (fields[k]?.trim()) n++;
     });
+    if (nswLicenceRequired) {
+      NSW_LICENCE_FIELDS.forEach((k) => {
+        if (fields[k]?.trim()) n++;
+      });
+    }
     if (groupHas(services, fields.servicesOther)) n++;
     if (groupHas(brands, fields.brandsOther)) n++;
     if (groupHas(productTypes, fields.productsOther)) n++;
     if (logo) n++;
     if (photos.length) n++;
     return n;
-  }, [fields, services, brands, productTypes, logo, photos]);
-  const pct = Math.round((done / PROGRESS_TOTAL) * 100);
+  }, [fields, nswLicenceRequired, services, brands, productTypes, logo, photos]);
+  const progressTotal = PROGRESS_TOTAL + (nswLicenceRequired ? NSW_LICENCE_FIELDS.length : 0);
+  const pct = Math.round((done / progressTotal) * 100);
 
   function validate(): string | null {
     const errs: Record<string, string> = {};
     REQUIRED.forEach((k) => {
       if (!fields[k]?.trim()) errs[k] = "This field is required.";
     });
+    if (nswLicenceRequired) {
+      NSW_LICENCE_FIELDS.forEach((k) => {
+        if (!fields[k]?.trim()) errs[k] = "This field is required.";
+      });
+    }
     ["leadsEmail", "enquiriesEmail", "submitterEmail"].forEach((k) => {
       if (fields[k]?.trim() && !EMAIL_RE.test(fields[k])) errs[k] = "Enter a valid email address.";
     });
@@ -252,7 +272,7 @@ export function DealerOnboardingForm({
             />
           </div>
           <span className="whitespace-nowrap text-[12.5px] font-semibold text-muted">
-            {done} of {PROGRESS_TOTAL} done
+            {done} of {progressTotal} done
           </span>
         </div>
       </div>
@@ -343,6 +363,18 @@ export function DealerOnboardingForm({
               <span data-field="postcode" />
               <Input id="postcode" inputMode="numeric" maxLength={4} className="max-w-[160px]" value={fields.postcode} onChange={(e) => set("postcode", e.target.value)} aria-invalid={!!errors.postcode} placeholder="e.g. 3175" />
             </Field>
+            {nswLicenceRequired && (
+              <>
+                <Field label="Motor Dealer Licence name" required htmlFor="motorDealerLicenceName" hint="Required for NSW dealers — the name your NSW Motor Dealer Licence is held under." error={errors.motorDealerLicenceName}>
+                  <span data-field="motorDealerLicenceName" />
+                  <Input id="motorDealerLicenceName" value={fields.motorDealerLicenceName} onChange={(e) => set("motorDealerLicenceName", e.target.value)} aria-invalid={!!errors.motorDealerLicenceName} placeholder="Name on your Motor Dealer Licence" />
+                </Field>
+                <Field label="Motor Dealer Licence number" required htmlFor="motorDealerLicenceNumber" hint="Required for NSW dealers — your NSW Motor Dealer Licence number." error={errors.motorDealerLicenceNumber}>
+                  <span data-field="motorDealerLicenceNumber" />
+                  <Input id="motorDealerLicenceNumber" value={fields.motorDealerLicenceNumber} onChange={(e) => set("motorDealerLicenceNumber", e.target.value)} aria-invalid={!!errors.motorDealerLicenceNumber} placeholder="e.g. MD012345" />
+                </Field>
+              </>
+            )}
             <div className="sm:col-span-2">
               <ToggleLine id="multipleLocations" name="multipleLocations" checked={flags.multipleLocations} onChange={(v) => flag("multipleLocations", v)} label="We have more than one location" sub="Tick this and we'll be in touch to list your other yards." />
             </div>
