@@ -125,8 +125,8 @@ export function DealerOnboardingForm({
     arr.length > 0 || other.trim().length > 0;
 
   // NSW motor dealers must display their Motor Dealer Licence name + number
-  // (mandatory by NSW law). These two fields only appear — and are only
-  // required — when the dealership's state is NSW.
+  // (mandatory by NSW law). The two fields are shown to every dealer but are
+  // only required — and counted in the progress total — when the state is NSW.
   const nswLicenceRequired = fields.state === "NSW";
 
   // Live progress.
@@ -363,18 +363,15 @@ export function DealerOnboardingForm({
               <span data-field="postcode" />
               <Input id="postcode" inputMode="numeric" maxLength={4} className="max-w-[160px]" value={fields.postcode} onChange={(e) => set("postcode", e.target.value)} aria-invalid={!!errors.postcode} placeholder="e.g. 3175" />
             </Field>
-            {nswLicenceRequired && (
-              <>
-                <Field label="Motor Dealer Licence name" required htmlFor="motorDealerLicenceName" hint="Required for NSW dealers — the name your NSW Motor Dealer Licence is held under." error={errors.motorDealerLicenceName}>
-                  <span data-field="motorDealerLicenceName" />
-                  <Input id="motorDealerLicenceName" value={fields.motorDealerLicenceName} onChange={(e) => set("motorDealerLicenceName", e.target.value)} aria-invalid={!!errors.motorDealerLicenceName} placeholder="Name on your Motor Dealer Licence" />
-                </Field>
-                <Field label="Motor Dealer Licence number" required htmlFor="motorDealerLicenceNumber" hint="Required for NSW dealers — your NSW Motor Dealer Licence number." error={errors.motorDealerLicenceNumber}>
-                  <span data-field="motorDealerLicenceNumber" />
-                  <Input id="motorDealerLicenceNumber" value={fields.motorDealerLicenceNumber} onChange={(e) => set("motorDealerLicenceNumber", e.target.value)} aria-invalid={!!errors.motorDealerLicenceNumber} placeholder="e.g. MD012345" />
-                </Field>
-              </>
-            )}
+            {/* Shown for every dealer; mandatory only for NSW (NSW Motor Dealer Licence law). */}
+            <Field label="Motor Dealer Licence name" required={nswLicenceRequired} optional={!nswLicenceRequired} htmlFor="motorDealerLicenceName" hint="Mandatory for NSW dealers — the name your NSW Motor Dealer Licence is held under." error={errors.motorDealerLicenceName}>
+              <span data-field="motorDealerLicenceName" />
+              <Input id="motorDealerLicenceName" value={fields.motorDealerLicenceName} onChange={(e) => set("motorDealerLicenceName", e.target.value)} aria-invalid={!!errors.motorDealerLicenceName} placeholder="Name on your Motor Dealer Licence" />
+            </Field>
+            <Field label="Motor Dealer Licence number" required={nswLicenceRequired} optional={!nswLicenceRequired} htmlFor="motorDealerLicenceNumber" hint="Mandatory for NSW dealers — your NSW Motor Dealer Licence number." error={errors.motorDealerLicenceNumber}>
+              <span data-field="motorDealerLicenceNumber" />
+              <Input id="motorDealerLicenceNumber" value={fields.motorDealerLicenceNumber} onChange={(e) => set("motorDealerLicenceNumber", e.target.value)} aria-invalid={!!errors.motorDealerLicenceNumber} placeholder="e.g. MD012345" />
+            </Field>
             <div className="sm:col-span-2">
               <ToggleLine id="multipleLocations" name="multipleLocations" checked={flags.multipleLocations} onChange={(v) => flag("multipleLocations", v)} label="We have more than one location" sub="Tick this and we'll be in touch to list your other yards." />
             </div>
