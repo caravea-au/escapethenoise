@@ -2,15 +2,28 @@
   "mcpServers": {
     "next-devtools": {
       "command": "npx",
-      "args": ["-y", "next-devtools-mcp@latest"]
+      "args": [
+        "-y",
+        "next-devtools-mcp@latest"
+      ]
     },
     "strapi": {
       "command": "npx",
-      "args": ["-y", "@bschauer/strapi-mcp-server@2.6.0"]
+      "args": [
+        "-y",
+        "@bschauer/strapi-mcp-server@2.6.0"
+      ]
     },
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
+    },
+    "figma": {
+      "type": "http",
+      "url": "https://mcp.figma.com/mcp"
     }
   }
 }

@@ -1,14 +1,14 @@
 ---
 name: nextjs-component-standards
 description: >
-  How to build a Next.js (App Router) component in escape-the-noise from a Claude
+  How to build a Next.js (App Router) component in this baseplate from a Claude
   Tailwind design export. Enforces reuse-before-writing, Tailwind-first styling, NO
   clamp(), design-token-only colours, server/client discipline, accessibility, and
   registering every new component. Use whenever writing, refactoring, or extracting a
   React/Next component here — invoked by /build-component and applicable on any component task.
 ---
 
-# Next.js Component Standards (escape-the-noise)
+# Next.js Component Standards (this baseplate)
 
 The stack: Next.js 15 App Router · React 19 · TypeScript · **Tailwind CSS 4**. Source of
 truth for look is `design.md` in the relevant `design-input/<export>/` folder. **design.md
@@ -44,7 +44,7 @@ section needs it.
 - **NO `clamp()`.** It misbehaves on iOS/Safari. Do responsive sizing with **breakpoint steps**:
   `text-[40px] md:text-[60px] lg:text-[78px]`, not `text-[clamp(40px,6.6vw,78px)]`.
 - **Tokens only — never raw hex.** Use the theme tokens from `/project-setup`
-  (`text-rust`, `bg-green`, `border-line`). If a colour isn't a token yet, add it to the Tailwind
+  (`text-accent`, `bg-surface`, `border-line`). If a colour isn't a token yet, add it to the Tailwind
   theme first, then use the token. Raw `#hex` in markup is a bug.
 - Spacing/layout: flex/grid with `gap` — never margin-based inline spacing (per `design.md` §5).
 - Honour `prefers-reduced-motion` on every animation.
@@ -63,16 +63,16 @@ section needs it.
 
 ## 5. Accessibility & assets
 
-- Semantic HTML (`<button>`, `<nav>`, `<h1-3>` in order). Visible focus ring (`focus-visible`, rust per design.md).
+- Semantic HTML (`<button>`, `<nav>`, `<h1-3>` in order). Visible focus ring (`focus-visible`, the accent token).
 - Images via `next/image`. **Pre-convert** each source asset to WebP under budget with
   `npm run optimize:image -- <src> <destUnderPublic> [--mobile]` (sharp; ≤200 KB desktop / ≤100 KB mobile),
   then reference the `public/` output.
 - **NEVER reference `design-input/` from component code** — it's git-ignored and excluded from the deploy
   package, so any `import` / `src` / `url()` into it breaks build & deploy. Reference `public/` only.
-- Real `alt` text. Decorative imagery sits under the dark-green scrim so text stays legible (design.md §7).
+- Real `alt` text. Decorative imagery sits under a dark scrim so text stays legible.
 
 > **Tokens live in Tailwind v4 `@theme {}` in `frontend/src/styles/tokens.css`** (no `tailwind.config.js`).
-> Use the token utilities (`bg-green`, `text-rust`); add a new token to `@theme` before using a new colour.
+> Use the token utilities (`bg-surface`, `text-accent`); add a new token to `@theme` before using a new colour.
 
 ## 6. Register what you build (closes the reuse loop)
 

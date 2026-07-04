@@ -1,5 +1,5 @@
 ---
-description: Pre-flight health-check of the escape-the-noise Claude setup (MCPs, Node, build, lint, kit) before working. Read-only.
+description: Pre-flight health-check of the this baseplate Claude setup (MCPs, Node, build, lint, kit) before working. Read-only.
 argument-hint: (none) — run /preflight at the start of a session
 ---
 
@@ -24,18 +24,21 @@ For each, attempt one cheap call. If its tools aren't available this session, ma
 ## 2. Toolchain (PowerShell)
 Run and report each:
 - `node -v` (engine range >=20 <=24; prefer 20 or 22)
-- `npm run lint` runs (ESLint 9 flat config at `frontend/eslint.config.mjs`; `next lint` is gone in Next 16).
-  Pre-existing baseplate `<a>`→`<Link>` errors in `layout.tsx`/`not-found.tsx` are expected until `/project-setup`
-  replaces those files — note them, don't treat as a kit failure.
+- `npm run lint` runs. (If the frontend is on Next 16, `next lint` is removed — switch the script to the
+  ESLint CLI / flat config. Any pre-existing baseplate placeholder-file lint errors clear when `/project-setup`
+  replaces those files — note them, don't treat as a kit failure.)
 - `npm run build` is runnable (you may report "not run" if it's slow — just confirm the script exists)
-- `sharp` is installed in `frontend/` (needed by `npm run optimize:image`) — `npm ls sharp -w frontend`.
+- `sharp` is installed in `frontend/` if `optimize:image` is used (`npm ls sharp -w frontend`) — `/project-setup`
+  adds it. Not a failure if absent pre-setup.
 - If `better-sqlite3` errors with `NODE_MODULE_VERSION`: fix = `npm rebuild better-sqlite3` from `backend/`.
 
 ## 3. Kit & inputs present
-- `.claude/skills/` has `nextjs-component-standards`, `caveman`, `ponytail`, `ponytail-review`.
-- `.claude/COMPONENTS.md` exists (the registry).
+- `.claude/skills/` has `nextjs-component-standards`, `motion-standards`, `design-taste-frontend`, `caveman`, `ponytail`, `ponytail-review`.
+- `motion` + `lenis` installed in `frontend/` (`npm ls motion lenis -w frontend`) — needed by the motion kit.
+- Kit docs exist: `.claude/COMPONENTS.md` · `.claude/QUALITY-BAR.md` · `.claude/PROJECT-PLAN.md` · `.claude/design-brief.md`.
 - `design-input/` exists and is git-ignored (`git check-ignore design-input/anything` should print a path).
-- At least one export folder under `design-input/<export>/` with `design.md` + a `*Tailwind.html` (else ⚠️ "drop an export first").
+- At least one export under `design-input/<export>/` with the structured shape (`tokens/` + `pages/`),
+  or an older flat `design.md` + `*Tailwind.html` (else ⚠️ "drop an export first").
 
 ## 4. Report
 Print a table: **Component | Status | Fix if ❌**. End with a one-line verdict:
