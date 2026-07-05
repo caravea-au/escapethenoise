@@ -17,9 +17,17 @@ For each, attempt one cheap call. If its tools aren't available this session, ma
 - **next-devtools** → a cheap call (e.g. `nextjs_index` / `nextjs_docs`). Expect a response.
 - **playwright** → confirm its tool namespace is loaded (do NOT open a browser). If absent, it was just added
   to `.mcp.json` — **reload the IDE window and approve it**; until then the visual gate falls back to a human check.
+- **figma** → confirm its tool namespace is loaded (e.g. a `figma` resource/tool listing). Expect a response
+  if the server is approved; if not connected, that's ❌ "not loaded — reload the window / approve the server."
+  Not every project uses Figma as the design front door, so an unused-but-connected server is fine — only flag
+  it if `/agentic-team` is actually in play for this project and the server can't be reached.
 
-> These three are wired in `.mcp.json`. The extra `.cursor/mcp.json` servers (Figma) are for the Cursor
-> editor, not Claude Code — do not check them here.
+> All four are wired in `.mcp.json` (base `.mcp.json` ships `figma` as an HTTP MCP for `/agentic-team`).
+
+## 1b. Sync drift (read-only)
+Run `npx claude-brain sync --check` and report the result:
+- ✅ "in sync" if it exits 0 (no drift).
+- ⚠️ "kit drift — run `npx claude-brain sync`" if it reports any create/update/prune, listing the changed paths.
 
 ## 2. Toolchain (PowerShell)
 Run and report each:
