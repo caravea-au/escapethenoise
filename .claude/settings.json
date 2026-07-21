@@ -19,5 +19,18 @@
     "playwright@claude-plugins-official": true,
     "skill-creator@claude-plugins-official": true,
     "ui-ux-pro-max@ui-ux-pro-max-skill": true
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"PR-to-main cleanup (synced via claude-brain; see the /pr command). When a turn creates or opens a pull request to main (for example gh pr create --base main), then AFTER the PR exists and before finishing you MUST: (1) stop every dev server you started for QA this session - background dev tasks (TaskStop) plus any leftover node on the dev ports Next 3000 and Strapi 1337, using the platform-correct kill; do not touch servers you did not start; (2) if this task ran inside a dedicated git worktree, cd back to the main repo root FIRST, then git worktree remove that worktree and git worktree prune. Never remove the worktree you are standing in, and never delete the primary checkout. This applies to both /pr and plain-English PR requests.\"}}'",
+            "shell": "bash"
+          }
+        ]
+      }
+    ]
   }
 }
