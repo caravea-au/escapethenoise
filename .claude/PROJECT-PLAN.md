@@ -38,7 +38,7 @@ Filled during `/project-setup` Phase 0 (intake interview). Foundation-first: dat
 |---|---|---|
 | Strapi running locally (`npm run dev:backend`) | ☐ | |
 | Strapi staging/prod URL + `NEXT_PUBLIC_STRAPI_URL` set | ☐ | |
-| Staging / deploy target reachable (Vercel/Netlify/synergy) | ☐ | |
+ | Staging / deploy target reachable | ☐ | |
 | Git remote + protected `main` | ☐ | |
 | Domain (if known) | ☐ | |
 | Design export present in `design-input/` | ☐ | |
