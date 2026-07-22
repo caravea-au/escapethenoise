@@ -69,6 +69,25 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           }}
         />
         {/* End Google Tag Manager */}
+        {/* Basecamp Pixel Code by Caravea */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(w,d,s,l,i){
+    w[l]=w[l]||[];
+    w[l].push({
+        'pixel.token': 'BC-NOBZ9MF1',
+        'pixel.endpoint': "https://basecamp.caravea.au/api/pixel/submit",
+        'pixel.debug': true,
+        'pixel.ecosystemKey': "{wl!F]4q0H'9~^-GBDpHo7ou[s!PW!Rx"
+    });
+    var f=d.getElementsByTagName(s)[0],j=d.createElement(s);
+    j.async=1;
+    j.src='https://basecamp.caravea.au/pixel/basecamp.js?v=' + Date.now();
+    f.parentNode.insertBefore(j,f);
+})(window,document,'script','basecampDataLayer','BC-NOBZ9MF1');`,
+          }}
+        />
+        {/* End Basecamp Pixel Code */}
       </head>
       <body className="flex min-h-svh flex-col">
         {/* Google Tag Manager (noscript) */}
