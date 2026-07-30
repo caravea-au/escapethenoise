@@ -50,6 +50,10 @@ const RECAPTCHA_TIMEOUT_MS = 10_000;
 // uniform timeout would abort exactly the dealers this fix is for.
 const SUBMIT_TIMEOUT_MS = 20_000;
 
+// Uploads get one retry for transient failures only (see uploadOne).
+const UPLOAD_ATTEMPTS = 2;
+const UPLOAD_RETRY_DELAY_MS = 800;
+
 const GENERIC_SUBMIT_ERROR =
   "Something went wrong sending your details. Please try again in a moment.";
 
@@ -63,9 +67,12 @@ function messageForCode(code: string, supportEmail: string | null): string {
     case "recaptcha-browser-blocked":
       return `Your browser or network is blocking our spam check, so we can't confirm you're human. Try turning off your ad blocker, or use a different browser or network.${emailSentence}`;
     case "recaptcha-low-score":
+      // Unlike browser-blocked, a low v3 score is scored fresh on every attempt,
+      // so a second go genuinely often passes. Lead with "try again" — and your
+      // details are still on screen, so retrying costs nothing.
       return supportEmail
-        ? `Our spam check couldn't confirm this submission. If that seems wrong, email us at ${supportEmail} and we'll sort it out.`
-        : "Our spam check couldn't confirm this submission. Please try again, or get in touch if it keeps happening.";
+        ? `Our spam check wasn't sure about this one. Your details are still here, so please press the button again. If it keeps happening, email us at ${supportEmail} and we'll list you manually.`
+        : "Our spam check wasn't sure about this one. Your details are still here, so please press the button again.";
     case "recaptcha-missing-token":
     case "recaptcha-action-mismatch":
       return "Our spam check didn't finish loading. Please refresh the page and try again.";
@@ -327,36 +334,45 @@ export function DealerOnboardingForm({
         return { failure: describe(null, "File is empty (0 bytes)") };
       }
 
-      try {
-        const fd = new FormData();
-        fd.append("files", file, file.name);
-        // No AbortSignal: large photos on thin connections are legitimately slow.
-        const r = await fetch(`${STRAPI_URL}/api/upload`, {
-          method: "POST",
-          body: fd,
-        });
-        if (!r.ok) {
+      // Two attempts. A dropped connection or a momentary 5xx should never cost a
+      // dealer a photo, but a 4xx (wrong format, empty, too large) will never fix
+      // itself, so those return immediately rather than wasting the dealer's time.
+      let lastFailure: MediaFailure = describe(null, "Upload failed");
+      for (let attempt = 1; attempt <= UPLOAD_ATTEMPTS; attempt++) {
+        try {
+          const fd = new FormData();
+          fd.append("files", file, file.name);
+          // No AbortSignal: large photos on thin connections are legitimately slow.
+          const r = await fetch(`${STRAPI_URL}/api/upload`, {
+            method: "POST",
+            body: fd,
+          });
+          if (r.ok) {
+            const out = (await r.json()) as { url: string }[];
+            const raw = out[0]?.url;
+            if (!raw) return { failure: describe(r.status, "Upload returned no URL") };
+            // DO Spaces URLs are absolute; the local dev provider returns a relative
+            // /uploads path, so make those absolute too.
+            const url = raw.startsWith("http") ? raw : `${STRAPI_URL}${raw}`;
+            uploadedUrls.current.set(file, url);
+            return { url };
+          }
           const { status, message } = await readStrapiError(r);
-          return { failure: describe(status, message || `Upload failed (${status})`) };
-        }
-        const out = (await r.json()) as { url: string }[];
-        const raw = out[0]?.url;
-        if (!raw) {
-          return { failure: describe(r.status, "Upload returned no URL") };
-        }
-        // DO Spaces URLs are absolute; the local dev provider returns a relative
-        // /uploads path, so make those absolute too.
-        const url = raw.startsWith("http") ? raw : `${STRAPI_URL}${raw}`;
-        uploadedUrls.current.set(file, url);
-        return { url };
-      } catch (err) {
-        return {
-          failure: describe(
+          lastFailure = describe(status, message || `Upload failed (${status})`);
+          if (status < 500) return { failure: lastFailure };
+        } catch (err) {
+          // Network-level failure (offline, dropped connection, unreadable file).
+          lastFailure = describe(
             null,
             err instanceof Error ? err.message : "Upload failed",
-          ),
-        };
+          );
+        }
+        if (attempt < UPLOAD_ATTEMPTS) {
+          setSubmitStatus(`Retrying ${file.name}…`);
+          await new Promise((r) => setTimeout(r, UPLOAD_RETRY_DELAY_MS));
+        }
       }
+      return { failure: lastFailure };
     };
 
     try {
@@ -439,7 +455,14 @@ export function DealerOnboardingForm({
         setSubmitError(messageForCode(code, supportEmail));
         return;
       }
-      router.push("/dealer-directory-onboarding/thank-you");
+      // Tell the dealer when an image didn't make it. The submission IS saved and
+      // the team gets the details by email, but silently dropping a photo they
+      // chose is the kind of quiet failure this whole change exists to remove.
+      router.push(
+        failures.length
+          ? `/dealer-directory-onboarding/thank-you?media=${failures.length}`
+          : "/dealer-directory-onboarding/thank-you",
+      );
     } catch (err) {
       setSubmitting(false);
       setSubmitStatus(null);
