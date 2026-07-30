@@ -47,6 +47,9 @@ const config = (params: Core.Config.Shared.ConfigParams): Core.Config.Middleware
   'strapi::poweredBy',
   'strapi::query',
   'strapi::body',
+  // MUST sit after strapi::body: it needs the temp files formidable wrote, and
+  // body deletes them once its own next() resolves. Scoped to POST /api/upload.
+  'global::require-image-signature',
   'strapi::session',
   'strapi::favicon',
   'strapi::public',

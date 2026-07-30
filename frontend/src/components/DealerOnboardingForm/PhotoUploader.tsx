@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ACCEPT_ATTR, isAllowedImage, MAX_FILE_BYTES, MAX_FILE_MB } from "./options";
+import {
+  ACCEPT_ATTR,
+  isAllowedImage,
+  isEmptyFile,
+  MAX_FILE_BYTES,
+  MAX_FILE_MB,
+} from "./options";
 
 const MAX = 5;
 
@@ -17,6 +23,7 @@ export function PhotoUploader({
   const [urls, setUrls] = useState<string[]>([]);
   const [sizeError, setSizeError] = useState(false);
   const [typeError, setTypeError] = useState(false);
+  const [emptyError, setEmptyError] = useState(false);
 
   useEffect(() => {
     const next = files.map((f) => URL.createObjectURL(f));
@@ -28,10 +35,15 @@ export function PhotoUploader({
     if (!list) return;
     const room = MAX - files.length;
     const all = Array.from(list);
-    // Only real raster images — no SVG (XSS vector). The Strapi upload plugin
-    // re-enforces this by magic bytes server-side.
+    // Only real raster images — no SVG (XSS vector). Enforced for real by the
+    // backend signature middleware, not by Strapi's own allowedTypes.
     const images = all.filter(isAllowedImage);
-    setTypeError(all.length > images.length);
+    // Empty files are called out separately: a 0-byte photo looks valid to the
+    // browser but makes Strapi reject the whole upload, so the fix the user
+    // needs ("open the file so it downloads") is nothing like a wrong format.
+    const empties = all.filter(isEmptyFile);
+    setEmptyError(empties.length > 0);
+    setTypeError(all.length - empties.length > images.length);
     setSizeError(images.some((f) => f.size > MAX_FILE_BYTES));
     const incoming = images
       .filter((f) => f.size <= MAX_FILE_BYTES)
@@ -84,6 +96,12 @@ export function PhotoUploader({
         className="absolute h-px w-px overflow-hidden opacity-0"
         tabIndex={-1}
       />
+      {emptyError && (
+        <p className="mt-2 text-[12.5px] font-medium text-[#b4452f]">
+          That file is empty (0 bytes). If it&apos;s saved in OneDrive or iCloud, open it
+          once so it downloads properly, then add it again.
+        </p>
+      )}
       {typeError && (
         <p className="mt-2 text-[12.5px] font-medium text-[#b4452f]">
           Only PNG, JPG or WebP images are allowed.

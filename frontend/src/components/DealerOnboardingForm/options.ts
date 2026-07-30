@@ -8,16 +8,29 @@ export const MAX_FILE_MB = 50;
 export const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
 // Only real raster images are accepted for the logo and photos. SVG is
-// deliberately excluded — it can embed <script> and is an XSS vector. This list
-// is the client-side UX gate; the Strapi upload plugin re-checks by magic bytes
-// server-side (backend/config/plugins.ts → upload.config.security.allowedTypes).
+// deliberately excluded — it can embed <script> and is an XSS vector.
+// NOTE: Strapi's upload plugin does NOT reliably re-check by magic bytes. When a
+// file has no detectable signature it falls back to the *filename extension*
+// (@strapi/upload → utils/mime-validation.mjs, the `expectedMimeFromExt` branch),
+// so the allow-list is only as trustworthy as the name the browser sent. The
+// backend middleware in backend/src/middlewares/require-image-signature.ts is
+// what actually enforces the signature on the public upload route.
 export const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 export const ACCEPT_ATTR = ACCEPTED_IMAGE_TYPES.join(",");
 
+// A 0-byte file is the failure that silently cost us real dealership
+// submissions: the browser still reports a normal `type` (inferred from the
+// extension), so it passed every check here, and Strapi then rejected the whole
+// upload with `ValidationError: Files are empty` — a single 0-size file part
+// trips that before any bytes are read. Cloud placeholders (OneDrive / iCloud
+// "online-only" files) and files still syncing are the usual source.
+export const isEmptyFile = (file: File): boolean => file.size === 0;
+
 // MIME-only check keeps it simple and avoids false-rejecting extension-less
-// files; the server is the authoritative gate regardless.
+// files. Size 0 is treated as "not a usable image" here so both the logo input
+// and the photo picker inherit the guard.
 export const isAllowedImage = (file: File): boolean =>
-  ACCEPTED_IMAGE_TYPES.includes(file.type);
+  !isEmptyFile(file) && ACCEPTED_IMAGE_TYPES.includes(file.type);
 
 export const SERVICES = [
   "New sales",

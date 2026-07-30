@@ -34,10 +34,12 @@ export const metadata: Metadata = {
 const STRAPI_URL =
   process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337";
 
-// Public reCAPTCHA config (site key only) from Strapi's SMTP Settings.
+// Public reCAPTCHA config (site key + support email) from Strapi's SMTP Settings.
 async function getRecaptchaConfig(): Promise<{
   enabled: boolean;
   siteKey: string | null;
+  supportEmail: string | null;
+  configError: boolean;
 }> {
   try {
     const res = await fetch(`${STRAPI_URL}/api/recaptcha-config`, {
@@ -45,17 +47,44 @@ async function getRecaptchaConfig(): Promise<{
       next: { revalidate: 300 },
     });
     if (!res.ok) throw new Error(`status ${res.status}`);
-    return (await res.json()) as { enabled: boolean; siteKey: string | null };
+    const cfg = (await res.json()) as {
+      enabled: boolean;
+      siteKey: string | null;
+      supportEmail?: string | null;
+    };
+    return { ...cfg, supportEmail: cfg.supportEmail ?? null, configError: false };
   } catch {
-    // Fail open on the fetch, not on protection: if we can't read the key the
-    // form still works, and the server-side check still guards the submission.
-    return { enabled: false, siteKey: null };
+    // Fail CLOSED. This used to return `enabled: false`, on the assumption the
+    // form would still work — it would not. The client would send no token while
+    // the backend still demanded one, so EVERY dealer got a generic error until
+    // the 300s ISR window rolled over. One Strapi restart during revalidation
+    // was a silent, site-wide form outage. Better to say so honestly.
+    return { enabled: false, siteKey: null, supportEmail: null, configError: true };
   }
 }
 
 export default async function DealerDirectoryOnboardingPage() {
-  const { enabled, siteKey } = await getRecaptchaConfig();
+  const { enabled, siteKey, supportEmail, configError } = await getRecaptchaConfig();
+
+  if (configError) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-[560px] flex-col items-center justify-center px-[18px] text-center sm:px-7">
+        <h1 className="m-0 mb-3.5 font-oswald text-[28px] font-bold leading-[1.1] text-green md:text-[34px]">
+          We can&apos;t load the form right now
+        </h1>
+        <p className="m-0 text-[16.5px] text-muted">
+          Something on our end isn&apos;t responding, so the form can&apos;t be
+          submitted at the moment. Please refresh the page, or try again shortly.
+        </p>
+      </main>
+    );
+  }
+
   return (
-    <DealerOnboardingForm recaptchaEnabled={enabled} recaptchaSiteKey={siteKey} />
+    <DealerOnboardingForm
+      recaptchaEnabled={enabled}
+      recaptchaSiteKey={siteKey}
+      supportEmail={supportEmail}
+    />
   );
 }
