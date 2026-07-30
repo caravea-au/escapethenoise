@@ -2,12 +2,12 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 // Presentational form controls for the dealership onboarding form. Stateless —
 // styled to the project tokens (matching the design export). Bundled client-side
-// via their importer (DealerOnboardingForm). Tailwind-first; the only non-token
-// colour is the terracotta error (#b4452f — no error token exists in the theme).
+// via their importer (DealerOnboardingForm). Tailwind-first, tokens only — the
+// terracotta error colour comes from the `error` theme token.
 
 // Shared field surface — mirrors the Tier-1 Input so selects/textareas match.
 const fieldBase =
-  "w-full rounded-input border border-line bg-cream px-4 py-3 text-[15px] text-ink placeholder:text-muted aria-[invalid=true]:border-[#b4452f]";
+  "w-full rounded-input border border-line bg-cream px-4 py-3 text-[15px] text-ink placeholder:text-muted aria-[invalid=true]:border-error";
 
 // Numbered section card (used 7×).
 export function FormSection({
@@ -61,7 +61,11 @@ export function Field({
 }) {
   return (
     <div className={`flex flex-col gap-[7px] ${full ? "sm:col-span-2" : ""}`}>
-      <label htmlFor={htmlFor} className="text-[13px] font-semibold text-green">
+      <label
+        htmlFor={htmlFor}
+        id={htmlFor ? `${htmlFor}-label` : undefined}
+        className="text-[13px] font-semibold text-green"
+      >
         {label}{" "}
         {required && <span className="font-bold text-rust">*</span>}
         {optional && (
@@ -71,7 +75,14 @@ export function Field({
       {hint && <span className="-mt-1 text-[12.5px] text-muted">{hint}</span>}
       {children}
       {error && (
-        <span className="text-[12.5px] font-medium text-[#b4452f]">{error}</span>
+        // id lets a control that shouldn't rely on aria-invalid (the MultiSelect
+        // trigger is a button) point aria-describedby at the message instead.
+        <span
+          id={htmlFor ? `${htmlFor}-error` : undefined}
+          className="text-[12.5px] font-medium text-error"
+        >
+          {error}
+        </span>
       )}
     </div>
   );

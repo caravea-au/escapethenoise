@@ -280,6 +280,18 @@ export function DealerOnboardingForm({
     if (first) {
       const el = formRef.current?.querySelector(`[data-field="${first}"]`);
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Scrolling alone is silent, so a screen-reader user got NO feedback that
+      // validation failed — focus stayed on the submit button and they never
+      // reached the message wired up via aria-describedby. Move focus to the
+      // control itself. The marker is usually an empty sibling <span>, but the
+      // consent block puts data-field on a wrapper that contains its controls,
+      // so look inside first and fall back to the marker's parent.
+      const focusable = "input:not([type=hidden]), select, textarea, button";
+      const control =
+        el?.querySelector<HTMLElement>(focusable) ??
+        el?.parentElement?.querySelector<HTMLElement>(focusable);
+      // preventScroll so this doesn't fight the smooth scrollIntoView above.
+      control?.focus({ preventScroll: true });
       return;
     }
 
@@ -640,19 +652,19 @@ export function DealerOnboardingForm({
         {/* 5. What you offer */}
         <FormSection num={5} title="What you offer" subtitle="This powers the directory's search filters.">
           <div className="grid grid-cols-1 gap-[18px]">
-            <Field full label="Services offered" required hint="Pick everything your dealership offers." error={errors.services}>
+            <Field full label="Services offered" required htmlFor="servicesSelect" hint="Pick everything your dealership offers." error={errors.services}>
               <span data-field="services" />
-              <MultiSelect placeholder="Select services…" options={SERVICES} selected={services} onChange={setServices} invalid={!!errors.services} />
+              <MultiSelect id="servicesSelect" placeholder="Select services…" options={SERVICES} selected={services} onChange={setServices} invalid={!!errors.services} />
               <Input className="mt-2.5" value={fields.servicesOther} onChange={(e) => set("servicesOther", e.target.value)} placeholder="Other services not listed — separate with commas" />
             </Field>
-            <Field full label="Brands stocked" required hint="All the brands you currently stock." error={errors.brands}>
+            <Field full label="Brands stocked" required htmlFor="brandsSelect" hint="All the brands you currently stock." error={errors.brands}>
               <span data-field="brands" />
-              <MultiSelect placeholder="Select brands…" options={BRANDS} selected={brands} onChange={setBrands} invalid={!!errors.brands} />
+              <MultiSelect id="brandsSelect" placeholder="Select brands…" options={BRANDS} selected={brands} onChange={setBrands} invalid={!!errors.brands} />
               <Input className="mt-2.5" value={fields.brandsOther} onChange={(e) => set("brandsOther", e.target.value)} placeholder="Other brands not listed — separate with commas" />
             </Field>
-            <Field full label="Product types you sell" required hint="The kinds of vans you sell." error={errors.productTypes}>
+            <Field full label="Product types you sell" required htmlFor="productTypesSelect" hint="The kinds of vans you sell." error={errors.productTypes}>
               <span data-field="productTypes" />
-              <MultiSelect placeholder="Select product types…" options={PRODUCT_TYPES} selected={productTypes} onChange={setProductTypes} invalid={!!errors.productTypes} />
+              <MultiSelect id="productTypesSelect" placeholder="Select product types…" options={PRODUCT_TYPES} selected={productTypes} onChange={setProductTypes} invalid={!!errors.productTypes} />
               <Input className="mt-2.5" value={fields.productsOther} onChange={(e) => set("productsOther", e.target.value)} placeholder="Other product types not listed — separate with commas" />
             </Field>
             <Field full label="Do you sell new, used, or both?" hint="Lets buyers filter for what they're after.">
@@ -759,7 +771,7 @@ export function DealerOnboardingForm({
               <ToggleLine id="marketingConsent" name="marketingConsent" checked={flags.marketingConsent} onChange={(v) => flag("marketingConsent", v)} label={<>I agree to be contacted for training and lead management by Caravea. <span className="font-bold text-rust">*</span></>} />
             </div>
             {consentError && (
-              <span className="mt-2.5 block text-[12.5px] font-medium text-[#b4452f]">Please tick all three boxes to continue.</span>
+              <span className="mt-2.5 block text-[12.5px] font-medium text-error">Please tick all three boxes to continue.</span>
             )}
           </div>
         </FormSection>
@@ -788,7 +800,7 @@ export function DealerOnboardingForm({
           <p className="mt-3 text-center text-[13px] font-medium text-muted" aria-live="polite">{submitStatus}</p>
         )}
         {submitError && (
-          <p className="mt-3 text-center text-[13px] font-medium text-[#b4452f]" role="alert">{submitError}</p>
+          <p className="mt-3 text-center text-[13px] font-medium text-error" role="alert">{submitError}</p>
         )}
         <p className="mt-3.5 text-center text-[12.5px] text-muted">
           We&apos;ll review your details and have your listing live shortly.
