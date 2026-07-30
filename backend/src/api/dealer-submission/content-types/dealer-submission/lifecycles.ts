@@ -17,6 +17,27 @@ function line(label: string, value: unknown): string {
   return `${label}: ${v}\n`;
 }
 
+/**
+ * Media failures get their own block, NOT a `line()` call: `line()` does
+ * String(value) on arrays, so an array of objects would render as
+ * "[object Object], [object Object]". This block is the operational channel for
+ * chasing a dealer whose logo or photo didn't upload — the submission is saved
+ * either way, so without this nobody would know anything was missing.
+ */
+function buildMediaBlock(d: AnyRecord): string {
+  const failures = Array.isArray(d.mediaErrors) ? (d.mediaErrors as AnyRecord[]) : [];
+  if (!failures.length) return '';
+  const rows = failures
+    .map(
+      (m) =>
+        `  - ${String(m.field)}: ${String(m.name)} (${String(m.size)} bytes, ${
+          String(m.type) || 'no type'
+        }) — ${String(m.message)}\n`,
+    )
+    .join('');
+  return `\n*** ${failures.length} IMAGE(S) FAILED TO UPLOAD — chase the dealer for these ***\n${rows}`;
+}
+
 function buildSummary(d: AnyRecord): string {
   return (
     line('Dealership', d.dealershipName) +
@@ -59,7 +80,9 @@ function buildSummary(d: AnyRecord): string {
     line('State association', d.stateAssociation) +
     line('Authorised', d.authorised ? 'Yes' : 'No') +
     line('Privacy consent', d.privacyConsent ? 'Yes' : 'No') +
-    line('Marketing consent', d.marketingConsent ? 'Yes' : 'No')
+    line('Marketing consent', d.marketingConsent ? 'Yes' : 'No') +
+    line('Spam suspect', d.spamSuspect ? 'YES — review before listing' : '') +
+    buildMediaBlock(d)
   );
 }
 

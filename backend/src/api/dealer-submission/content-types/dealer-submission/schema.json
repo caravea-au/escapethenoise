@@ -59,6 +59,7 @@
     "description": { "type": "text", "maxLength": 320 },
     "logo": { "type": "string" },
     "photos": { "type": "json" },
+    "mediaErrors": { "type": "json" },
     "facebook": { "type": "string" },
     "instagram": { "type": "string" },
     "youtube": { "type": "string" },
@@ -72,6 +73,7 @@
     "privacyConsent": { "type": "boolean", "default": false },
     "marketingConsent": { "type": "boolean", "default": false },
 
-    "submittedAt": { "type": "datetime" }
+    "submittedAt": { "type": "datetime" },
+    "spamSuspect": { "type": "boolean", "default": false }
   }
 }

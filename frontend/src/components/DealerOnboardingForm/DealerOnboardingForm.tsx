@@ -22,6 +22,7 @@ import {
   BRANDS,
   DMS_SYSTEMS,
   isAllowedImage,
+  isEmptyFile,
   MAX_FILE_BYTES,
   MAX_FILE_MB,
   PRODUCT_TYPES,
@@ -35,8 +36,73 @@ const STRAPI_URL =
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// reCAPTCHA v3 action name (shows in the reCAPTCHA admin console).
+// reCAPTCHA v3 action names (show in the reCAPTCHA admin console). The pre-check
+// uses its own action so it doesn't skew the score stats for real submissions.
 const RECAPTCHA_ACTION = "dealer_submit";
+const RECAPTCHA_PRECHECK_ACTION = "dealer_precheck";
+
+// grecaptcha.execute() can hang indefinitely when the network blocks Google, and
+// there is no fetch to abort — so it needs its own deadline.
+const RECAPTCHA_TIMEOUT_MS = 10_000;
+
+// The small JSON create call is safe to bound. Uploads deliberately are NOT:
+// five large photos on a thin regional connection are legitimately slow, and a
+// uniform timeout would abort exactly the dealers this fix is for.
+const SUBMIT_TIMEOUT_MS = 20_000;
+
+const GENERIC_SUBMIT_ERROR =
+  "Something went wrong sending your details. Please try again in a moment.";
+
+// Maps the backend's stable `error.details.code` values to what the dealer reads.
+// Never match on the message text — these codes are the contract.
+function messageForCode(code: string, supportEmail: string | null): string {
+  const emailSentence = supportEmail
+    ? ` If that's not possible, email us at ${supportEmail} and we'll list you manually.`
+    : "";
+  switch (code) {
+    case "recaptcha-browser-blocked":
+      return `Your browser or network is blocking our spam check, so we can't confirm you're human. Try turning off your ad blocker, or use a different browser or network.${emailSentence}`;
+    case "recaptcha-low-score":
+      return supportEmail
+        ? `Our spam check couldn't confirm this submission. If that seems wrong, email us at ${supportEmail} and we'll sort it out.`
+        : "Our spam check couldn't confirm this submission. Please try again, or get in touch if it keeps happening.";
+    case "recaptcha-missing-token":
+    case "recaptcha-action-mismatch":
+      return "Our spam check didn't finish loading. Please refresh the page and try again.";
+    case "recaptcha-unavailable":
+      return "We couldn't reach our spam checker just now. Please try again in a moment.";
+    default:
+      return GENERIC_SUBMIT_ERROR;
+  }
+}
+
+// Strapi errors come back as { data: null, error: { status, message, details } }.
+// Pull out the code and message rather than throwing the body away.
+async function readStrapiError(
+  res: Response,
+): Promise<{ status: number; code: string; message: string }> {
+  let code = "";
+  let message = "";
+  try {
+    const parsed = (await res.json()) as {
+      error?: { message?: string; details?: { code?: string } };
+    };
+    code = parsed?.error?.details?.code ?? "";
+    message = parsed?.error?.message ?? "";
+  } catch {
+    // Non-JSON body (an nginx error page, say) — status is all we get.
+  }
+  return { status: res.status, code, message };
+}
+
+type MediaFailure = {
+  field: "logo" | "photos";
+  name: string;
+  size: number;
+  type: string;
+  status: number | null;
+  message: string;
+};
 
 declare global {
   interface Window {
@@ -50,6 +116,7 @@ declare global {
 type DealerOnboardingFormProps = {
   recaptchaEnabled?: boolean;
   recaptchaSiteKey?: string | null;
+  supportEmail?: string | null;
 };
 
 // Scalar string fields (camelCase = Strapi attribute names).
@@ -87,6 +154,7 @@ const NSW_LICENCE_FIELDS = ["motorDealerLicenceName", "motorDealerLicenceNumber"
 export function DealerOnboardingForm({
   recaptchaEnabled = false,
   recaptchaSiteKey = null,
+  supportEmail = null,
 }: DealerOnboardingFormProps = {}) {
   const router = useRouter();
   const recaptchaActive = recaptchaEnabled && !!recaptchaSiteKey;
@@ -103,7 +171,21 @@ export function DealerOnboardingForm({
   const [consentError, setConsentError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitStatus, setSubmitStatus] = useState<string | null>(null);
+  // Honeypot. Deliberately NOT a key in INITIAL_FIELDS — that object mirrors
+  // Strapi attribute names, and this is not one.
+  const [comment, setComment] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  // Real hydration time, so the timing signal measures how long the human took.
+  // Resets on reload, which is correct: a reloaded form restarts the clock.
+  const loadedAt = useRef(0);
+  // Uploaded-URL cache keyed on File identity. A retry after a failed submit
+  // re-uploads nothing, which is what previously orphaned 31 paid Spaces files.
+  const uploadedUrls = useRef(new Map<File, string>());
+
+  useEffect(() => {
+    loadedAt.current = Date.now();
+  }, []);
 
   // Load the reCAPTCHA v3 script once when protection is enabled.
   useEffect(() => {
@@ -195,37 +277,136 @@ export function DealerOnboardingForm({
     }
 
     setSubmitting(true);
-    try {
-      // Get a fresh reCAPTCHA v3 token (verified server-side on create).
-      let recaptchaToken: string | undefined;
-      if (recaptchaActive) {
-        if (!window.grecaptcha) throw new Error("recaptcha not loaded");
-        recaptchaToken = await new Promise<string>((resolve, reject) => {
-          window.grecaptcha!.ready(() => {
-            window
-              .grecaptcha!.execute(recaptchaSiteKey!, { action: RECAPTCHA_ACTION })
-              .then(resolve)
-              .catch(reject);
-          });
+    setSubmitStatus(null);
+
+    // Mint a reCAPTCHA v3 token. execute() can hang forever on a network that
+    // blocks Google, so it gets a deadline of its own.
+    const mintToken = async (action: string): Promise<string | undefined> => {
+      if (!recaptchaActive) return undefined;
+      if (!window.grecaptcha) throw new Error("recaptcha not loaded");
+      const execute = new Promise<string>((resolve, reject) => {
+        window.grecaptcha!.ready(() => {
+          window
+            .grecaptcha!.execute(recaptchaSiteKey!, { action })
+            .then(resolve)
+            .catch(reject);
         });
+      });
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("recaptcha timeout")),
+          RECAPTCHA_TIMEOUT_MS,
+        ),
+      );
+      return await Promise.race([execute, timeout]);
+    };
+
+    // One file per request, and never throws. A single unreadable photo used to
+    // abort the whole submission and lose the dealership; now it just reports
+    // itself and the rest of the submission carries on.
+    const uploadOne = async (
+      file: File,
+      field: MediaFailure["field"],
+    ): Promise<{ url: string } | { failure: MediaFailure }> => {
+      const cached = uploadedUrls.current.get(file);
+      if (cached) return { url: cached };
+
+      const describe = (status: number | null, message: string): MediaFailure => ({
+        field,
+        name: file.name,
+        size: file.size,
+        type: file.type || "unknown",
+        status,
+        message,
+      });
+
+      // Caught here rather than at selection time on purpose: a file can go
+      // unreadable between picking and submitting (cloud placeholder rehydration,
+      // iOS purging its sandbox copy, a USB stick pulled out).
+      if (isEmptyFile(file)) {
+        return { failure: describe(null, "File is empty (0 bytes)") };
       }
 
-      // Upload the files first (Strapi routes them to the DigitalOcean Space),
-      // then store the returned public URLs directly on the entry — logo as a
-      // string, photos as a JSON array of URLs.
-      const upload = async (list: File[]): Promise<string[]> => {
-        if (!list.length) return [];
+      try {
         const fd = new FormData();
-        list.forEach((f) => fd.append("files", f, f.name));
-        const r = await fetch(`${STRAPI_URL}/api/upload`, { method: "POST", body: fd });
-        if (!r.ok) throw new Error(`upload ${r.status}`);
+        fd.append("files", file, file.name);
+        // No AbortSignal: large photos on thin connections are legitimately slow.
+        const r = await fetch(`${STRAPI_URL}/api/upload`, {
+          method: "POST",
+          body: fd,
+        });
+        if (!r.ok) {
+          const { status, message } = await readStrapiError(r);
+          return { failure: describe(status, message || `Upload failed (${status})`) };
+        }
         const out = (await r.json()) as { url: string }[];
+        const raw = out[0]?.url;
+        if (!raw) {
+          return { failure: describe(r.status, "Upload returned no URL") };
+        }
         // DO Spaces URLs are absolute; the local dev provider returns a relative
         // /uploads path, so make those absolute too.
-        return out.map((u) => (u.url.startsWith("http") ? u.url : `${STRAPI_URL}${u.url}`));
-      };
-      const [logoUrl] = await upload(logo ? [logo] : []);
-      const photoUrls = await upload(photos);
+        const url = raw.startsWith("http") ? raw : `${STRAPI_URL}${raw}`;
+        uploadedUrls.current.set(file, url);
+        return { url };
+      } catch (err) {
+        return {
+          failure: describe(
+            null,
+            err instanceof Error ? err.message : "Upload failed",
+          ),
+        };
+      }
+    };
+
+    try {
+      // Pre-check the token BEFORE uploading anything. A dealer whose network
+      // blocks Google now finds out in about a second instead of after a
+      // multi-minute upload, and nothing gets orphaned in the Space.
+      if (recaptchaActive) {
+        setSubmitStatus("Checking your browser…");
+        const precheckToken = await mintToken(RECAPTCHA_PRECHECK_ACTION);
+        const pre = await fetch(`${STRAPI_URL}/api/dealer-submissions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            data: { verifyOnly: true, recaptchaToken: precheckToken },
+          }),
+          signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
+        });
+        if (!pre.ok) {
+          const { status, code, message } = await readStrapiError(pre);
+          console.error(`[dealer-form] precheck ${status} ${code} ${message}`);
+          setSubmitting(false);
+          setSubmitStatus(null);
+          setSubmitError(messageForCode(code, supportEmail));
+          return;
+        }
+      }
+
+      // Upload sequentially so the status line means something and thin uplinks
+      // aren't fighting themselves.
+      const failures: MediaFailure[] = [];
+      let logoUrl: string | null = null;
+      if (logo) {
+        setSubmitStatus("Uploading your logo…");
+        const res = await uploadOne(logo, "logo");
+        if ("url" in res) logoUrl = res.url;
+        else failures.push(res.failure);
+      }
+
+      const photoUrls: string[] = [];
+      for (let i = 0; i < photos.length; i++) {
+        setSubmitStatus(`Uploading photo ${i + 1} of ${photos.length}…`);
+        const res = await uploadOne(photos[i], "photos");
+        if ("url" in res) photoUrls.push(res.url);
+        else failures.push(res.failure);
+      }
+
+      setSubmitStatus("Saving your details…");
+      // A fresh token: v3 tokens are single-use, so reusing the pre-check one
+      // would come back as `timeout-or-duplicate`.
+      const recaptchaToken = await mintToken(RECAPTCHA_ACTION);
 
       const data = {
         ...fields,
@@ -236,22 +417,42 @@ export function DealerOnboardingForm({
         brands,
         productTypes,
         tradingHours: hours,
-        logo: logoUrl ?? null,
+        logo: logoUrl,
         photos: photoUrls,
+        mediaErrors: failures,
         submittedAt: new Date().toISOString(),
+        comment,
+        elapsedMs: loadedAt.current ? Date.now() - loadedAt.current : 0,
         ...(recaptchaToken ? { recaptchaToken } : {}),
       };
       const res = await fetch(`${STRAPI_URL}/api/dealer-submissions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ data }),
+        signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
       });
-      if (!res.ok) throw new Error(`status ${res.status}`);
+      if (!res.ok) {
+        const { status, code, message } = await readStrapiError(res);
+        console.error(`[dealer-form] submit ${status} ${code} ${message}`);
+        setSubmitting(false);
+        setSubmitStatus(null);
+        setSubmitError(messageForCode(code, supportEmail));
+        return;
+      }
       router.push("/dealer-directory-onboarding/thank-you");
     } catch (err) {
       setSubmitting(false);
+      setSubmitStatus(null);
+      // A hung or blocked reCAPTCHA script never reaches the server, so there is
+      // no code to map — say what the dealer can actually do about it.
+      const failedRecaptcha =
+        err instanceof Error &&
+        (err.message === "recaptcha not loaded" ||
+          err.message === "recaptcha timeout");
       setSubmitError(
-        "Something went wrong sending your details. Please try again in a moment.",
+        failedRecaptcha
+          ? messageForCode("recaptcha-browser-blocked", supportEmail)
+          : GENERIC_SUBMIT_ERROR,
       );
       console.error(err);
     }
@@ -464,6 +665,13 @@ export function DealerOnboardingForm({
                   Upload logo
                   <input type="file" accept={ACCEPT_ATTR} className="absolute h-px w-px overflow-hidden opacity-0" onChange={(e) => {
                     const f = e.target.files?.[0] ?? null;
+                    // Reset first: without this, re-picking the same file after
+                    // fixing it on disk never re-fires onChange.
+                    e.target.value = "";
+                    if (f && isEmptyFile(f)) {
+                      setErrors((prev) => ({ ...prev, logo: "That file is empty (0 bytes). If it's saved in OneDrive or iCloud, open it once so it downloads properly, then choose it again." }));
+                      return;
+                    }
                     if (f && !isAllowedImage(f)) {
                       setErrors((prev) => ({ ...prev, logo: "Logo must be a PNG, JPG or WebP image." }));
                       return;
@@ -533,11 +741,31 @@ export function DealerOnboardingForm({
           </div>
         </FormSection>
 
+        {/* Honeypot: off-screen rather than display:none, because bots skip
+            hidden inputs but do fill visually-hidden ones. Named "comment"
+            because Chrome has no autofill category for it — an autofilled
+            honeypot would false-flag a real dealer. */}
+        <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+          <label htmlFor="comment">Comment</label>
+          <input
+            id="comment"
+            name="comment"
+            type="text"
+            tabIndex={-1}
+            autoComplete="off"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+          />
+        </div>
+
         <Button variant="primary" fullWidth type="submit" disabled={submitting} className="text-green-dark">
           {submitting ? "Sending…" : "List my dealership"}
         </Button>
+        {submitting && submitStatus && (
+          <p className="mt-3 text-center text-[13px] font-medium text-muted" aria-live="polite">{submitStatus}</p>
+        )}
         {submitError && (
-          <p className="mt-3 text-center text-[13px] font-medium text-[#b4452f]">{submitError}</p>
+          <p className="mt-3 text-center text-[13px] font-medium text-[#b4452f]" role="alert">{submitError}</p>
         )}
         <p className="mt-3.5 text-center text-[12.5px] text-muted">
           We&apos;ll review your details and have your listing live shortly.

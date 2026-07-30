@@ -15,13 +15,24 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
   upload: {
     config: {
       sizeLimit: MAX_UPLOAD_BYTES,
-      // Only real image files may be uploaded. Strapi validates by MAGIC BYTES
-      // (via the bundled file-type lib), not the client-supplied Content-Type,
-      // so a renamed/spoofed file is rejected with a ValidationError. Enforced
-      // on both the public content API (/api/upload, used by the dealer
-      // onboarding form) and the admin media library. SVG is deliberately
-      // excluded — it can embed <script>. If an editor later needs to upload
-      // SVG/PDF via the admin, widen this list.
+      // Only real image files may be uploaded. SVG is deliberately excluded — it
+      // can embed <script>. If an editor later needs SVG/PDF in the admin, widen
+      // this list.
+      //
+      // CAUTION — this allow-list is NOT a magic-byte check, despite what an
+      // earlier version of this comment claimed. Strapi only compares against
+      // detected content when the bundled file-type lib actually recognises a
+      // signature; for anything signature-less (plain text, HTML, JS, a bare
+      // <svg> with no XML prolog) it falls back to the *filename extension*
+      // (@strapi/upload → utils/mime-validation.mjs, `expectedMimeFromExt`).
+      // That extension is client-supplied, so `evil.txt` renamed `evil.jpg` and
+      // declared image/jpeg passed this list with a 201.
+      //
+      // Real enforcement for the PUBLIC route lives in
+      // backend/src/middlewares/require-image-signature.ts, which reads the
+      // leading bytes itself. Adding `deniedTypes` here does not help: it is
+      // evaluated against the mimetype Strapi already settled on, which in that
+      // scenario is a clean image/jpeg.
       security: {
         allowedTypes: ['image/png', 'image/jpeg', 'image/webp'],
       },
