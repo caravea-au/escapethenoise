@@ -97,18 +97,18 @@ export function PhotoUploader({
         tabIndex={-1}
       />
       {emptyError && (
-        <p className="mt-2 text-[12.5px] font-medium text-[#b4452f]">
+        <p className="mt-2 text-[12.5px] font-medium text-error">
           That file is empty (0 bytes). If it&apos;s saved in OneDrive or iCloud, open it
           once so it downloads properly, then add it again.
         </p>
       )}
       {typeError && (
-        <p className="mt-2 text-[12.5px] font-medium text-[#b4452f]">
+        <p className="mt-2 text-[12.5px] font-medium text-error">
           Only PNG, JPG or WebP images are allowed.
         </p>
       )}
       {sizeError && (
-        <p className="mt-2 text-[12.5px] font-medium text-[#b4452f]">
+        <p className="mt-2 text-[12.5px] font-medium text-error">
           Each photo must be {MAX_FILE_MB}MB or smaller.
         </p>
       )}

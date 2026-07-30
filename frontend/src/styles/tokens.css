@@ -27,6 +27,7 @@
   --color-badge-closed: #6d6e71;
   --color-badge-closed-bg: #eef0f2;
   --color-badge-accredited-bg: #f4e8d4;
+  --color-error: #b4452f;
 
   /* ---- Radii (design.md §6) ---- */
   --radius-button: 12px;
