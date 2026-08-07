@@ -5,26 +5,36 @@
 // code deploy.
 //
 // Runs against ANY Strapi instance over REST — point it at local or live:
-//   STRAPI_TOKEN=<token> npm run seed:home-page                              # local (default URL)
-//   STRAPI_URL=https://cms-... STRAPI_TOKEN=<token> npm run seed:home-page   # live
+//   STRAPI_TOKEN=<token> npm run seed:home-page                                      # local
+//   STRAPI_URL=https://cms-... STRAPI_TOKEN=<token> npm run seed:home-page -- --live # live
 //
 // Flags:
 //   --dry-run   print the assembled payload as JSON and write nothing
+//   --live      required to write to any non-localhost STRAPI_URL. This script
+//               publishes, and STRAPI_URL is easy to leave exported in a shell,
+//               so reaching production must be deliberate.
 //   --yes       proceed even if the draft and published home-page differ
 //               (otherwise the script refuses, since PUT ?status=published
 //               would publish those pending edits as a side effect)
+//
+// Always do a --dry-run against live first and eyeball the hero block for an
+// intact title/subtitle before the real run.
 //
 // home-page has draftAndPublish: true (backend/src/api/home-page/content-types/
 // home-page/schema.json), unlike header/footer/vehicle-listings-page. A plain
 // PUT only writes the draft — the public (tokenless) API keeps serving the old
 // published version — so the write here MUST be PUT ?status=published.
 //
-// `hero` already holds real live copy (title/subtitle) that this script must
-// never touch. Strapi replaces a non-repeatable component wholesale on update,
-// so the script GETs the current hero first, strips document metadata (keeping
-// the component's numeric `id` so the row is updated in place, not orphaned),
-// merges only the fields below over it, and hard-asserts title/subtitle are
-// unchanged before writing — it throws rather than silently overwriting.
+// Strapi replaces a non-repeatable component wholesale on update, so EVERY
+// component here is merged over what is already stored, never sent as a bare
+// literal. The script GETs the current document first, strips document
+// metadata (keeping each component's numeric `id` so the row is updated in
+// place, not orphaned), merges only the fields below over it, and then hard-
+// asserts before writing — it throws rather than silently overwriting:
+//   - hero.title / hero.subtitle must be unchanged (live holds real copy), and
+//   - no media may be dropped (trustBar.ciaaLogo, trustBar.stateLogos,
+//     lifestyle.backgroundImage are all null today but the client may upload
+//     into them later).
 //
 // `openDay` is DELIBERATELY NOT SEEDED and must stay that way: its date
 // (12 July 2026) is stale, and leaving the field null is what keeps the Open
@@ -43,9 +53,20 @@ const STRAPI_URL = (process.env.STRAPI_URL ?? "http://localhost:1337").replace(/
 const TOKEN = process.env.STRAPI_TOKEN;
 const DRY_RUN = process.argv.includes("--dry-run");
 const YES = process.argv.includes("--yes");
+const LIVE = process.argv.includes("--live");
 
 if (!TOKEN) {
   console.error("✗ STRAPI_TOKEN env var is required (full-access API token).");
+  process.exit(1);
+}
+
+// Writing to a non-local Strapi needs --live said out loud. STRAPI_URL is easy
+// to leave exported in a shell after an earlier live run, and this script
+// publishes — so a bare `npm run seed:home-page` must never reach production
+// by accident.
+const IS_LOCAL = /^https?:\/\/(localhost|127\.0\.0\.1)(:|$|\/)/.test(STRAPI_URL);
+if (!IS_LOCAL && !LIVE && !DRY_RUN) {
+  console.error(`✗ ${STRAPI_URL} is not local. Re-run with --live to write to it.`);
   process.exit(1);
 }
 
@@ -182,16 +203,38 @@ async function main() {
     console.warn("  --yes passed — continuing anyway.\n");
   }
 
-  const current = draft; // most up-to-date source for the hero merge
+  const current = draft; // most up-to-date source for the merges
 
+  // EVERY component is merged over what is already there, never replaced.
+  // Strapi swaps a non-repeatable component wholesale, so sending a bare
+  // literal would blank every field this script does not list — including
+  // media the client uploaded later (trustBar.ciaaLogo / trustBar.stateLogos /
+  // lifestyle.backgroundImage), orphaning those component rows. clean() keeps
+  // the component's numeric `id` so the existing row is updated in place.
   const hero = { ...clean(current?.hero), ...HERO_FIELDS };
+  const trustBar = { ...clean(current?.trustBar), ...TRUST_BAR };
+  const lifestyle = { ...clean(current?.lifestyle), ...LIFESTYLE };
+
+  // Hard guards: refuse to write rather than destroy anything this script does
+  // not own. Copy the client edits into the constants above if they are meant
+  // to become the new seed values.
   for (const key of ["title", "subtitle"]) {
     if (current?.hero?.[key] && hero[key] !== current.hero[key]) {
       throw new Error(`refusing to write: hero.${key} would change`);
     }
   }
+  const mediaGuards = [
+    ["trustBar.ciaaLogo", current?.trustBar?.ciaaLogo, trustBar.ciaaLogo],
+    ["trustBar.stateLogos", current?.trustBar?.stateLogos, trustBar.stateLogos],
+    ["lifestyle.backgroundImage", current?.lifestyle?.backgroundImage, lifestyle.backgroundImage],
+  ];
+  for (const [label, before, after] of mediaGuards) {
+    const had = Array.isArray(before) ? before.length > 0 : before != null;
+    const kept = Array.isArray(after) ? after.length > 0 : after != null;
+    if (had && !kept) throw new Error(`refusing to write: ${label} would be dropped`);
+  }
 
-  const data = { hero, trustBar: TRUST_BAR, lifestyle: LIFESTYLE };
+  const data = { hero, trustBar, lifestyle };
   // openDay / journey / buyingGuidesHeader / seo deliberately omitted — see
   // header comment. openDay in particular must never be added here.
 
