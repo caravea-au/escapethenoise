@@ -69,7 +69,13 @@ export function FilterBar({
         </div>
 
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:contents">
-          <Select tone="white" aria-label="Filter by state" value={stateValue} onChange={(e) => onStateChange(e.target.value)}>
+          <Select
+            tone="white"
+            aria-label="Filter by state"
+            value={stateValue}
+            onChange={(e) => onStateChange(e.target.value)}
+            className="lg:w-[150px] lg:flex-none"
+          >
             <option value="">All States</option>
             {options.states.map((s) => (
               <option key={s} value={s}>
@@ -77,7 +83,13 @@ export function FilterBar({
               </option>
             ))}
           </Select>
-          <Select tone="white" aria-label="Filter by brand" value={brandValue} onChange={(e) => onBrandChange(e.target.value)}>
+          <Select
+            tone="white"
+            aria-label="Filter by brand"
+            value={brandValue}
+            onChange={(e) => onBrandChange(e.target.value)}
+            className="lg:w-[150px] lg:flex-none"
+          >
             <option value="">All Brands</option>
             {options.brands.map((b) => (
               <option key={b} value={b}>
@@ -85,7 +97,13 @@ export function FilterBar({
               </option>
             ))}
           </Select>
-          <Select tone="white" aria-label="Filter by van type" value={typeValue} onChange={(e) => onTypeChange(e.target.value)}>
+          <Select
+            tone="white"
+            aria-label="Filter by van type"
+            value={typeValue}
+            onChange={(e) => onTypeChange(e.target.value)}
+            className="lg:w-[150px] lg:flex-none"
+          >
             <option value="">Van Type</option>
             {options.productTypes.map((t) => (
               <option key={t} value={t}>
@@ -93,7 +111,13 @@ export function FilterBar({
               </option>
             ))}
           </Select>
-          <Select tone="white" aria-label="Filter by service" value={serviceValue} onChange={(e) => onServiceChange(e.target.value)}>
+          <Select
+            tone="white"
+            aria-label="Filter by service"
+            value={serviceValue}
+            onChange={(e) => onServiceChange(e.target.value)}
+            className="lg:w-[150px] lg:flex-none"
+          >
             <option value="">Services</option>
             {options.services.map((s) => (
               <option key={s} value={s}>

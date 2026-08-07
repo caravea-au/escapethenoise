@@ -35,6 +35,7 @@ const DealerMap = dynamic(() => import("./DealerMap").then((m) => m.DealerMap), 
 
 const CHIP_KEYS = Object.keys(CHIP_PREDICATES) as ChipKey[];
 const NO_LOCATION_NOTICE = "We couldn't get your location. Enter a suburb or postcode instead.";
+const NO_MATCH_NOTICE = "We couldn't find that location. Try a nearby suburb or postcode.";
 
 type Props = {
   dealers: DirectoryDealer[];
@@ -86,7 +87,11 @@ export function DealerDirectory({
         if (value) usp.set(key, value);
       }
       const qs = usp.toString();
-      router.replace(`/find-dealer${qs ? `?${qs}` : ""}`, { scroll: false });
+      // push (not replace): each user-initiated filter commit — dropdown
+      // change, chip click, sort change, search submit, clear-all — should
+      // land its own history entry so Back/Forward step through the filter
+      // journey one change at a time (see BUG 1).
+      router.push(`/find-dealer${qs ? `?${qs}` : ""}`, { scroll: false });
     },
     [router, qParam, stateParam, brandParam, typeParam, serviceParam, chipParam, sortParamRaw],
   );
@@ -97,7 +102,6 @@ export function DealerDirectory({
   const [geoOrigin, setGeoOrigin] = useState<DealerOrigin | null>(null);
   const [geoNotice, setGeoNotice] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(qParam);
-  const [queryNotice, setQueryNotice] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Map: gate the mapbox-gl chunk behind visibility so mobile users who never
@@ -131,21 +135,19 @@ export function DealerDirectory({
 
   const queryOrigin = useMemo(() => resolveOriginFromQuery(qParam, dealers), [qParam, dealers]);
   const origin = geoOrigin ?? queryOrigin;
+  // Derived straight from the URL (not local state) so the notice shows
+  // however `q` got there — typed + Enter, a shared link, or Back/Forward —
+  // and clears itself the moment `q` is cleared or resolves (BUG 2).
+  const queryNotice = qParam.trim() && !queryOrigin ? NO_MATCH_NOTICE : null;
 
   function commitSearch() {
     const trimmed = searchInput.trim();
     setGeoOrigin(null);
     setGeoNotice(null);
-    if (trimmed && !resolveOriginFromQuery(trimmed, dealers)) {
-      setQueryNotice("We couldn't match that location. Showing results unsorted by distance.");
-    } else {
-      setQueryNotice(null);
-    }
     pushParams({ q: trimmed });
   }
 
   function handleNearMe() {
-    setQueryNotice(null);
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
       setGeoOrigin(null);
       setGeoNotice(NO_LOCATION_NOTICE);
