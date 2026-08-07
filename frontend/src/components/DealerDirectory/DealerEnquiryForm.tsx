@@ -48,6 +48,7 @@ export function DealerEnquiryForm({ dealer, recaptchaEnabled, recaptchaSiteKey, 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const loadedAt = useRef(Date.now());
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Load the reCAPTCHA v3 script the first time this form mounts, i.e. the
   // first time a dealer's modal is opened — never on page load.
@@ -88,7 +89,17 @@ export function DealerEnquiryForm({ dealer, recaptchaEnabled, recaptchaSiteKey, 
     else if (!EMAIL_RE.test(email.trim())) errs.email = "Enter a valid email address.";
     if (!message.trim()) errs.message = "This field is required.";
     setErrors(errs);
-    if (Object.keys(errs).length) return;
+
+    const firstKey = Object.keys(errs)[0];
+    if (firstKey) {
+      // Scrolling alone is silent for a screen-reader user — the button
+      // appears to do nothing. Move focus to the first invalid field itself
+      // (mirrors DealerOnboardingForm's validate-and-focus approach).
+      const control = formRef.current?.querySelector<HTMLElement>(`#enquiry-${firstKey}`);
+      control?.scrollIntoView({ behavior: "smooth", block: "center" });
+      control?.focus({ preventScroll: true });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -160,7 +171,7 @@ export function DealerEnquiryForm({ dealer, recaptchaEnabled, recaptchaSiteKey, 
           directly on <a href={`tel:${dealer.phone}`} className="font-semibold text-green underline">{dealer.phone}</a>.
         </p>
       )}
-      <form onSubmit={handleSubmit} noValidate className="mt-3.5 flex flex-col gap-[11px]">
+      <form ref={formRef} onSubmit={handleSubmit} noValidate className="mt-3.5 flex flex-col gap-[11px]">
         <div className="flex gap-[11px] flex-wrap">
           <div className="min-w-[130px] flex-1">
             <label htmlFor="enquiry-name" className="sr-only">
@@ -172,6 +183,8 @@ export function DealerEnquiryForm({ dealer, recaptchaEnabled, recaptchaSiteKey, 
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Name"
+              required
+              aria-required="true"
               aria-invalid={!!errors.name}
               aria-describedby={errors.name ? "enquiry-name-error" : undefined}
             />
@@ -207,6 +220,8 @@ export function DealerEnquiryForm({ dealer, recaptchaEnabled, recaptchaSiteKey, 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
+              required
+              aria-required="true"
               aria-invalid={!!errors.email}
               aria-describedby={errors.email ? "enquiry-email-error" : undefined}
             />
@@ -253,6 +268,8 @@ export function DealerEnquiryForm({ dealer, recaptchaEnabled, recaptchaSiteKey, 
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Your enquiry…"
+            required
+            aria-required="true"
             aria-invalid={!!errors.message}
             aria-describedby={errors.message ? "enquiry-message-error" : undefined}
           />

@@ -150,7 +150,7 @@ export function DealerModal({
             <h3 id={titleId} className="font-oswald text-2xl font-bold tracking-[-.4px] text-green">
               {dealer.dealershipName}
             </h3>
-            <span className="rounded-chip bg-badge-accredited-bg px-[9px] py-[3px] text-[10.5px] font-bold tracking-[.3px] text-rust">
+            <span className="rounded-chip bg-badge-accredited-bg px-[9px] py-[3px] text-[10.5px] font-bold tracking-[.3px] text-rust-deep">
               ✓ Accredited
             </span>
           </div>

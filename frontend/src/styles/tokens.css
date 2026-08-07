@@ -24,7 +24,7 @@
   --color-service: #3a7d4e;
   --color-badge-open: #27412e;
   --color-badge-open-bg: #e6ede0;
-  --color-badge-closed: #6d6e71;
+  --color-badge-closed: #5f6063; /* 5.50:1 on --color-badge-closed-bg (AA) — was #6d6e71 at 4.46:1 */
   --color-badge-closed-bg: #eef0f2;
   --color-badge-accredited-bg: #f4e8d4;
   --color-error: #b4452f;
@@ -32,7 +32,8 @@
   /* find-a-dealer directory (design.md §6) */
   --color-line-strong: #d9cdb4; /* input / media borders */
   --color-line-button: #c9bda0; /* secondary button border */
-  --color-gold-deep: #9a7b3f; /* muted gold: modal icon strokes + section labels. `gold` on white is ~1.7:1 and fails AA; this passes. */
+  --color-gold-deep: #8a6d38; /* muted gold: modal icon strokes + section labels. `gold` on white is ~1.7:1 and fails AA; 4.86:1 passes (was #9a7b3f at 3.98:1, which did not). */
+  --color-rust-deep: #8a5417; /* 5.16:1 on --color-badge-accredited-bg — "✓ Accredited" pill text only. Do not use `rust` itself here (2.80:1, fails AA). */
   --color-map-land: #e6dcc4; /* Mapbox land fill + map fallback illustration base */
   --color-map-scrub: #cfd8c2; /* Mapbox landuse / park */
   --color-map-sand: #d6c8ad; /* Mapbox water / secondary landform */

@@ -89,7 +89,7 @@ export function DealerCard({ dealer, now, origin, selected, onSelect, onOpenModa
                   </>
                 )}
               </span>
-              <span className="ml-auto shrink-0 rounded-chip bg-badge-accredited-bg px-[7px] py-[2px] text-[10.5px] font-bold text-rust">
+              <span className="ml-auto shrink-0 rounded-chip bg-badge-accredited-bg px-[7px] py-[2px] text-[10.5px] font-bold text-rust-deep">
                 ✓ Accredited
               </span>
             </div>

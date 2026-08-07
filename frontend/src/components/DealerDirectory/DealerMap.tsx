@@ -233,6 +233,14 @@ export function DealerMap({ dealers, selectedId, onPinClick, mapboxToken }: Prop
         onPinClickRef.current(dealer.documentId);
       });
       const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" }).setLngLat(lngLat).addTo(map);
+      // mapbox-gl's Marker constructor sets role="img" on any element that
+      // doesn't already carry a role attribute (it treats markers as static
+      // icons) — that's wrong for a real <button>: it can make AT announce
+      // it as a static graphic instead of an activatable control. The
+      // existing aria-label already supplies the accessible name, so just
+      // drop the role mapbox-gl added and let the button's implicit
+      // role="button" stand.
+      el.removeAttribute("role");
       markersRef.current.set(dealer.documentId, { marker, el, type });
     }
 

@@ -277,6 +277,12 @@ export function DealerDirectory({
       )}
 
       <Container width="marketing" className="py-6">
+        <a
+          href="#dealer-results"
+          className="sr-only focus:not-sr-only focus:mb-3 focus:inline-block focus:rounded-input focus:bg-white focus:px-4 focus:py-3 focus:text-[14px] focus:font-semibold focus:text-rust focus:shadow-[0_4px_14px_rgba(22,39,28,.18)]"
+        >
+          Skip map, go to dealer results
+        </a>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div
             ref={mapSectionRef}
@@ -296,7 +302,12 @@ export function DealerDirectory({
             )}
           </div>
 
-          <div className="min-w-0 lg:max-h-[1000px] lg:flex-[1_1_380px] lg:overflow-auto lg:overscroll-contain">
+          <div
+            id="dealer-results"
+            tabIndex={-1}
+            className="min-w-0 lg:max-h-[1000px] lg:flex-[1_1_380px] lg:overflow-auto lg:overscroll-contain"
+          >
+            <h2 className="sr-only">Dealer results</h2>
             <ResultsHeader
               count={sorted.length}
               originLabel={origin?.label ?? null}
