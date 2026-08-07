@@ -29,6 +29,14 @@
   --color-badge-accredited-bg: #f4e8d4;
   --color-error: #b4452f;
 
+  /* find-a-dealer directory (design.md §6) */
+  --color-line-strong: #d9cdb4; /* input / media borders */
+  --color-line-button: #c9bda0; /* secondary button border */
+  --color-gold-deep: #9a7b3f; /* muted gold: modal icon strokes + section labels. `gold` on white is ~1.7:1 and fails AA; this passes. */
+  --color-map-land: #e6dcc4; /* Mapbox land fill + map fallback illustration base */
+  --color-map-scrub: #cfd8c2; /* Mapbox landuse / park */
+  --color-map-sand: #d6c8ad; /* Mapbox water / secondary landform */
+
   /* ---- Radii (design.md §6) ---- */
   --radius-button: 12px;
   --radius-card: 16px;

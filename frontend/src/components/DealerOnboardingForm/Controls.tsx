@@ -6,8 +6,13 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
 // terracotta error colour comes from the `error` theme token.
 
 // Shared field surface — mirrors the Tier-1 Input so selects/textareas match.
+// `tone` defaults to "cream" (existing onboarding-form surface, byte-identical
+// to before); "white" is for fields sitting on a white surface (dealer
+// directory filter bar / modal).
 const fieldBase =
-  "w-full rounded-input border border-line bg-cream px-4 py-3 text-[15px] text-ink placeholder:text-muted aria-[invalid=true]:border-error";
+  "w-full rounded-input border px-4 py-3 text-[15px] text-ink placeholder:text-muted aria-[invalid=true]:border-error";
+const fieldSurface = (tone: "cream" | "white") =>
+  tone === "white" ? "bg-white border-line-strong" : "bg-cream border-line";
 
 // Numbered section card (used 7×).
 export function FormSection({
@@ -89,13 +94,14 @@ export function Field({
 }
 
 export function Select({
+  tone = "cream",
   className = "",
   children,
   ...rest
-}: ComponentPropsWithoutRef<"select">) {
+}: ComponentPropsWithoutRef<"select"> & { tone?: "cream" | "white" }) {
   return (
     <select
-      className={`${fieldBase} cursor-pointer appearance-none bg-[length:12px] bg-[right_14px_center] bg-no-repeat pr-9 ${className}`}
+      className={`${fieldBase} ${fieldSurface(tone)} cursor-pointer appearance-none bg-[length:12px] bg-[right_14px_center] bg-no-repeat pr-9 ${className}`}
       style={{
         backgroundImage:
           "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236d6e71' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\")",
@@ -108,12 +114,13 @@ export function Select({
 }
 
 export function Textarea({
+  tone = "cream",
   className = "",
   ...rest
-}: ComponentPropsWithoutRef<"textarea">) {
+}: ComponentPropsWithoutRef<"textarea"> & { tone?: "cream" | "white" }) {
   return (
     <textarea
-      className={`${fieldBase} min-h-[90px] resize-y ${className}`}
+      className={`${fieldBase} ${fieldSurface(tone)} min-h-[90px] resize-y ${className}`}
       {...rest}
     />
   );
