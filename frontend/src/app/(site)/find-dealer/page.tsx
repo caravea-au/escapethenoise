@@ -1,0 +1,176 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
+import NextLink from "next/link";
+import { Container } from "@/components/ui/Container";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
+import { Eyebrow } from "@/components/ui/Eyebrow";
+import { getDealers, getDealerStateCounts } from "@/lib/strapi";
+import { getRecaptchaConfig } from "@/lib/recaptcha";
+import { CHIP_PREDICATES, type ChipKey, type DealerFilters } from "@/lib/dealers";
+import { DealerDirectory } from "@/components/DealerDirectory/DealerDirectory";
+
+const CHIP_KEYS = Object.keys(CHIP_PREDICATES) as ChipKey[];
+
+// Real AU state/territory order matches the design export's state-grid tiles.
+const STATE_ORDER = ["NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"] as const;
+
+// Fallback copy — used when live data (dealer count) can't be resolved, so the
+// page still reads honestly rather than printing a fabricated number.
+const FALLBACK = {
+  metaTitle: "Find a Dealer Near You",
+  metaDescription:
+    "Find accredited caravan dealers near you across Australia. Search by location, brand or van type.",
+  eyebrow: "Dealer directory",
+  heading: "Find a Dealer Near You",
+  subtitleNoCount: "Accredited caravan dealers across Australia. Search by location, brand or van type.",
+  subtitleWithCount: (n: number) =>
+    `${n} accredited caravan dealers across Australia. Search by location, brand or van type.`,
+  stateHeading: "Select Your State or Territory",
+  outageHeading: "We can't load the dealer directory right now",
+  outageBody: "Please try again shortly, or search for your state below.",
+} as const;
+
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const state = typeof sp.state === "string" ? sp.state.toUpperCase() : undefined;
+  // Any filter permutation beyond ?state shouldn't be indexed — keeps only the
+  // 8 canonical state URLs (plus the unfiltered index) crawlable.
+  const hasOtherParams = Object.entries(sp).some(([key, value]) => key !== "state" && value !== undefined);
+
+  const title = state ? `Caravan Dealers in ${state}` : FALLBACK.metaTitle;
+  const description = state
+    ? `Accredited caravan dealers in ${state}. Search by location, brand or van type.`
+    : FALLBACK.metaDescription;
+  const ogImage = "/og-image.png";
+
+  return {
+    title,
+    description,
+    alternates: { canonical: "/find-dealer" },
+    ...(hasOtherParams ? { robots: { index: false, follow: true } } : {}),
+    openGraph: {
+      title,
+      description,
+      url: "/find-dealer",
+      images: [{ url: ogImage }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
+    },
+  };
+}
+
+export default async function FindDealerPage({ searchParams }: { searchParams: SearchParams }) {
+  const sp = await searchParams;
+  const stateParam = typeof sp.state === "string" ? sp.state.toUpperCase() : undefined;
+
+  // strapiFetch throws on a Strapi outage and this app has no route-level error
+  // boundary above (site)/, so both calls are caught here — the branded page
+  // must still render, just without live data. getRecaptchaConfig() never
+  // throws — but unlike /dealer-directory-onboarding, a recaptcha-config
+  // outage must NOT fail this page closed: the directory itself has nothing
+  // to do with enquiries, so it renders normally either way (see
+  // DealerDirectory's `recaptchaConfigError`, which only affects the enquiry
+  // form's copy).
+  const [dealers, counts, recaptcha] = await Promise.all([
+    getDealers().catch(() => null),
+    getDealerStateCounts().catch(() => null),
+    getRecaptchaConfig(),
+  ]);
+
+  // Total comes from summing the real per-state counts (or the dealer list
+  // length as a fallback) — never a hardcoded figure. The export's own numbers
+  // (403+, 480+, tiles summing to 465) contradicted each other and aren't used.
+  const total = counts
+    ? Object.values(counts).reduce((sum, n) => sum + n, 0)
+    : (dealers?.length ?? null);
+
+  const chipParam = typeof sp.chip === "string" && CHIP_KEYS.includes(sp.chip as ChipKey) ? (sp.chip as ChipKey) : null;
+  const initialFilters: DealerFilters = {
+    state: stateParam,
+    brand: typeof sp.brand === "string" ? sp.brand : undefined,
+    productType: typeof sp.type === "string" ? sp.type : undefined,
+    service: typeof sp.service === "string" ? sp.service : undefined,
+    chips: chipParam ? [chipParam] : [],
+  };
+
+  return (
+    <>
+      <section className="bg-[linear-gradient(150deg,var(--color-green),var(--color-green-dark))]">
+        <Container width="marketing" className="pt-11 pb-10">
+          <Eyebrow tone="gold">{FALLBACK.eyebrow}</Eyebrow>
+          <Heading as="h1" className="mt-2.5 text-[28px] text-white md:text-[32px] lg:text-[42px]">
+            {FALLBACK.heading}
+          </Heading>
+          <Text variant="lead" className="mt-2 max-w-[620px] text-sand">
+            {total !== null ? FALLBACK.subtitleWithCount(total) : FALLBACK.subtitleNoCount}
+          </Text>
+        </Container>
+      </section>
+
+      {dealers === null ? (
+        <Container width="marketing" className="py-16">
+          <div className="rounded-card border border-line bg-white px-6 py-10 text-center">
+            <Heading as="h2" className="text-[22px] text-green">
+              {FALLBACK.outageHeading}
+            </Heading>
+            <Text variant="lead" className="mx-auto mt-2.5 max-w-[520px] text-muted">
+              {FALLBACK.outageBody}
+            </Text>
+          </div>
+        </Container>
+      ) : (
+        <Suspense fallback={null}>
+          <DealerDirectory
+            dealers={dealers}
+            initialFilters={initialFilters}
+            recaptchaEnabled={recaptcha.enabled}
+            recaptchaSiteKey={recaptcha.siteKey}
+            recaptchaConfigError={recaptcha.configError}
+            mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? null}
+          />
+        </Suspense>
+      )}
+
+      <section className="border-t border-line bg-white">
+        <Container width="marketing" className="pt-[60px] pb-[72px] text-center">
+          <Heading as="h2" className="text-[24px] text-green md:text-[28px] lg:text-[32px]">
+            {FALLBACK.stateHeading}
+          </Heading>
+          <div className="mx-auto mt-8 grid max-w-[980px] grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3.5">
+            {STATE_ORDER.map((abbr) => {
+              const count = counts?.[abbr];
+              const isEmpty = count === 0;
+              return (
+                <NextLink
+                  key={abbr}
+                  href={`/find-dealer?state=${abbr}`}
+                  className={`rounded-[13px] border border-line bg-white px-3 py-5 shadow-[0_3px_10px_rgba(22,39,28,.05)] transition ${
+                    isEmpty ? "opacity-60" : "hover:border-rust"
+                  }`}
+                >
+                  <div className="font-oswald text-[26px] font-bold text-green">{abbr}</div>
+                  {count !== undefined && (
+                    <div className="mt-[5px] text-[12.5px] text-muted">
+                      {count} {count === 1 ? "dealer" : "dealers"}
+                    </div>
+                  )}
+                </NextLink>
+              );
+            })}
+          </div>
+        </Container>
+      </section>
+    </>
+  );
+}
