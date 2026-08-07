@@ -29,11 +29,16 @@ export const metadata: Metadata = {
 export default async function FindDealerPage({
   searchParams,
 }: {
-  // Next 16 hands searchParams over as a Promise.
-  searchParams: Promise<{ q?: string }>;
+  // Next 16 hands searchParams over as a Promise, and a repeated key
+  // (/find-dealer?q=a&q=b) arrives as string[] — typing it as `string` would
+  // throw on .trim() and 500 a public route, so narrow it here.
+  searchParams: Promise<{ q?: string | string[] }>;
 }) {
   const { q } = await searchParams;
-  const query = q?.trim().slice(0, 60) || undefined;
+  const raw = Array.isArray(q) ? q[0] : q;
+  // Empty/whitespace collapses to undefined: submitting the hero form blank
+  // lands here as `?q=`, which must not render a dangling echo line.
+  const query = raw?.trim().slice(0, 60) || undefined;
 
   return (
     <>
