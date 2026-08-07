@@ -103,13 +103,24 @@ function PinContent({ type, selected }: { type: PinType; selected: boolean }) {
   const size = selected ? "h-[34px] w-[34px]" : "h-[26px] w-[26px]";
   return (
     <span className="relative block">
+      {/* The halo carries no `-translate-x-1/2 -translate-y-1/2`: the ping2
+          keyframes already apply `translate(-50%, -50%)`, and in Tailwind v4
+          those utilities compile to the standalone `translate` property, which
+          COMPOSES with `transform` rather than replacing it. With both, the
+          halo was shifted twice and sat 15px up-left of the pin — which read as
+          a second marker. Centring is left entirely to the keyframes. */}
       {selected && (
-        <span className="absolute left-1/2 top-1/2 h-[30px] w-[30px] -translate-x-1/2 -translate-y-1/2 animate-ping2 rounded-full bg-rust/50" />
+        <span className="absolute left-1/2 top-1/2 h-[30px] w-[30px] animate-ping2 rounded-full bg-rust/50" />
       )}
+      {/* Centre the dot with flex, not margins. The export used `mx-auto mt-1.5`,
+          a fixed 6px offset that only lines up at one pin size: the circular
+          part of the teardrop is centred on the box, so a 26px pin (22px inside
+          the 2px border) needs 6.5px and a selected 34px pin needs 10.5px. The
+          fixed margin left the selected pin's dot 4.5px high — visibly off. */}
       <span
-        className={`relative block rotate-[-45deg] rounded-[50%_50%_50%_0] border-2 border-white shadow-[0_4px_10px_rgba(22,39,28,.35)] ${size} ${PIN_COLOUR_CLASS[type]}`}
+        className={`relative flex items-center justify-center rotate-[-45deg] rounded-[50%_50%_50%_0] border-2 border-white shadow-[0_4px_10px_rgba(22,39,28,.35)] ${size} ${PIN_COLOUR_CLASS[type]}`}
       >
-        <span className="mx-auto mt-1.5 block h-[9px] w-[9px] rotate-45 rounded-full bg-white" />
+        <span className="block h-[9px] w-[9px] rotate-45 rounded-full bg-white" />
       </span>
     </span>
   );
