@@ -116,7 +116,11 @@ export function Hero({
               role="search"
               className="mx-auto mt-[46px] flex max-w-[680px] flex-wrap gap-3 rounded-[22px] bg-white p-3.5 shadow-[0_1px_0_rgba(255,255,255,.5)_inset,0_32px_70px_-20px_rgba(16,28,20,.7)]"
             >
-              <div className="flex min-w-[220px] flex-1 items-center gap-3 rounded-[14px] border border-line bg-cream px-[18px]">
+              {/* The input itself is deliberately borderless inside this pill,
+                  so it carries outline-none — which would also kill the global
+                  focus ring. Put the ring on the pill instead, so tabbing into
+                  the field lights up the whole control. */}
+              <div className="flex min-w-[220px] flex-1 items-center gap-3 rounded-[14px] border border-line bg-cream px-[18px] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-rust">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0 text-rust" aria-hidden="true">
                   <path d="M12 21s7-6.4 7-12a7 7 0 1 0-14 0c0 5.6 7 12 7 12Z" fill="currentColor" />
                   <circle cx="12" cy="9" r="2.6" className="fill-white" />
