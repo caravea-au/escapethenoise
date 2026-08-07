@@ -369,12 +369,20 @@ export type HomeLifestyle = {
   ctaUrl: string | null;
 } | null;
 
+export type HomeOpenDay = {
+  badge: string | null;
+  heading: string | null;
+  ctaLabel: string | null;
+  ctaUrl: string | null;
+} | null;
+
 export type HomePage = {
   hero: HomeHero;
   trustBar: HomeTrustBar;
   journey: HomeJourney;
   buyingGuidesHeader: HomeSectionHeader;
   lifestyle: HomeLifestyle;
+  openDay: HomeOpenDay;
 };
 
 // Explicit deep populate — Strapi 5's `populate=*` stops at the first level and
