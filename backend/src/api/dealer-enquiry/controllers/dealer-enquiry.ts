@@ -84,6 +84,30 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
     const dealerDocumentId =
       typeof data.dealer === 'string' ? data.dealer.trim() : '';
 
+    // Per-IP rate limit runs FIRST, ahead of the honeypot branch and the
+    // reCAPTCHA check. Both of those can be walked straight past — the
+    // honeypot branch below deliberately writes a row and returns 200, and
+    // verifyRecaptcha fails open when unconfigured — so anything that writes
+    // has to sit behind this. Otherwise `{"comment":"x"}` is an unauthenticated
+    // unbounded INSERT loop against a single-writer SQLite file.
+    const ipHash = hashIp(ctx);
+    const now = Date.now();
+    // Compare on `createdAt`, not `submittedAt`, and with a Date rather than an
+    // ISO string. SQLite stores these datetime columns as epoch integers, so an
+    // ISO string never matches and the count silently returns 0 — i.e. the
+    // limit looks present but never fires. `createdAt` is also set by Strapi
+    // itself, whereas `submittedAt` arrives in the request payload.
+    const fifteenMinAgo = new Date(now - RATE_LIMIT_WINDOW_IP_MS);
+
+    const recentByIp = await strapi.db.query(ENQUIRY_UID).count({
+      where: { ipHash, createdAt: { $gte: fifteenMinAgo } },
+    });
+    if (recentByIp >= RATE_LIMIT_PER_IP) {
+      return ctx.tooManyRequests('Too many enquiries. Try again shortly.', {
+        code: 'rate-limited',
+      });
+    }
+
     // Honeypot: a field hidden off-screen that only a bot fills in. Store the
     // best-effort record flagged, but reveal nothing to the caller — a bot
     // that gets a distinct response for tripping the trap will just stop
@@ -94,7 +118,6 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
     if (honeypotTripped) {
       try {
         const dealerRow = await findDealerRow(dealerDocumentId);
-        const ipHash = hashIp(ctx);
         const payload = encodeAngles({
           dealer: dealerRow?.documentId,
           dealerName: dealerRow?.dealershipName,
@@ -155,29 +178,16 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
       return ctx.badRequest('Unknown dealer.', { code: 'dealer-not-found' });
     }
 
-    // Rate limit. This is the layer that actually holds when reCAPTCHA fails
-    // open (unconfigured secret, or Google unreachable) — not optional.
-    const ipHash = hashIp(ctx);
-    const now = Date.now();
-    const fifteenMinAgo = new Date(now - RATE_LIMIT_WINDOW_IP_MS).toISOString();
-    const sixtyMinAgo = new Date(
-      now - RATE_LIMIT_WINDOW_IP_DEALER_MS
-    ).toISOString();
-
-    const recentByIp = await strapi.db.query(ENQUIRY_UID).count({
-      where: { ipHash, submittedAt: { $gte: fifteenMinAgo } },
-    });
-    if (recentByIp >= RATE_LIMIT_PER_IP) {
-      return ctx.tooManyRequests('Too many enquiries. Try again shortly.', {
-        code: 'rate-limited',
-      });
-    }
+    // Second, narrower limit: the same visitor repeatedly messaging ONE dealer.
+    // Needs the resolved dealer, so it can only run here; the broad per-IP
+    // limit above already bounds total writes.
+    const sixtyMinAgo = new Date(now - RATE_LIMIT_WINDOW_IP_DEALER_MS);
 
     const recentByIpAndDealer = await strapi.db.query(ENQUIRY_UID).count({
       where: {
         ipHash,
         dealer: dealerRow.id,
-        submittedAt: { $gte: sixtyMinAgo },
+        createdAt: { $gte: sixtyMinAgo },
       },
     });
     if (recentByIpAndDealer >= RATE_LIMIT_PER_IP_DEALER) {

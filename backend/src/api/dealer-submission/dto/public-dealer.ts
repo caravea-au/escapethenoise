@@ -57,13 +57,34 @@ export type PublicDealer = Record<PublicDealerField, unknown>;
 // Compare the parsed host EXACTLY. A `startsWith` prefix test would also accept
 // `https://syd1.digitaloceanspaces.com.example.com/...`, which is an attacker's
 // domain, not ours.
-const MEDIA_HOST = 'syd1.digitaloceanspaces.com';
+//
+// The host alone is NOT sufficient: `syd1.digitaloceanspaces.com` is
+// DigitalOcean's shared regional endpoint, used by every Spaces customer in
+// that region, and real URLs are path-style
+// (https://<host>/<bucket>/<rootPath>/file.jpg). Without the path check,
+// anyone with a syd1 Space could point `logo`/`photos` at their own bucket and
+// choose the image bytes rendered on our directory. So pin bucket + root path
+// too, derived from the same env the upload provider uses.
+const MEDIA_HOST = new URL(
+  process.env.DO_SPACE_ENDPOINT || 'https://syd1.digitaloceanspaces.com'
+).hostname;
+
+const MEDIA_PATH_PREFIX = `/${[
+  process.env.DO_SPACE_BUCKET,
+  process.env.DO_SPACE_ROOT_PATH,
+]
+  .filter(Boolean)
+  .join('/')}/`;
 
 const isTrustedMediaUrl = (value: unknown): value is string => {
   if (typeof value !== 'string') return false;
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && url.hostname === MEDIA_HOST;
+    return (
+      url.protocol === 'https:' &&
+      url.hostname === MEDIA_HOST &&
+      url.pathname.startsWith(MEDIA_PATH_PREFIX)
+    );
   } catch {
     return false; // not a parseable absolute URL
   }
