@@ -11,6 +11,7 @@
     "dev": "strapi develop",
     "seed:guides": "node scripts/seed-buying-guides.mjs",
     "seed:header-footer": "node scripts/seed-header-footer.mjs",
+    "seed:home-page": "node scripts/seed-home-page.mjs",
     "seed:vehicles": "node scripts/seed-vehicle-listings.mjs",
     "seed:industry-partners": "node scripts/seed-industry-partners.mjs",
     "seed:vehicle-listings-page": "node scripts/seed-vehicle-listings-page.mjs",

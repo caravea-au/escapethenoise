@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Eyebrow } from "@/components/ui/Eyebrow";
-// import { Button } from "@/components/ui/Button"; // hidden with search card + chips
+import { Button } from "@/components/ui/Button";
 import { strapiMedia, type HomeHero } from "@/lib/strapi";
 
 // Fallbacks — the current hardcoded hero content, used when Strapi has no value.
@@ -9,6 +9,12 @@ const FALLBACK_VIDEO = "/photos/hero.mp4";
 const FALLBACK_EYEBROW = "No better time to";
 const FALLBACK_SUBTITLE =
   "Plain-English guides that help everyday Australians choose the right van and escape the noise.";
+const FALLBACK_SEARCH_PLACEHOLDER = "Enter suburb or postcode…";
+const FALLBACK_SEARCH_CTA_LABEL = "Find Dealers";
+// The 📍 emoji lives in JSX as its own aria-hidden span now, so this fallback
+// is text-only — a CMS editor no longer has to paste an emoji to keep the icon.
+const FALLBACK_LOCATION_CHIP_LABEL = "Use my location";
+const FALLBACK_STATE_CHIP_LABEL = "Browse by state";
 
 // Shared <h1> styling — used by both the HTML (Strapi) and JSX (prop/fallback) branches.
 const H1_CLASS =
@@ -24,6 +30,7 @@ export function Hero({
   title: titleProp,
   subtitle: subtitleProp,
   fullHeight = false,
+  showSearch = false,
   children,
 }: {
   data?: HomeHero;
@@ -33,6 +40,10 @@ export function Hero({
   // Grow to fill a flex-column parent and vertically centre the content. Used by
   // the dealer onboarding thank-you page to fill 100svh minus the header/footer.
   fullHeight?: boolean;
+  // Opt-in only: Hero is also used by the dealer onboarding thank-you page, an
+  // exact-100svh layout — a `true` default would inject a ~200px search card
+  // there and introduce a scrollbar on a page built not to scroll.
+  showSearch?: boolean;
   children?: ReactNode;
 } = {}) {
   const poster = strapiMedia(data?.backgroundPoster?.url) ?? FALLBACK_POSTER;
@@ -45,6 +56,10 @@ export function Hero({
   // hardcoded fallback stay on the normal children path.
   const strapiTitle =
     titleProp == null && typeof data?.title === "string" ? data.title : null;
+  const searchPlaceholder = data?.searchPlaceholder ?? FALLBACK_SEARCH_PLACEHOLDER;
+  const searchCtaLabel = data?.searchCtaLabel ?? FALLBACK_SEARCH_CTA_LABEL;
+  const locationChipLabel = data?.locationChipLabel ?? FALLBACK_LOCATION_CHIP_LABEL;
+  const stateChipLabel = data?.stateChipLabel ?? FALLBACK_STATE_CHIP_LABEL;
 
   return (
     <section
@@ -93,33 +108,47 @@ export function Hero({
         </p>
         {children}
 
-        {/* Hidden during design iteration — dealer-search elements (search card + chips):
-        <div className="mx-auto mt-[46px] flex max-w-[680px] flex-wrap gap-3 rounded-[22px] bg-white p-3.5 shadow-[0_1px_0_rgba(255,255,255,.5)_inset,0_32px_70px_-20px_rgba(16,28,20,.7)]">
-          <div className="flex min-w-[220px] flex-1 items-center gap-3 rounded-[14px] border border-line bg-cream px-[18px]">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
-              <path d="M12 21s7-6.4 7-12a7 7 0 1 0-14 0c0 5.6 7 12 7 12Z" fill="#C17C2C" />
-              <circle cx="12" cy="9" r="2.6" fill="#fff" />
-            </svg>
-            <input
-              placeholder="Enter suburb or postcode…"
-              aria-label="Enter suburb or postcode"
-              className="w-full border-0 bg-transparent py-[19px] text-[16.5px] text-ink outline-none"
-            />
-          </div>
-          <Button href="#" className="min-h-[60px] rounded-[14px] px-[34px]">
-            Find Dealers
-          </Button>
-        </div>
+        {showSearch && (
+          <>
+            <form
+              method="get"
+              action="/find-dealer"
+              role="search"
+              className="mx-auto mt-[46px] flex max-w-[680px] flex-wrap gap-3 rounded-[22px] bg-white p-3.5 shadow-[0_1px_0_rgba(255,255,255,.5)_inset,0_32px_70px_-20px_rgba(16,28,20,.7)]"
+            >
+              {/* The input itself is deliberately borderless inside this pill,
+                  so it carries outline-none — which would also kill the global
+                  focus ring. Put the ring on the pill instead, so tabbing into
+                  the field lights up the whole control. */}
+              <div className="flex min-w-[220px] flex-1 items-center gap-3 rounded-[14px] border border-line bg-cream px-[18px] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-rust">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0 text-rust" aria-hidden="true">
+                  <path d="M12 21s7-6.4 7-12a7 7 0 1 0-14 0c0 5.6 7 12 7 12Z" fill="currentColor" />
+                  <circle cx="12" cy="9" r="2.6" className="fill-white" />
+                </svg>
+                <label htmlFor="hero-dealer-search" className="sr-only">Suburb or postcode</label>
+                <input
+                  id="hero-dealer-search"
+                  name="q"
+                  placeholder={searchPlaceholder}
+                  className="w-full border-0 bg-transparent py-[19px] text-[16.5px] text-ink outline-none"
+                />
+              </div>
+              {/* type="submit" works because Button spreads ...rest AFTER its type="button" default — keep that order. */}
+              <Button type="submit" className="min-h-[60px] rounded-[14px] px-[34px]">
+                {searchCtaLabel}
+              </Button>
+            </form>
 
-        <div className="mt-5 flex flex-wrap justify-center gap-3.5">
-          <Button href="#" variant="glass" className="rounded-chip px-5 py-3 text-sm">
-            📍 Use my location
-          </Button>
-          <Button href="#" variant="glass" className="rounded-chip px-5 py-3 text-sm">
-            Browse by state
-          </Button>
-        </div>
-        */}
+            <div className="mt-5 flex flex-wrap justify-center gap-3.5">
+              <Button href="/find-dealer" variant="glass" className="rounded-chip px-5 py-3 text-sm">
+                <span aria-hidden="true">📍</span> {locationChipLabel}
+              </Button>
+              <Button href="/find-dealer#states" variant="glass" className="rounded-chip px-5 py-3 text-sm">
+                {stateChipLabel}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </section>
   );
