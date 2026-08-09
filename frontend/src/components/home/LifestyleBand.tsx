@@ -2,7 +2,7 @@ import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Heading } from "@/components/ui/Heading";
-// import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import { strapiMedia, type HomeLifestyle } from "@/lib/strapi";
 
 // Fallbacks — the current hardcoded lifestyle-band content, used when Strapi has no value.
@@ -11,6 +11,8 @@ const FALLBACK_EYEBROW = "No better time to escape the noise";
 const FALLBACK_HEADING = "The open road is calling";
 const FALLBACK_BODY =
   "From coastal parks to outback skies, every great trip starts with the right van — and the right accredited dealer to set you up. Find yours and go.";
+const FALLBACK_CTA_LABEL = "Find your nearest dealer →";
+const FALLBACK_CTA_URL = "/find-dealer";
 
 // Full-bleed lifestyle band — photo under a left-to-right green scrim (design.md §7).
 export function LifestyleBand({ data }: { data?: HomeLifestyle }) {
@@ -18,6 +20,8 @@ export function LifestyleBand({ data }: { data?: HomeLifestyle }) {
   const eyebrow = data?.eyebrow ?? FALLBACK_EYEBROW;
   const heading = data?.heading ?? FALLBACK_HEADING;
   const body = data?.body ?? FALLBACK_BODY;
+  const ctaLabel = data?.ctaLabel ?? FALLBACK_CTA_LABEL;
+  const ctaUrl = data?.ctaUrl ?? FALLBACK_CTA_URL;
 
   return (
     <section className="relative flex min-h-[380px] items-center overflow-hidden md:min-h-[400px] lg:min-h-[520px] xl:min-h-[540px]">
@@ -43,9 +47,9 @@ export function LifestyleBand({ data }: { data?: HomeLifestyle }) {
           <p className="mt-4 text-[15px] leading-[1.55] text-[#d8cfb8] lg:text-[18px]">
             {body}
           </p>
-          {/* <Button href="#" className="mt-[26px] px-[30px] py-[15px]">
-            Find your nearest dealer →
-          </Button> */}
+          <Button href={ctaUrl} className="mt-[26px] px-[30px] py-[15px]">
+            {ctaLabel}
+          </Button>
         </div>
       </Container>
     </section>

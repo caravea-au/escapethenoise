@@ -46,12 +46,12 @@ Tiers (see `nextjs-component-standards`): **1** global primitive (`components/ui
 | DealerEnquiryForm | 2 | Name/phone/email/postcode/interest/message → POST /api/dealer-enquiries (reCAPTCHA v3 + honeypot); success panel | components/DealerDirectory/DealerEnquiryForm.tsx | dealer, recaptchaEnabled, recaptchaSiteKey, recaptchaConfigError, onDone | find-dealer |
 | DealerMap | 2 | Client island: real Mapbox GL (light-v11, recoloured via CSS vars) — HTML marker pins by dealer type, custom zoom stack, legend + OSM/skipped-dealer credit, 2-way select↔flyTo sync w/ pin-click→open-modal+scroll-card, reduced-motion aware; loaded via `next/dynamic({ssr:false})` gated behind an IntersectionObserver in DealerDirectory | components/DealerDirectory/DealerMap.tsx | dealers, selectedId, onPinClick, mapboxToken | find-dealer |
 | MapFallback | 2 | Statically-imported decorative map skin (no mapbox import) — loading/unavailable/error variants; used pre-intersection, when no token, and on map runtime failure | components/DealerDirectory/MapFallback.tsx | variant | find-dealer |
-| Hero | home | Video hero + headline + sub; copy overridable via optional eyebrow/title/subtitle/children props; `fullHeight` grows it to fill a flex-column parent (100svh − header/footer) | components/home/Hero.tsx | eyebrow?, title?, subtitle?, fullHeight?, children? | home, dealer-directory-onboarding/thank-you |
-| TrustBar | home | Stats + state-association logo marquee (via LogoMarquee) | components/home/TrustBar.tsx | data?: HomeTrustBar | home |
-| OpenDayCTA | home | Single highlighted event banner | components/home/OpenDayCTA.tsx | — | home |
-| JourneySection | home | "What are you looking for?" 4 entry cards | components/home/JourneySection.tsx | — | home |
-| BuyingGuides | home | Latest guides — 3 article cards | components/home/BuyingGuides.tsx | — | home |
-| LifestyleBand | home | Full-bleed photo band + CTA | components/home/LifestyleBand.tsx | — | home |
+| Hero | home | Video hero + headline + sub; copy overridable via optional eyebrow/title/subtitle/children props; `fullHeight` grows it to fill a flex-column parent (100svh − header/footer); `showSearch` opts in to the dealer-search card + chips (GET form → `/find-dealer?q=`) | components/home/Hero.tsx | data?: HomeHero, eyebrow?, title?, subtitle?, fullHeight?, showSearch?, children? | home, dealer-directory-onboarding/thank-you |
+| TrustBar | home | Stats + 9-logo state-association marquee (via LogoMarquee) | components/home/TrustBar.tsx | data?: HomeTrustBar | home |
+| OpenDayCTA | home | Single highlighted event banner | components/home/OpenDayCTA.tsx | data?: HomeOpenDay | — (built + wired, not rendered: stale date) |
+| JourneySection | home | "What are you looking for?" 4 entry cards | components/home/JourneySection.tsx | data?: HomeJourney | home |
+| BuyingGuides | home | Latest guides — 3 article cards | components/home/BuyingGuides.tsx | header?: HomeSectionHeader | home |
+| LifestyleBand | home | Full-bleed photo band + CTA → `/find-dealer` | components/home/LifestyleBand.tsx | data?: HomeLifestyle | home |
 
 > **Note:** an `Input` Tier-1 primitive exists (`components/ui/Input.tsx`) but the hero search
 > still uses an inline `<input>` — adopt `Input` there the next time the search is touched.

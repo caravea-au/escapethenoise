@@ -27,14 +27,19 @@ export async function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-green">
-      <Container className="flex min-h-[90px] items-center gap-x-7 gap-y-2 py-3">
+      <Container className="flex min-h-[90px] items-center gap-x-3 gap-y-2 py-3 md:gap-x-7">
         <Link href="/" className="flex shrink-0 items-center">
+          {/* Dimensions are the lockup's true intrinsic size (viewBox 760x210).
+              They were 210x64, a ratio the artwork never had, so the reserved
+              box was ~90px narrower than the render. At h-16 the lockup is
+              ~232px wide, which with the 44px hamburger and 24px gutters
+              overflowed a 320px viewport, so step it down below md too. */}
           <Image
             src={logoSrc}
             alt="No Better Time to Escape the Noise — Caravan Industry Association of Australia"
-            width={210}
-            height={64}
-            className="h-16 w-auto"
+            width={760}
+            height={210}
+            className="h-12 w-auto md:h-16"
             priority
           />
         </Link>
