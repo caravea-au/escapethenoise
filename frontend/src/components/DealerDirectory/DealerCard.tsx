@@ -2,9 +2,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { dealerCardImage, type DirectoryDealer } from "@/lib/strapi";
 import {
-  centroidFor,
-  formatDistance,
-  haversineKm,
+  distanceLabelFor,
   isOpenNow,
   CHIP_PREDICATES,
   type ChipKey,
@@ -30,11 +28,7 @@ export function DealerCard({ dealer, now, origin, selected, onSelect, onOpenModa
   const image = dealerCardImage(dealer);
   const location = [dealer.suburb, dealer.state].filter(Boolean).join(", ");
 
-  let distanceLabel: string | null = null;
-  if (origin) {
-    const coords = centroidFor(dealer.postcode);
-    if (coords) distanceLabel = formatDistance(haversineKm(origin.coords, coords));
-  }
+  const distanceLabel = distanceLabelFor(origin, dealer);
 
   // Predicates only need `nowMs` for the "Open Now" key, which isn't in this
   // list, so the placeholder value is never read.

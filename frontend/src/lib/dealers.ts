@@ -1,13 +1,15 @@
 // Pure helpers for the dealer directory (find-dealer). No React here — these
 // are shared by server rendering and, later, the client-side directory island.
 //
-// Attribution: `au-postcode-centroids.json` was geocoded from OpenStreetMap
-// data via the Nominatim API. It is licensed ODbL, which requires attribution
-// wherever it is displayed — the map UI that renders these coordinates MUST
-// show "© OpenStreetMap contributors" (see https://www.openstreetmap.org/copyright).
+// Attribution: `au-postcode-centroids.json` and `dealer-geocodes.json` were both
+// geocoded from OpenStreetMap data via the Nominatim API. They are licensed ODbL,
+// which requires attribution wherever they are displayed — the map UI that renders
+// these coordinates MUST show "© OpenStreetMap contributors"
+// (see https://www.openstreetmap.org/copyright).
 
 import type { DirectoryDealer, DealerTradingHours } from "@/lib/strapi";
 import centroids from "@/lib/au-postcode-centroids.json";
+import geocodes from "@/lib/dealer-geocodes.json";
 
 type Centroids = Record<string, [number, number]>;
 const CENTROIDS = centroids as unknown as Centroids;
@@ -19,6 +21,37 @@ export function centroidFor(postcode: string | null | undefined): [number, numbe
   if (!trimmed) return null;
   const key = /^\d+$/.test(trimmed) ? trimmed.padStart(4, "0") : trimmed;
   return CENTROIDS[key] ?? null;
+}
+
+// Per-dealer coordinates, keyed by documentId: `[lat, lng, precision, matched]`.
+// `matched` is the OpenStreetMap display_name that answered, kept in the file so
+// a pin that looks wrong can be diagnosed by reading it rather than re-querying.
+//
+// This is a sidecar file, not a schema change: `dealer-submission` is a
+// temporary stand-in for a real dealer API and the client forbade adding fields
+// to it. Regenerate with `npm run seed:dealer-geo` from `backend/`.
+type Geocode = [number, number, string, string];
+const GEOCODES = geocodes as unknown as Record<string, Geocode>;
+
+/** A dealer's map position, and whether it is exact enough to quote a precise distance. */
+export type DealerPoint = { coords: [number, number]; precise: boolean };
+
+/**
+ * Where a dealer sits on the map: their street-address geocode when we have
+ * one, else the postcode centroid, else null (they are counted as "not shown"
+ * rather than silently dropped).
+ *
+ * `precise` is true only for street-level geocodes. Postcode centroids and
+ * suburb-level geocode fallbacks are approximate, and distance labels keep
+ * their "~" accordingly.
+ */
+export function dealerPoint(
+  dealer: Pick<DirectoryDealer, "documentId" | "postcode">,
+): DealerPoint | null {
+  const hit = GEOCODES[dealer.documentId];
+  if (hit) return { coords: [hit[0], hit[1]], precise: hit[2] === "street" };
+  const centroid = centroidFor(dealer.postcode);
+  return centroid ? { coords: centroid, precise: false } : null;
 }
 
 const EARTH_RADIUS_KM = 6371;
@@ -38,13 +71,27 @@ export function haversineKm(a: [number, number], b: [number, number]): number {
 }
 
 /**
- * Human distance label. Coordinates are postcode centroids, not street
- * addresses, so distances are approximate — always render with a `~` and
- * round to the whole kilometre; never show false precision like "1.4km away".
+ * Human distance label. Only drops the `~` and shows a decimal when BOTH ends
+ * are exact — the user's own GPS position measured to a street-level dealer
+ * geocode. A postcode-centroid origin or a suburb-level dealer fallback is
+ * approximate, and keeps the `~` and whole kilometres rather than inventing
+ * precision the coordinates don't have.
  */
-export function formatDistance(km: number): string {
+export function formatDistance(km: number, precise = false): string {
+  if (precise) return km < 10 ? `${km.toFixed(1)}km away` : `${Math.round(km)}km away`;
   if (km < 1) return "~<1km away";
   return `~${Math.round(km)}km away`;
+}
+
+/** Distance from an origin to a dealer, labelled honestly about both ends' precision. Null when the dealer has no coordinate at all. */
+export function distanceLabelFor(
+  origin: DealerOrigin | null,
+  dealer: Pick<DirectoryDealer, "documentId" | "postcode">,
+): string | null {
+  if (!origin) return null;
+  const point = dealerPoint(dealer);
+  if (!point) return null;
+  return formatDistance(haversineKm(origin.coords, point.coords), origin.precise && point.precise);
 }
 
 // Australia spans multiple DST rules (WA/QLD/NT don't observe it), so a naive
@@ -249,8 +296,8 @@ export const SORTS: Record<
     if (!origin) return dealers;
     return dealers
       .map((d) => {
-        const c = centroidFor(d.postcode);
-        const km = c ? haversineKm(origin, c) : Number.POSITIVE_INFINITY;
+        const point = dealerPoint(d);
+        const km = point ? haversineKm(origin, point.coords) : Number.POSITIVE_INFINITY;
         return { d, km };
       })
       .sort((a, b) => a.km - b.km)
@@ -264,7 +311,8 @@ export function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-export type DealerOrigin = { coords: [number, number]; label: string };
+/** A search origin. `precise` is true only for the user's actual device position. */
+export type DealerOrigin = { coords: [number, number]; label: string; precise: boolean };
 
 /**
  * Resolves a typed location query to a `{ coords, label }` origin, purely
@@ -272,19 +320,23 @@ export type DealerOrigin = { coords: [number, number]; label: string };
  * case-insensitive suburb match among the loaded dealers (using that
  * dealer's own postcode centroid). Never calls a network API — a Mapbox
  * geocoding fallback is a later task.
+ *
+ * Both paths deliberately stay on postcode centroids rather than per-dealer
+ * geocodes: someone typing "Narellan" means the suburb, not one particular
+ * dealer's front door. So these origins are always approximate.
  */
 export function resolveOriginFromQuery(q: string, dealers: DirectoryDealer[]): DealerOrigin | null {
   const query = q.trim();
   if (!query) return null;
 
   const postcodeCoords = centroidFor(query);
-  if (postcodeCoords) return { coords: postcodeCoords, label: query };
+  if (postcodeCoords) return { coords: postcodeCoords, label: query, precise: false };
 
   const lowerQuery = query.toLowerCase();
   const match = dealers.find((d) => d.suburb && d.suburb.toLowerCase() === lowerQuery);
   if (match) {
     const coords = centroidFor(match.postcode);
-    if (coords) return { coords, label: match.suburb as string };
+    if (coords) return { coords, label: match.suburb as string, precise: false };
   }
 
   return null;

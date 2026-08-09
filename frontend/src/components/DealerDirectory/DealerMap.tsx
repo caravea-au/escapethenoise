@@ -10,7 +10,7 @@ import { createPortal } from "react-dom";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { DirectoryDealer } from "@/lib/strapi";
-import { centroidFor, dealerPinType, prefersReducedMotion } from "@/lib/dealers";
+import { dealerPoint, dealerPinType, prefersReducedMotion } from "@/lib/dealers";
 import { MapFallback } from "./MapFallback";
 
 // The v3 "standard" default style is a 3D style whose layers don't respond to
@@ -52,7 +52,7 @@ type Props = {
 };
 
 function toLngLat(coords: [number, number]): [number, number] {
-  // centroidFor() returns [lat, lng]; Mapbox wants [lng, lat].
+  // dealerPoint() returns [lat, lng]; Mapbox wants [lng, lat].
   return [coords[1], coords[0]];
 }
 
@@ -218,13 +218,13 @@ export function DealerMap({ dealers, selectedId, onPinClick, mapboxToken }: Prop
     let skipped = 0;
 
     for (const dealer of dealers) {
-      const coords = centroidFor(dealer.postcode);
-      if (!coords) {
+      const point = dealerPoint(dealer);
+      if (!point) {
         skipped += 1;
         continue;
       }
       nextIds.add(dealer.documentId);
-      const lngLat = toLngLat(coords);
+      const lngLat = toLngLat(point.coords);
       bounds.extend(lngLat);
       hasBoundsPoint = true;
 
@@ -302,12 +302,12 @@ export function DealerMap({ dealers, selectedId, onPinClick, mapboxToken }: Prop
     if (!map || !mapReady || mapError || !selectedId) return;
     const dealer = dealers.find((d) => d.documentId === selectedId);
     if (!dealer) return;
-    const coords = centroidFor(dealer.postcode);
-    if (!coords) return;
+    const point = dealerPoint(dealer);
+    if (!point) return;
     // Cleanly stop whatever's running (e.g. the initial fitBounds) before
     // starting a new camera move, rather than letting flyTo interrupt it.
     map.stop();
-    const center = toLngLat(coords);
+    const center = toLngLat(point.coords);
     const zoom = Math.max(map.getZoom(), 11);
     if (prefersReducedMotion()) {
       map.jumpTo({ center, zoom });

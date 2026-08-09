@@ -157,7 +157,15 @@ export function DealerDirectory({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setGeoNotice(null);
-        setGeoOrigin({ coords: [pos.coords.latitude, pos.coords.longitude], label: "your location" });
+        setGeoOrigin({
+          coords: [pos.coords.latitude, pos.coords.longitude],
+          label: "your location",
+          // We ask for a low-accuracy fix (cheaper, faster, no GPS wake), so
+          // this can be a wifi/IP estimate kilometres wide. Only call the
+          // origin precise when the browser says the fix is street-sized —
+          // otherwise distances keep their "~".
+          precise: typeof pos.coords.accuracy === "number" && pos.coords.accuracy <= 200,
+        });
       },
       () => {
         setGeoOrigin(null);

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { dealerCardImage, type DirectoryDealer } from "@/lib/strapi";
-import { centroidFor, formatDistance, haversineKm, isOpenNow, todayHoursLabel, type DealerOrigin } from "@/lib/dealers";
+import { distanceLabelFor, isOpenNow, todayHoursLabel, type DealerOrigin } from "@/lib/dealers";
 import { DealerEnquiryForm } from "./DealerEnquiryForm";
 import { BrandsIcon, ClockIcon, CloseIcon, DirectionsIcon, PhoneIcon, PinIcon, ServicesIcon, WebsiteIcon } from "./icons";
 
@@ -98,11 +98,7 @@ export function DealerModal({
   const address = [dealer.street, dealer.suburb, dealer.state, dealer.postcode].filter(Boolean).join(", ");
   const hoursLabel = now !== null ? todayHoursLabel(dealer.tradingHours, dealer.state, now) : null;
 
-  let distanceLabel: string | null = null;
-  if (origin) {
-    const coords = centroidFor(dealer.postcode);
-    if (coords) distanceLabel = formatDistance(haversineKm(origin.coords, coords));
-  }
+  const distanceLabel = distanceLabelFor(origin, dealer);
 
   return createPortal(
     <div
