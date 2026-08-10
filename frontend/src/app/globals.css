@@ -53,6 +53,20 @@ html {
   }
 }
 
+/* ── Mapbox GL overrides ─────────────────────────────────────────────────────
+   Hides the map's bottom-right control stack (the Mapbox wordmark and the
+   attribution toggle) on the dealer directory map.
+
+   The credits themselves have NOT been dropped — the map legend renders
+   "© Mapbox © OpenStreetMap contributors" as text, which is what keeps the
+   ODbL requirement on the stored geocodes satisfied. Keep that legend line.
+
+   Note: removing the Mapbox wordmark requires a Mapbox plan that permits it.
+   If the account is on standard terms, restore this by deleting the rule. */
+.mapboxgl-ctrl-bottom-right {
+  display: none;
+}
+
 /* ── Keyframes (design.md §8; tokens in tokens.css map these to animate-*) ── */
 @keyframes marquee {
   from {
