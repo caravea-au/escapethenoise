@@ -154,6 +154,14 @@ export function DealerMap({ dealers, selectedId, onPinClick, mapboxToken }: Prop
         center: DEFAULT_CENTER,
         zoom: DEFAULT_ZOOM,
         cooperativeGestures: true,
+        // Mapbox adds its own expanded AttributionControl unless this is
+        // false, which stacked a second credit bar under the compact one we
+        // add below. Attribution itself is required (Mapbox ToS + ODbL) —
+        // this removes the DUPLICATE, not the credit.
+        attributionControl: false,
+        // Default is bottom-left, directly underneath the legend card. Both
+        // required credits now sit together in the bottom-right corner.
+        logoPosition: "bottom-right",
       });
     } catch {
       // No WebGL2 (mapboxgl.supported() was removed in v3 — this try/catch
@@ -367,9 +375,12 @@ export function DealerMap({ dealers, selectedId, onPinClick, mapboxToken }: Prop
         </button>
       </div>
 
+      {/* Legend is narrower below sm: at 320px the 220px card spanned almost
+          the whole map and sat on top of the Mapbox wordmark, which now lives
+          in the bottom-right corner alongside the attribution control. */}
       <div
         aria-label="Map legend"
-        className="absolute bottom-3.5 left-3.5 max-w-[220px] rounded-[11px] bg-white px-[15px] py-[13px] shadow-[0_6px_18px_rgba(22,39,28,.16)]"
+        className="absolute bottom-3.5 left-3.5 max-w-[148px] rounded-[11px] bg-white px-[15px] py-[13px] shadow-[0_6px_18px_rgba(22,39,28,.16)] sm:max-w-[220px]"
       >
         <div className="mb-[9px] text-[11px] font-bold uppercase tracking-[1px] text-green">Map Legend</div>
         <div className="mb-1.5 flex items-center gap-2 text-[12.5px] text-tag">
