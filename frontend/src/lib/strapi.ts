@@ -449,3 +449,69 @@ export async function getVehicleListingsPage(): Promise<VehicleListingsPage | nu
     return null;
   }
 }
+
+// ── Dealer directory (public /api/dealers + /api/dealer-counts) ─────────────
+// Sanitised, allow-listed shape emitted by backend/src/api/dealer-submission —
+// no PII, no fields beyond this list exist on the public response.
+
+export type DealerTradingDay = { open: boolean; openTime: string; closeTime: string };
+export type DealerTradingHours = Record<
+  "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday",
+  DealerTradingDay
+> | null;
+
+export type DirectoryDealer = {
+  documentId: string;
+  dealershipName: string;
+  street: string | null;
+  suburb: string | null;
+  state: string | null;
+  postcode: string | null;
+  phone: string | null;
+  website: string | null;
+  description: string | null;
+  logo: string | null;
+  photos: string[];
+  facebook: string | null;
+  instagram: string | null;
+  youtube: string | null;
+  googleProfile: string | null;
+  tradingHours: DealerTradingHours;
+  services: string[];
+  servicesOther: string | null;
+  brands: string[];
+  brandsOther: string | null;
+  productTypes: string[];
+  productsOther: string | null;
+  stockCondition: "New" | "Used" | "Both" | null;
+  financeAvailable: boolean | null;
+  deliveryAvailable: boolean | null;
+  rvmapBadged: boolean | null;
+  rvmasterBadged: boolean | null;
+  established: number | null;
+  multipleLocations: boolean | null;
+  stateAssociation: string | null;
+};
+
+/** All accredited dealers for the directory. Throws on a Strapi outage (house collection-getter contract). */
+export async function getDealers(): Promise<DirectoryDealer[]> {
+  const json = await strapiFetch<{ data: DirectoryDealer[]; meta: { total: number } }>(
+    "/api/dealers",
+  );
+  return json.data;
+}
+
+/** Dealer counts per state (e.g. `{ VIC: 28, NSW: 46 }`). Throws on a Strapi outage. */
+export async function getDealerStateCounts(): Promise<Record<string, number>> {
+  const json = await strapiFetch<{ data: Record<string, number>; meta: { total: number } }>(
+    "/api/dealer-counts",
+  );
+  return json.data;
+}
+
+// Dealer photos/logo are absolute DigitalOcean Spaces URLs, not Strapi media —
+// never run them through strapiMedia (which would wrongly prefix them with STRAPI_URL).
+/** Card image: first photo → logo → null. */
+export function dealerCardImage(d: DirectoryDealer): string | null {
+  return d.photos[0] ?? d.logo ?? null;
+}

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Eyebrow } from "@/components/ui/Eyebrow";
+import { GENERIC_SUBMIT_ERROR, messageForCode, readStrapiError } from "@/lib/formErrors";
 import {
   Field,
   FormSection,
@@ -53,54 +54,6 @@ const SUBMIT_TIMEOUT_MS = 20_000;
 // Uploads get one retry for transient failures only (see uploadOne).
 const UPLOAD_ATTEMPTS = 2;
 const UPLOAD_RETRY_DELAY_MS = 800;
-
-const GENERIC_SUBMIT_ERROR =
-  "Something went wrong sending your details. Please try again in a moment.";
-
-// Maps the backend's stable `error.details.code` values to what the dealer reads.
-// Never match on the message text — these codes are the contract.
-function messageForCode(code: string, supportEmail: string | null): string {
-  const emailSentence = supportEmail
-    ? ` If that's not possible, email us at ${supportEmail} and we'll list you manually.`
-    : "";
-  switch (code) {
-    case "recaptcha-browser-blocked":
-      return `Your browser or network is blocking our spam check, so we can't confirm you're human. Try turning off your ad blocker, or use a different browser or network.${emailSentence}`;
-    case "recaptcha-low-score":
-      // Unlike browser-blocked, a low v3 score is scored fresh on every attempt,
-      // so a second go genuinely often passes. Lead with "try again" — and your
-      // details are still on screen, so retrying costs nothing.
-      return supportEmail
-        ? `Our spam check wasn't sure about this one. Your details are still here, so please press the button again. If it keeps happening, email us at ${supportEmail} and we'll list you manually.`
-        : "Our spam check wasn't sure about this one. Your details are still here, so please press the button again.";
-    case "recaptcha-missing-token":
-    case "recaptcha-action-mismatch":
-      return "Our spam check didn't finish loading. Please refresh the page and try again.";
-    case "recaptcha-unavailable":
-      return "We couldn't reach our spam checker just now. Please try again in a moment.";
-    default:
-      return GENERIC_SUBMIT_ERROR;
-  }
-}
-
-// Strapi errors come back as { data: null, error: { status, message, details } }.
-// Pull out the code and message rather than throwing the body away.
-async function readStrapiError(
-  res: Response,
-): Promise<{ status: number; code: string; message: string }> {
-  let code = "";
-  let message = "";
-  try {
-    const parsed = (await res.json()) as {
-      error?: { message?: string; details?: { code?: string } };
-    };
-    code = parsed?.error?.details?.code ?? "";
-    message = parsed?.error?.message ?? "";
-  } catch {
-    // Non-JSON body (an nginx error page, say) — status is all we get.
-  }
-  return { status: res.status, code, message };
-}
 
 type MediaFailure = {
   field: "logo" | "photos";

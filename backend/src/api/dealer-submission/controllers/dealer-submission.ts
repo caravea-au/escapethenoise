@@ -16,6 +16,9 @@
 
 import { factories } from '@strapi/strapi';
 import { verifyRecaptcha } from '../../../utils/verify-recaptcha';
+import { encodeAngles } from '../../../utils/encode-angles';
+import { DEALER_NOT_SPAM_FILTER } from '../../../utils/dealer-not-spam-filter';
+import { PUBLIC_DEALER_FIELDS, toPublicDealer } from '../dto/public-dealer';
 
 // reCAPTCHA actions minted by the frontend. The pre-check uses its own action so
 // it doesn't pollute the score distribution for real submissions in the console.
@@ -92,29 +95,61 @@ export default factories.createCoreController(
 
       // Sanitize every submitted string so no stored value can later be parsed
       // as HTML/script by a future consumer (a directory listing, CSV export,
-      // etc.). We HTML-entity-encode angle brackets rather than strip them: this
-      // is LOSSLESS, so legitimate copy like "vans < 3.5 tonne" survives while
-      // any "<script>" becomes inert "&lt;script&gt;". Recurses into the json
-      // fields (services/brands/productTypes arrays, tradingHours object) and
-      // leaves numbers/booleans untouched.
-      // NOTE: no SQL-keyword filtering — Strapi parameterizes all queries
-      // (SQLite here), and stripping keywords would corrupt legitimate values
-      // like a dealership named "Select Caravans".
+      // etc.). Recurses into the json fields (services/brands/productTypes
+      // arrays, tradingHours object) and leaves numbers/booleans untouched.
       // Side effect worth knowing: this also encodes brackets inside
       // mediaErrors messages, so the odd "&lt;" may show up in the admin email.
-      const encodeAngles = (v: unknown): unknown =>
-        typeof v === 'string'
-          ? v.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          : Array.isArray(v)
-            ? v.map(encodeAngles)
-            : v && typeof v === 'object'
-              ? Object.fromEntries(
-                  Object.entries(v).map(([k, x]) => [k, encodeAngles(x)]),
-                )
-              : v;
       body.data = encodeAngles(data) as Record<string, unknown>;
 
       return await super.create(ctx);
+    },
+
+    /**
+     * Public, sanitized dealer directory listing. Bypasses the core
+     * find/document-service entirely: `config/api.ts` caps maxLimit at 100 and
+     * there are 147 dealers, and the core controller has no way to select an
+     * allow-list of fields at the DB layer (PII would still be fetched from
+     * SQLite even if stripped after). `strapi.db.query` lets us pass `select`
+     * so PII never leaves SQLite in the first place.
+     */
+    async findPublic(ctx) {
+      const rows = await strapi.db
+        .query('api::dealer-submission.dealer-submission')
+        .findMany({
+          select: PUBLIC_DEALER_FIELDS as unknown as string[],
+          where: DEALER_NOT_SPAM_FILTER,
+          orderBy: [{ state: 'asc' }, { dealershipName: 'asc' }],
+        });
+
+      const data = (rows as Record<string, unknown>[]).map(toPublicDealer);
+
+      ctx.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+      ctx.body = { data, meta: { total: data.length } };
+    },
+
+    /**
+     * Public dealer counts per state, for the directory's state filter UI.
+     * Route is `/dealer-counts` (not `/dealers/counts`) so it never depends on
+     * route-registration order against a future `/dealers/:key` route.
+     */
+    async stateCounts(ctx) {
+      const rows = await strapi.db
+        .query('api::dealer-submission.dealer-submission')
+        .findMany({
+          select: ['state'],
+          where: DEALER_NOT_SPAM_FILTER,
+        });
+
+      const counts: Record<string, number> = {};
+      let total = 0;
+      for (const row of rows as { state?: string | null }[]) {
+        if (!row.state) continue;
+        counts[row.state] = (counts[row.state] ?? 0) + 1;
+        total += 1;
+      }
+
+      ctx.set('Cache-Control', 'public, max-age=300');
+      ctx.body = { data: counts, meta: { total } };
     },
   }),
 );
