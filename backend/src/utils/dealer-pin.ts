@@ -82,7 +82,12 @@ function haversineKm(a: [number, number], b: [number, number]): number {
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-const cleanAddress = (value: unknown): string => {
+/**
+ * Exported so every path that stores an address string uses this one sanitiser,
+ * including the boot backfill, whose input is a committed file rather than a
+ * request. That file is trusted today; the point is that it does not have to be.
+ */
+export const cleanAddress = (value: unknown): string => {
   if (typeof value !== 'string') return '';
   return (
     value

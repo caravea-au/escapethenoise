@@ -33,6 +33,7 @@
 
 import type { Core } from '@strapi/strapi';
 
+import { cleanAddress } from './dealer-pin';
 import seed from './dealer-coordinates.seed.json';
 
 const SUBMISSION_UID = 'api::dealer-submission.dealer-submission';
@@ -87,7 +88,12 @@ export async function backfillDealerCoordinates(
           // Provenance only the backend may assert. A form submission can only
           // ever be 'geocoded' or 'adjusted'.
           geocodeSource: 'imported',
-          matchedAddress: typeof matchedAddress === 'string' ? matchedAddress : '',
+          // Through the same sanitiser the form path uses, rather than stored
+          // raw. The seed file is committed and currently clean (no formula
+          // leaders, no angle brackets, longest entry 119 chars), so this
+          // changes nothing today — it just means the only way an address
+          // reaches this column is via cleanAddress, whoever edits the file.
+          matchedAddress: cleanAddress(matchedAddress),
         },
       });
       placed += 1;
