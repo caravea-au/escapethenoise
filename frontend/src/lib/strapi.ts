@@ -491,11 +491,12 @@ export type DirectoryDealer = {
   established: number | null;
   multipleLocations: boolean | null;
   stateAssociation: string | null;
-  // Map position, merged in by /api/dealers from the `dealer-geocode`
-  // collection — not columns on dealer-submission. Null when that dealer has no
-  // geocode row yet, in which case dealerPoint() falls back to the postcode
-  // centroid. `precision` is "street" only when the coordinate is good enough
-  // to quote a distance without a "~".
+  // Map position: columns on the dealer record, served flat by /api/dealers.
+  // Null when that dealer has no coordinates yet, in which case dealerPoint()
+  // falls back to the postcode centroid. `precision` is "street" only when the
+  // coordinate is good enough to quote a distance without a "~". The dealer's
+  // other three coordinate fields (geocodeSource, matchedAddress,
+  // geocodedAddress) are private and deliberately never reach this response.
   latitude: number | null;
   longitude: number | null;
   precision: "street" | "approx" | null;

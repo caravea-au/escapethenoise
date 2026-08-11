@@ -43,6 +43,17 @@ export const PUBLIC_DEALER_FIELDS = [
   'established',
   'multipleLocations',
   'stateAssociation',
+  // Map position, published on /find-dealer. Appended LAST on purpose: this
+  // array's order is the JSON key order of every dealer object, and these three
+  // used to be merged on after the fact, so keeping them at the end leaves the
+  // public response byte-identical to before the coordinates moved collection.
+  //
+  // The other three coordinate columns — geocodeSource, matchedAddress,
+  // geocodedAddress — must NOT be added here. This array is also the SQL
+  // `select`, so leaving them out is what keeps them inside SQLite.
+  'latitude',
+  'longitude',
+  'precision',
 ] as const;
 
 export type PublicDealerField = (typeof PUBLIC_DEALER_FIELDS)[number];

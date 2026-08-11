@@ -7,7 +7,8 @@
 // displayed — any map UI that renders these coordinates MUST show
 // "© OpenStreetMap contributors" (see https://www.openstreetmap.org/copyright).
 // Coordinates a dealer placed themselves are their own contribution, and the
-// `source` field on `dealer-geocode` records which is which.
+// `geocodeSource` field on the dealer record notes which is which (it is not
+// public, so it is not visible here).
 
 import type { DirectoryDealer, DealerTradingHours } from "@/lib/strapi";
 import centroids from "@/lib/au-postcode-centroids.json";
@@ -32,12 +33,12 @@ export type DealerPoint = { coords: [number, number]; precise: boolean };
  * the postcode centroid, else null (they are counted as "not shown" rather than
  * silently dropped).
  *
- * Coordinates come from the `dealer-geocode` collection, merged onto each dealer
- * by /api/dealers. They used to live in a committed `dealer-geocodes.json`
- * sidecar, which meant a wrong pin needed a code deploy to move and a newly
- * onboarded dealer sat on a postcode centroid until someone ran a script. Now a
- * dealer places their own pin on the onboarding form and staff can correct any
- * pin in the admin, and both show up within the ISR window.
+ * Coordinates are fields on the dealer record itself, served flat by
+ * /api/dealers. They used to live in a committed `dealer-geocodes.json` sidecar,
+ * which meant a wrong pin needed a code deploy to move and a newly onboarded
+ * dealer sat on a postcode centroid until someone ran a script. Now a dealer
+ * places their own pin on the onboarding form and staff can correct any pin in
+ * the admin, and both show up within the ISR window.
  *
  * `precise` is true only for street-level coordinates. Postcode centroids and
  * approximate geocodes keep their "~" in distance labels.
