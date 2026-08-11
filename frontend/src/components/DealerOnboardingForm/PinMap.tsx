@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { MapFallback } from "@/components/DealerDirectory/MapFallback";
+import { MapZoomControls } from "@/components/MapZoomControls/MapZoomControls";
 import { prefersReducedMotion } from "@/lib/dealers";
 
 // Not the v3 default "standard" style: it is a 3D style that ignores
@@ -245,28 +246,7 @@ export function PinMap({ mapboxToken, lat, lng, onChange }: Props) {
           markerEl,
         )}
 
-      <div
-        role="group"
-        aria-label="Map zoom controls"
-        className="absolute right-3.5 top-3.5 flex flex-col overflow-hidden rounded-[9px] bg-white shadow-[0_4px_14px_rgba(22,39,28,.18)]"
-      >
-        <button
-          type="button"
-          aria-label="Zoom in"
-          onClick={zoomIn}
-          className="flex h-[38px] w-[38px] items-center justify-center border-b border-line text-[21px] text-green"
-        >
-          +
-        </button>
-        <button
-          type="button"
-          aria-label="Zoom out"
-          onClick={zoomOut}
-          className="flex h-[38px] w-[38px] items-center justify-center text-[21px] text-green"
-        >
-          −
-        </button>
-      </div>
+      <MapZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} />
     </div>
   );
 }

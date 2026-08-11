@@ -286,8 +286,9 @@ export function LocationPin({
                 : "We could only place this approximately. Please drag the pin to your entrance."}{" "}
             {/* Visible, not only in the marker's aria-label: a sighted keyboard
                 user has no screen reader to read that out, and would otherwise
-                see a pin with no hint that it can be moved without a mouse. */}
-            Or focus the pin and nudge it with the arrow keys.{" "}
+                see a pin with no hint that it can be moved without a mouse.
+                Avoids the word "focus", which means nothing to a dealer. */}
+            Or click the pin, then nudge it with your arrow keys.{" "}
             <span className="text-green">
               {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
             </span>
