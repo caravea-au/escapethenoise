@@ -1,0 +1,37 @@
+{
+  "kind": "collectionType",
+  "collectionName": "dealer_geocodes",
+  "info": {
+    "singularName": "dealer-geocode",
+    "pluralName": "dealer-geocodes",
+    "displayName": "Dealer Geocode",
+    "description": "Map coordinates for one dealer, keyed by dealer-submission documentId. Holds no PII — these coordinates are published on /find-dealer. Replaces the old frontend/src/lib/dealer-geocodes.json sidecar, so a wrong pin is now an admin edit instead of a code deploy. Deliberately a SEPARATE collection rather than fields on dealer-submission: that collection is a stand-in for a real dealer API and the client forbade adding fields to it, and a separate collection re-keys cleanly when the stand-in is replaced."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "dealerDocumentId": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "latitude": { "type": "decimal", "required": true },
+    "longitude": { "type": "decimal", "required": true },
+    "precision": {
+      "type": "enumeration",
+      "enum": ["street", "approx"],
+      "default": "approx",
+      "required": true
+    },
+    "source": {
+      "type": "enumeration",
+      "enum": ["geocoded", "adjusted", "imported", "admin"],
+      "default": "geocoded",
+      "required": true
+    },
+    "matchedAddress": { "type": "string" },
+    "geocodedAddress": { "type": "string" }
+  }
+}
