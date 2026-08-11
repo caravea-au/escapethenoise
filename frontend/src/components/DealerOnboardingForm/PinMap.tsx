@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { MapFallback } from "@/components/DealerDirectory/MapFallback";
+import { prefersReducedMotion } from "@/lib/dealers";
 
 // Not the v3 default "standard" style: it is a 3D style that ignores
 // setPaintProperty, and DealerMap already settled on flat vector light-v11.
@@ -100,6 +101,17 @@ export function PinMap({ mapboxToken, lat, lng, onChange }: Props) {
     mapRef.current = map;
     map.on("error", () => setMapError(true));
 
+    // Mapbox makes the canvas a tab stop (tabindex=0, role=region) with its own
+    // arrow-key handler that PANS THE CAMERA. That produced two visually
+    // identical "map" tab stops before the marker, and arrowing on the first one
+    // moved the view while the pin's actual coordinates never changed — a
+    // keyboard user would watch the pin slide across the screen and reasonably
+    // believe they had placed it. Panning is not needed to complete this field,
+    // so remove both the handler and the tab stop and leave exactly one
+    // focusable thing that moves the pin.
+    map.keyboard.disable();
+    map.getCanvas().removeAttribute("tabindex");
+
     const el = document.createElement("button");
     el.type = "button";
     // Not a div: the dealer must be able to reach and move this pin without a
@@ -158,7 +170,9 @@ export function PinMap({ mapboxToken, lat, lng, onChange }: Props) {
           : current.lng + dLng / metresPerDegLng;
 
       marker.setLngLat([nextLng, nextLat]);
-      map.panTo([nextLng, nextLat], { duration: 120 });
+      map.panTo([nextLng, nextLat], {
+        duration: prefersReducedMotion() ? 0 : 120,
+      });
       emit(nextLat, nextLng);
     });
 
@@ -197,7 +211,11 @@ export function PinMap({ mapboxToken, lat, lng, onChange }: Props) {
     const emitted = emittedRef.current;
     if (emitted && emitted[0] === lat && emitted[1] === lng) return;
     marker.setLngLat([lng, lat]);
-    map.easeTo({ center: [lng, lat], zoom: DEFAULT_ZOOM, duration: 400 });
+    map.easeTo({
+      center: [lng, lat],
+      zoom: DEFAULT_ZOOM,
+      duration: prefersReducedMotion() ? 0 : 400,
+    });
   }, [lat, lng]);
 
   const zoomIn = useCallback(() => mapRef.current?.zoomIn(), []);

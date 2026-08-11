@@ -46,8 +46,12 @@ export type DealerPinRow = {
 
 /** Postcode -> `[lat, lng]` centroid. Mirrors the frontend's centroidFor so the two can't disagree. */
 function centroidFor(postcode: unknown): [number, number] | null {
-  if (typeof postcode !== 'string') return null;
-  const trimmed = postcode.trim();
+  // Coerce rather than reject non-strings. A bare `typeof !== 'string'` bail let
+  // a caller skip the far-from-postcode precision downgrade entirely just by
+  // sending `"postcode": 3000` as a JSON number instead of a string.
+  if (postcode === null || postcode === undefined) return null;
+  if (typeof postcode === 'object') return null;
+  const trimmed = String(postcode).trim();
   if (!trimmed) return null;
   const key = /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
   return CENTROIDS[key] ?? null;
@@ -66,10 +70,31 @@ function haversineKm(a: [number, number], b: [number, number]): number {
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-const cleanAddress = (value: unknown): string =>
-  typeof value === 'string'
-    ? value.replace(/\p{C}/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, MAX_ADDRESS_LENGTH)
-    : '';
+const cleanAddress = (value: unknown): string => {
+  if (typeof value !== 'string') return '';
+  return (
+    value
+      // Slice BEFORE the regex passes. Regexing an unbounded string and only
+      // then truncating to 300 chars let a large payload burn event-loop time
+      // on every other API route — Strapi is single-threaded.
+      .slice(0, MAX_ADDRESS_LENGTH * 4)
+      .replace(/\p{C}/gu, ' ')
+      .replace(/\s+/g, ' ')
+      // Angle brackets encoded for the same reason encodeAngles exists for the
+      // rest of the payload: no stored value should be parseable as HTML by a
+      // future consumer. These two fields bypass encodeAngles because the pin is
+      // stripped from `data` before that call runs. Not reachable today (neither
+      // field is in PUBLIC_DEALER_FIELDS and the frontend never renders them),
+      // which is exactly why it would be easy to expose later by accident.
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      // Leading =, +, - or @ makes a spreadsheet treat the cell as a formula on
+      // CSV export. Prefix a quote to neutralise it.
+      .replace(/^([=+\-@])/, "'$1")
+      .trim()
+      .slice(0, MAX_ADDRESS_LENGTH)
+  );
+};
 
 /**
  * Turns whatever arrived in `data.pin` into a row we are willing to store, or

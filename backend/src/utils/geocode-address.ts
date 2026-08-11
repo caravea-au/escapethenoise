@@ -41,6 +41,36 @@ const FETCH_TIMEOUT_MS = 5000;
 // move, so there is no TTL — a process restart is the only invalidation.
 const CACHE_MAX = 500;
 
+// Hard ceiling on outbound Nominatim calls, counted globally rather than per
+// caller. The per-IP limit in the controller cannot carry this on its own: Koa
+// takes the client IP from X-Forwarded-For, and the API's CORS policy lets any
+// origin drive this endpoint from its own visitors' browsers, so an attacker
+// can present an effectively unlimited number of distinct "IPs". This ceiling
+// is what actually protects the thing that matters — our server's standing with
+// Nominatim, whose block would take the whole directory's geocoding down.
+const GLOBAL_MAX_PER_MIN = 40;
+const GLOBAL_WINDOW_MS = 60_000;
+
+// Queue depth cap. The queue is serial at RATE_MS, so without a cap a burst of N
+// requests makes the Nth caller wait N x RATE_MS x (tiers) and every one of them
+// holds a Strapi request open. Kept small deliberately: at 8 the last admitted
+// caller still waited ~30s, which is worse than being told to try again.
+const MAX_PENDING = 4;
+
+// Total wall-clock budget for one lookup, across the queue wait, all tiers and
+// all retries. Must stay comfortably under the client's own 15s timeout in
+// LocationPin.tsx, so the server gives up first and the form can say something
+// useful rather than the request dying under the browser.
+const TOTAL_BUDGET_MS = 8_000;
+
+/** Thrown when we are shedding load. The caller should answer 429, not "no pin". */
+export class GeocodeBusyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GeocodeBusyError';
+  }
+}
+
 export type GeocodePrecision = 'street' | 'approx';
 
 export type GeocodeAddressInput = {
@@ -66,6 +96,7 @@ const sleep = (ms: number): Promise<void> =>
 // ── rate limiting ────────────────────────────────────────────────────────────
 
 let queueTail: Promise<void> = Promise.resolve();
+let pending = 0;
 
 /**
  * Serialises every outbound Nominatim call process-wide and spaces them
@@ -81,6 +112,16 @@ function enqueue<T>(job: () => Promise<T>): Promise<T> {
     () => sleep(RATE_MS),
   );
   return scheduled;
+}
+
+/** Rolling timestamps of outbound calls, for the global ceiling. */
+let globalHits: number[] = [];
+
+function globalCeilingReached(): boolean {
+  const cutoff = Date.now() - GLOBAL_WINDOW_MS;
+  // Bounded by GLOBAL_MAX_PER_MIN, so this filter is cheap and cannot grow.
+  globalHits = globalHits.filter((t) => t >= cutoff);
+  return globalHits.length >= GLOBAL_MAX_PER_MIN;
 }
 
 // ── heuristics ───────────────────────────────────────────────────────────────
@@ -152,19 +193,35 @@ type NominatimHit = {
   display_name?: string;
 };
 
-/** One Nominatim call with a small retry/backoff. Returns the first result or null. Never throws. */
-async function query(url: string, label: string): Promise<NominatimHit | null> {
+/** One Nominatim call with a small retry/backoff, bounded by `deadline`. Returns the first result or null. Never throws. */
+async function query(
+  url: string,
+  label: string,
+  deadline: number,
+): Promise<NominatimHit | null> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (Date.now() > deadline) return null;
     try {
-      const res = await enqueue(() =>
-        fetch(url, {
+      // The deadline is re-checked INSIDE the queued job, not just before
+      // queueing it. Waiting for a slot is itself the dominant cost — the queue
+      // is serial at RATE_MS — so a check that only runs before `enqueue` bounds
+      // retries and tiers while letting the queue wait run unbounded. That left
+      // a burst of 8 callers waiting up to 30s each.
+      const res = await enqueue(async () => {
+        if (Date.now() > deadline) return null;
+        const response = await fetch(url, {
           headers: { 'User-Agent': USER_AGENT, 'Accept-Language': 'en-AU' },
           signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        }),
-      );
+        });
+        globalHits.push(Date.now());
+        return response;
+      });
+      // Budget expired while we waited for a slot; the caller has given up.
+      if (res === null) return null;
       if (res.status === 429 || res.status >= 500) {
         // Back off inside the queue: everyone behind us shares the IP that is
         // being throttled, so they must wait too.
+        if (Date.now() > deadline) return null;
         await enqueue(() => sleep(RATE_MS * (attempt + 1)));
         continue;
       }
@@ -181,6 +238,7 @@ async function query(url: string, label: string): Promise<NominatimHit | null> {
           }`,
         );
       }
+      if (Date.now() > deadline) return null;
       await enqueue(() => sleep(RATE_MS * (attempt + 1)));
     }
   }
@@ -213,7 +271,8 @@ function writeCache(key: string, value: GeocodeResult | null): void {
  * Nominatim wants full state names and returns [] for "VIC", and AU postcodes
  * are nationally unique so it adds nothing.
  *
- * Returns null when nothing resolves. NEVER throws: the caller must be able to
+ * Returns null when nothing resolves. Only ever throws GeocodeBusyError, when
+ * we are shedding load; for every other failure the caller must be able to
  * degrade to "no pin" rather than to an error.
  */
 export async function geocodeAddress(
@@ -223,10 +282,36 @@ export async function geocodeAddress(
   const geocodedAddress = composeAddress(input);
   if (!geocodedAddress) return null;
 
+  // Cache lookups are free and must stay outside the load-shedding checks: a
+  // repeat of an address we already know costs no outbound call, and rejecting
+  // it would make the form worse for no benefit.
   const cacheKey = geocodedAddress.toLowerCase();
   const cached = readCache(cacheKey);
   if (cached.hit) return cached.value;
 
+  if (pending >= MAX_PENDING) {
+    throw new GeocodeBusyError('geocode queue saturated');
+  }
+  if (globalCeilingReached()) {
+    throw new GeocodeBusyError('global geocode ceiling reached');
+  }
+
+  const deadline = Date.now() + TOTAL_BUDGET_MS;
+  pending += 1;
+  try {
+    return await runLadder(input, geocodedAddress, cacheKey, label, deadline);
+  } finally {
+    pending -= 1;
+  }
+}
+
+async function runLadder(
+  input: GeocodeAddressInput,
+  geocodedAddress: string,
+  cacheKey: string,
+  label: string,
+  deadline: number,
+): Promise<GeocodeResult | null> {
   const { street, suburb, state, postcode } = input;
   const enc = encodeURIComponent;
   const base =
@@ -266,7 +351,10 @@ export async function geocodeAddress(
   }
 
   for (const { tier, url } of tiers) {
-    const hit = await query(url, label);
+    // Stop climbing the ladder once the budget is spent, rather than letting a
+    // slow upstream turn one lookup into three tiers of retries.
+    if (Date.now() > deadline) break;
+    const hit = await query(url, label, deadline);
     if (!hit) continue;
 
     const lat = Number(Number(hit.lat).toFixed(6));

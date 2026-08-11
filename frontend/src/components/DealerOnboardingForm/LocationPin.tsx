@@ -54,9 +54,33 @@ export type DealerPin = {
   geocodedAddress: string;
 };
 
-type Status = "idle" | "locating" | "ready" | "notfound";
+type Status = "idle" | "locating" | "ready" | "notfound" | "busy";
+
+/**
+ * Accepts the geocode response only if it is actually shaped like a pin. A
+ * `200 {"data":{}}` from any intermediary would otherwise reach render and throw
+ * on `pin.lat.toFixed(5)`, taking the whole form island down — which is the
+ * exact silent-failure class this form has history with.
+ */
+function asPin(value: unknown): Omit<DealerPin, "source"> | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.lat !== "number" || !Number.isFinite(v.lat)) return null;
+  if (typeof v.lng !== "number" || !Number.isFinite(v.lng)) return null;
+  const precision = v.precision === "street" ? "street" : "approx";
+  return {
+    lat: v.lat,
+    lng: v.lng,
+    precision,
+    matchedAddress: typeof v.matchedAddress === "string" ? v.matchedAddress : "",
+    geocodedAddress:
+      typeof v.geocodedAddress === "string" ? v.geocodedAddress : "",
+  };
+}
 
 type Props = {
+  /** Id for the field group, so the Field label has a real element to point at. */
+  id: string;
   street: string;
   suburb: string;
   state: string;
@@ -67,6 +91,7 @@ type Props = {
 };
 
 export function LocationPin({
+  id,
   street,
   suburb,
   state,
@@ -119,23 +144,29 @@ export function LocationPin({
             signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS),
           });
           if (reqId !== reqIdRef.current) return;
-          // Includes 429 (too many lookups) and any server error. There is
-          // nothing useful for a dealer to do about either, and the pin is
-          // optional, so this reads as "we couldn't place you" and moves on.
+          // 429 is load shedding, NOT a bad address. Telling a dealer we
+          // couldn't find their address when the real answer is "we're busy"
+          // sends them off editing a perfectly correct address.
+          if (res.status === 429) {
+            setStatus("busy");
+            onChangeRef.current(null);
+            return;
+          }
           if (!res.ok) {
             setStatus("notfound");
             onChangeRef.current(null);
             return;
           }
-          const body = (await res.json()) as { data: Omit<DealerPin, "source"> | null };
+          const body = (await res.json()) as { data?: unknown };
           if (reqId !== reqIdRef.current) return;
-          if (!body.data) {
+          const resolved = asPin(body?.data);
+          if (!resolved) {
             setStatus("notfound");
             onChangeRef.current(null);
             return;
           }
           setStatus("ready");
-          onChangeRef.current({ ...body.data, source: "geocoded" });
+          onChangeRef.current({ ...resolved, source: "geocoded" });
         } catch {
           if (reqId !== reqIdRef.current) return;
           // Timeout or offline. Never surfaced as a form error: the dealer can
@@ -174,31 +205,54 @@ export function LocationPin({
   const farFromPostcode =
     kmFromPostcode !== null && kmFromPostcode > FAR_FROM_POSTCODE_KM;
 
+  // Always render the group with `id`, in every state, so the Field's
+  // `htmlFor`/`aria-labelledby` always has a real element to point at. The map
+  // is not a labelable control, so the field is labelled as a group instead.
+  const groupProps = {
+    id,
+    role: "group" as const,
+    "aria-labelledby": `${id}-label`,
+  };
+
   if (!addressComplete && !pin) {
     return (
-      <p className="text-[12.5px] text-muted">
-        Fill in your address above and we&apos;ll show you a map to check your pin.
-      </p>
+      <div {...groupProps}>
+        <p className="text-[12.5px] text-muted">
+          Fill in your address above and we&apos;ll show you a map to check your pin.
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-[10px]">
+    <div {...groupProps} className="flex flex-col gap-[10px]">
       {/* Status for assistive tech. The visible copy below carries the same
-          information, so this stays polite rather than assertive. */}
+          information, so this stays polite rather than assertive. The
+          far-from-postcode warning is included here too: it appears instantly
+          for a sighted user, so it must be announced rather than only drawn. */}
       <p className="sr-only" role="status" aria-live="polite">
         {status === "locating"
           ? "Finding your address on the map."
-          : status === "ready" && pin
-            ? `Pin placed at ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}.`
-            : status === "notfound"
-              ? "We couldn't place your address on the map. You can still submit the form."
-              : ""}
+          : status === "busy"
+            ? "The map service is busy. You can still submit the form and we'll place your pin for you."
+            : status === "ready" && pin
+              ? `Pin placed at ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}.` +
+                (farFromPostcode
+                  ? ` Warning: that is about ${Math.round(kmFromPostcode as number)} kilometres from postcode ${postcode.trim()}. Please check it is in the right place.`
+                  : "")
+              : status === "notfound"
+                ? "We couldn't place your address on the map. You can still submit the form."
+                : ""}
       </p>
 
       <div className="h-[280px] w-full sm:h-[320px]">
         {status === "locating" && !pin ? (
           <MapFallback variant="loading" caption="Finding your address…" />
+        ) : status === "busy" && !pin ? (
+          <MapFallback
+            variant="unavailable"
+            caption="The map is busy right now — nothing wrong with your address. Carry on and we'll place your pin for you."
+          />
         ) : status === "notfound" && !pin ? (
           <MapFallback
             variant="unavailable"
@@ -229,6 +283,10 @@ export function LocationPin({
               : pin.precision === "street"
                 ? "Drag the pin (or tap the map) if your entrance is somewhere else."
                 : "We could only place this approximately. Please drag the pin to your entrance."}{" "}
+            {/* Visible, not only in the marker's aria-label: a sighted keyboard
+                user has no screen reader to read that out, and would otherwise
+                see a pin with no hint that it can be moved without a mouse. */}
+            Or focus the pin and nudge it with the arrow keys.{" "}
             <span className="text-green">
               {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
             </span>

@@ -199,7 +199,12 @@ export default factories.createCoreController(
 
       const data = (rows as Record<string, unknown>[]).map((row) => {
         const dealer = toPublicDealer(row);
-        const geo = byDealer.get(String(dealer.documentId));
+        // Explicit string check rather than String(): a nullish documentId would
+        // stringify to "null" and could then match a geocode row keyed "null",
+        // attaching one dealer's coordinates to another.
+        const key = dealer.documentId;
+        const geo =
+          typeof key === 'string' && key ? byDealer.get(key) : undefined;
         return {
           ...dealer,
           // Explicit nulls rather than omitted keys, so the frontend always

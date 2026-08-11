@@ -568,6 +568,7 @@ export function DealerOnboardingForm({
             </Field>
             <Field full label="Your spot on the map" optional htmlFor="locationPin" hint="We place this from your address — check it's right so buyers arrive at the correct gate.">
               <LocationPin
+                id="locationPin"
                 street={fields.street}
                 suburb={fields.suburb}
                 state={fields.state}
