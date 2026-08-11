@@ -1,15 +1,16 @@
 // Pure helpers for the dealer directory (find-dealer). No React here — these
 // are shared by server rendering and, later, the client-side directory island.
 //
-// Attribution: `au-postcode-centroids.json` and `dealer-geocodes.json` were both
-// geocoded from OpenStreetMap data via the Nominatim API. They are licensed ODbL,
-// which requires attribution wherever they are displayed — the map UI that renders
-// these coordinates MUST show "© OpenStreetMap contributors"
-// (see https://www.openstreetmap.org/copyright).
+// Attribution: `au-postcode-centroids.json`, and most per-dealer coordinates now
+// served by /api/dealers, were geocoded from OpenStreetMap data via the Nominatim
+// API. They are licensed ODbL, which requires attribution wherever they are
+// displayed — any map UI that renders these coordinates MUST show
+// "© OpenStreetMap contributors" (see https://www.openstreetmap.org/copyright).
+// Coordinates a dealer placed themselves are their own contribution, and the
+// `source` field on `dealer-geocode` records which is which.
 
 import type { DirectoryDealer, DealerTradingHours } from "@/lib/strapi";
 import centroids from "@/lib/au-postcode-centroids.json";
-import geocodes from "@/lib/dealer-geocodes.json";
 
 type Centroids = Record<string, [number, number]>;
 const CENTROIDS = centroids as unknown as Centroids;
@@ -23,33 +24,41 @@ export function centroidFor(postcode: string | null | undefined): [number, numbe
   return CENTROIDS[key] ?? null;
 }
 
-// Per-dealer coordinates, keyed by documentId: `[lat, lng, precision, matched]`.
-// `matched` is the OpenStreetMap display_name that answered, kept in the file so
-// a pin that looks wrong can be diagnosed by reading it rather than re-querying.
-//
-// This is a sidecar file, not a schema change: `dealer-submission` is a
-// temporary stand-in for a real dealer API and the client forbade adding fields
-// to it. Regenerate with `npm run seed:dealer-geo` from `backend/`.
-type Geocode = [number, number, string, string];
-const GEOCODES = geocodes as unknown as Record<string, Geocode>;
-
 /** A dealer's map position, and whether it is exact enough to quote a precise distance. */
 export type DealerPoint = { coords: [number, number]; precise: boolean };
 
 /**
- * Where a dealer sits on the map: their street-address geocode when we have
- * one, else the postcode centroid, else null (they are counted as "not shown"
- * rather than silently dropped).
+ * Where a dealer sits on the map: their own coordinates when we have them, else
+ * the postcode centroid, else null (they are counted as "not shown" rather than
+ * silently dropped).
  *
- * `precise` is true only for street-level geocodes. Postcode centroids and
- * suburb-level geocode fallbacks are approximate, and distance labels keep
- * their "~" accordingly.
+ * Coordinates come from the `dealer-geocode` collection, merged onto each dealer
+ * by /api/dealers. They used to live in a committed `dealer-geocodes.json`
+ * sidecar, which meant a wrong pin needed a code deploy to move and a newly
+ * onboarded dealer sat on a postcode centroid until someone ran a script. Now a
+ * dealer places their own pin on the onboarding form and staff can correct any
+ * pin in the admin, and both show up within the ISR window.
+ *
+ * `precise` is true only for street-level coordinates. Postcode centroids and
+ * approximate geocodes keep their "~" in distance labels.
  */
 export function dealerPoint(
-  dealer: Pick<DirectoryDealer, "documentId" | "postcode">,
+  dealer: Pick<DirectoryDealer, "postcode" | "latitude" | "longitude" | "precision">,
 ): DealerPoint | null {
-  const hit = GEOCODES[dealer.documentId];
-  if (hit) return { coords: [hit[0], hit[1]], precise: hit[2] === "street" };
+  // Guard on both being finite rather than truthy: longitude 0 is falsy, and
+  // while that is in the Atlantic rather than Australia, a truthiness test here
+  // is the kind of thing that survives into a codebase that later isn't AU-only.
+  if (
+    typeof dealer.latitude === "number" &&
+    typeof dealer.longitude === "number" &&
+    Number.isFinite(dealer.latitude) &&
+    Number.isFinite(dealer.longitude)
+  ) {
+    return {
+      coords: [dealer.latitude, dealer.longitude],
+      precise: dealer.precision === "street",
+    };
+  }
   const centroid = centroidFor(dealer.postcode);
   return centroid ? { coords: centroid, precise: false } : null;
 }
@@ -86,7 +95,7 @@ export function formatDistance(km: number, precise = false): string {
 /** Distance from an origin to a dealer, labelled honestly about both ends' precision. Null when the dealer has no coordinate at all. */
 export function distanceLabelFor(
   origin: DealerOrigin | null,
-  dealer: Pick<DirectoryDealer, "documentId" | "postcode">,
+  dealer: Pick<DirectoryDealer, "postcode" | "latitude" | "longitude" | "precision">,
 ): string | null {
   if (!origin) return null;
   const point = dealerPoint(dealer);

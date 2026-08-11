@@ -491,6 +491,14 @@ export type DirectoryDealer = {
   established: number | null;
   multipleLocations: boolean | null;
   stateAssociation: string | null;
+  // Map position, merged in by /api/dealers from the `dealer-geocode`
+  // collection — not columns on dealer-submission. Null when that dealer has no
+  // geocode row yet, in which case dealerPoint() falls back to the postcode
+  // centroid. `precision` is "street" only when the coordinate is good enough
+  // to quote a distance without a "~".
+  latitude: number | null;
+  longitude: number | null;
+  precision: "street" | "approx" | null;
 };
 
 /** All accredited dealers for the directory. Throws on a Strapi outage (house collection-getter contract). */
