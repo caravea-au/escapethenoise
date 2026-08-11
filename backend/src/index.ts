@@ -1,5 +1,7 @@
 import type { Core } from "@strapi/strapi";
 
+import { backfillDealerCoordinates } from "./utils/backfill-dealer-coordinates";
+
 // Public read actions the frontend relies on (it queries these without a token).
 const PUBLIC_ACTIONS = [
   "api::buying-guide.buying-guide.find",
@@ -40,5 +42,10 @@ export default {
         strapi.log.info(`[bootstrap] granted Public role: ${action}`);
       }
     }
+
+    // Fill in dealer map coordinates on any database that has not had them yet.
+    // Flag-guarded, fills only NULLs, and never throws — see the module header
+    // for why this lives here rather than in database/migrations.
+    await backfillDealerCoordinates(strapi);
   },
 };

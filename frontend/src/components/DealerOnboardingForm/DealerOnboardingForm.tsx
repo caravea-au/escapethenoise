@@ -130,10 +130,9 @@ export function DealerOnboardingForm({
   const [hours, setHours] = useState<Hours>(defaultHours);
   const [logo, setLogo] = useState<File | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
-  // Map pin. NOT a key in `fields`: that object is string-only and mirrors
-  // dealer-submission's attribute names, and these coordinates are numbers
-  // stored in a different collection entirely (dealer-geocode). Optional by
-  // design — never validated, never counted in the progress bar.
+  // Map pin. NOT a key in `fields`: that object is string-only, and a pin is a
+  // nested object of numbers that the backend unpacks into its own columns.
+  // Optional by design — never validated, never counted in the progress bar.
   const [pin, setPin] = useState<DealerPin | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [consentError, setConsentError] = useState(false);
@@ -410,11 +409,13 @@ export function DealerOnboardingForm({
         photos: photoUrls,
         mediaErrors: failures,
         submittedAt: new Date().toISOString(),
-        // Transient: dealer-submission has no coordinate attributes (and by
-        // design never will), so Strapi's sanitizeInput would silently drop
-        // these. The controller reads them off the body before stripping them
-        // and writes a dealer-geocode row instead. Omitted entirely when the
-        // address never resolved, rather than sent as nulls.
+        // Transient. The dealer's coordinates ARE columns on dealer-submission,
+        // but they are server-owned: the controller validates this nested `pin`
+        // and writes the flat columns itself, and it rejects those column names
+        // outright if a client sends them. So send the pin, never latitude and
+        // longitude. Omitted entirely when the address never resolved, rather
+        // than sent as nulls — Strapi 400s on any key with no matching
+        // attribute, so `pin` must be stripped server-side either way.
         ...(pin ? { pin } : {}),
         comment,
         elapsedMs: loadedAt.current ? Date.now() - loadedAt.current : 0,

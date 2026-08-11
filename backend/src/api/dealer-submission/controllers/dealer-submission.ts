@@ -21,15 +21,6 @@ import { DEALER_NOT_SPAM_FILTER } from '../../../utils/dealer-not-spam-filter';
 import { validateDealerPin } from '../../../utils/dealer-pin';
 import { PUBLIC_DEALER_FIELDS, toPublicDealer } from '../dto/public-dealer';
 
-const GEOCODE_UID = 'api::dealer-geocode.dealer-geocode';
-
-type GeocodeRow = {
-  dealerDocumentId: string;
-  latitude: number;
-  longitude: number;
-  precision: 'street' | 'approx';
-};
-
 // reCAPTCHA actions minted by the frontend. The pre-check uses its own action so
 // it doesn't pollute the score distribution for real submissions in the console.
 const ACTION_SUBMIT = 'dealer_submit';
@@ -39,14 +30,41 @@ const ACTION_PRECHECK = 'dealer_precheck';
 const MIN_ELAPSED_MS = 3000;
 
 // Client-only keys that must never be persisted (none is a schema attribute).
-// `pin` carries the dealer's map coordinates, which live in the separate
-// dealer-geocode collection — see the `capturedPin` handling in `create`.
+// `pin` carries the dealer's map coordinates as a nested object; `create`
+// captures and validates it, then writes the flat columns itself.
+//
+// This strip is LOAD-BEARING, not an optimisation. Strapi's core create runs
+// validateInput BEFORE sanitizeInput, and validateInput applies
+// throwUnrecognizedFields unconditionally — it is not gated by `strictParams`,
+// which this project never sets. So a root key with no matching attribute is a
+// 400, not a silent drop.
 const TRANSIENT_KEYS = [
   'recaptchaToken',
   'verifyOnly',
   'comment',
   'elapsedMs',
   'pin',
+];
+
+// The six coordinate attributes. They ARE schema attributes, so unlike
+// TRANSIENT_KEYS Strapi would happily persist whatever arrives in them — and
+// `dealer-submission.create` is a PUBLIC, unauthenticated route (see
+// PUBLIC_ACTIONS in src/index.ts). Left unstripped, a caller with curl could set
+// coordinates directly, skipping every control in validateDealerPin (AU bounds,
+// the far-from-postcode precision downgrade, cleanAddress and its
+// CSV-formula-injection guard) and assert `geocodeSource: 'admin'`. Those forged
+// coordinates would then be published on /find-dealer, because latitude,
+// longitude and precision are in PUBLIC_DEALER_FIELDS.
+//
+// So: strip all six from client input, then write only what validateDealerPin
+// returns. These are server-owned.
+const SERVER_OWNED_KEYS = [
+  'latitude',
+  'longitude',
+  'precision',
+  'geocodeSource',
+  'matchedAddress',
+  'geocodedAddress',
 ];
 
 export default factories.createCoreController(
@@ -92,10 +110,11 @@ export default factories.createCoreController(
       // browser's own bounds/enum checks are a courtesy, not a control.
       const capturedPin = validateDealerPin(data.pin, data.postcode);
 
-      // Strip transient keys before anything touches the DB. Strapi's
-      // sanitizeInput would drop unknown attributes anyway; this keeps the
-      // sanitiser below from walking values we never intend to store.
-      for (const key of TRANSIENT_KEYS) {
+      // Strip transient AND server-owned keys before anything touches the DB.
+      // Both matter, for different reasons: a transient key would be REJECTED by
+      // validateInput (a 400 for the dealer), while a server-owned key would be
+      // ACCEPTED and persisted unvalidated. See the two comment blocks above.
+      for (const key of [...TRANSIENT_KEYS, ...SERVER_OWNED_KEYS]) {
         delete data[key];
       }
 
@@ -122,51 +141,31 @@ export default factories.createCoreController(
       // arrays, tradingHours object) and leaves numbers/booleans untouched.
       // Side effect worth knowing: this also encodes brackets inside
       // mediaErrors messages, so the odd "&lt;" may show up in the admin email.
-      body.data = encodeAngles(data) as Record<string, unknown>;
-
-      const result = await super.create(ctx);
-
-      // Store the coordinates AFTER the submission is safely saved, because the
-      // documentId to key them against does not exist until then.
       //
-      // Best-effort by design, exactly like the notification emails in
-      // lifecycles.ts: a dealer losing their entire onboarding submission
-      // because a coordinate write failed would be far worse than a missing
-      // pin, which the team can place later. So this only ever logs.
-      //
-      // Not in an afterCreate lifecycle: the pin was stripped from `data` above,
-      // so the lifecycle's `event.result` never sees it.
-      if (capturedPin) {
-        try {
-          // Read the documentId off the RETURN VALUE, not ctx.body. Strapi's
-          // core `create` returns `transformResponse(entity)` and leaves
-          // ctx.body untouched — the route layer assigns it afterwards — so
-          // ctx.body is still undefined at this point.
-          const documentId = (
-            result as { data?: { documentId?: string } } | undefined
-          )?.data?.documentId;
-          if (documentId) {
-            // `as any`: documents().create() types `data` from the generated
-            // content-type schema; tsconfig here runs with strict: false and
-            // this is the narrowest loosening (same pattern as dealer-enquiry).
-            await strapi.documents(GEOCODE_UID).create({
-              data: { dealerDocumentId: documentId, ...capturedPin } as any,
-            });
-          } else {
-            strapi.log.warn(
-              '[dealer-submission] created row exposed no documentId — map pin not stored.',
-            );
-          }
-        } catch (error) {
-          strapi.log.warn(
-            `[dealer-submission] map pin not stored: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-          );
-        }
-      }
+      // The validated pin is merged in HERE, before the call, so the coordinates
+      // ride the normal create path and land in `event.result` for the
+      // notification email. Passing it through encodeAngles is safe both ways:
+      // the numbers are returned untouched, and cleanAddress has already turned
+      // any angle bracket into `&lt;`, which encodeAngles leaves alone (it
+      // rewrites `<` and `>`, never `&`, so it cannot double-encode).
+      body.data = encodeAngles({
+        ...data,
+        ...(capturedPin ?? {}),
+      }) as Record<string, unknown>;
 
-      return result;
+      // The coordinates are plain columns on this row now, so they are written
+      // by the create above — no second write keyed on the new documentId, and
+      // nothing to reconcile if that write were to fail.
+      //
+      // The trade-off, stated plainly: the old sidecar write was wrapped in a
+      // try/catch and only logged, so a coordinate problem could never cost a
+      // dealer their submission. It can now. Everything that could fail has been
+      // removed rather than caught — the six attributes are optional,
+      // defaultless, unconstrained, and `text` rather than a length-limited
+      // varchar, and validateDealerPin degrades bad input to null instead of
+      // throwing. Keep it that way; do not add `required`, a `maxLength`, or a
+      // unique index to any of them.
+      return super.create(ctx);
     },
 
     /**
@@ -186,34 +185,17 @@ export default factories.createCoreController(
           orderBy: [{ state: 'asc' }, { dealershipName: 'asc' }],
         });
 
-      // Coordinates live in a separate collection (see dealer-geocode), so they
-      // cannot ride PUBLIC_DEALER_FIELDS — that array is both the DB `select`
-      // and the output allow-list for dealer-submission's OWN columns, and must
-      // stay that way. One extra query and a Map keeps this O(1) per dealer
-      // rather than N+1, and `toPublicDealer` stays the untouched security gate:
-      // the merge happens strictly AFTER it, on the object it returns.
-      const geocodes = (await strapi.db.query(GEOCODE_UID).findMany({
-        select: ['dealerDocumentId', 'latitude', 'longitude', 'precision'],
-      })) as GeocodeRow[];
-      const byDealer = new Map(geocodes.map((g) => [g.dealerDocumentId, g]));
-
-      const data = (rows as Record<string, unknown>[]).map((row) => {
-        const dealer = toPublicDealer(row);
-        // Explicit string check rather than String(): a nullish documentId would
-        // stringify to "null" and could then match a geocode row keyed "null",
-        // attaching one dealer's coordinates to another.
-        const key = dealer.documentId;
-        const geo =
-          typeof key === 'string' && key ? byDealer.get(key) : undefined;
-        return {
-          ...dealer,
-          // Explicit nulls rather than omitted keys, so the frontend always
-          // sees the same shape and can fall back to the postcode centroid.
-          latitude: geo?.latitude ?? null,
-          longitude: geo?.longitude ?? null,
-          precision: geo?.precision ?? null,
-        };
-      });
+      // Coordinates are columns on this row, so they ride PUBLIC_DEALER_FIELDS
+      // like everything else and need no second query. toPublicDealer's
+      // `row[field] ?? null` gives the explicit nulls the frontend depends on:
+      // it always sees the same shape and falls back to the postcode centroid.
+      //
+      // geocodeSource, matchedAddress and geocodedAddress are deliberately NOT
+      // in that array. It is both the DB `select` and the output allow-list, so
+      // they never leave SQLite — matchedAddress in particular is raw upstream
+      // Nominatim text. They are also `private` in the schema, which covers the
+      // paths that go through Strapi's own sanitizeOutput rather than this one.
+      const data = (rows as Record<string, unknown>[]).map(toPublicDealer);
 
       ctx.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
       ctx.body = { data, meta: { total: data.length } };

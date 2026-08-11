@@ -47,6 +47,19 @@ function buildSummary(d: AnyRecord): string {
     line('DMS', d.dmsOther || d.dms) +
     '\n' +
     line('Address', [d.street, d.suburb, d.state, d.postcode].filter(Boolean).join(', ')) +
+    // The pin the dealer placed on the map, if they placed one. Readable here
+    // because the coordinates are now columns on this row, written before
+    // `super.create`, so they are in `event.result` — when they lived in a
+    // separate collection this lifecycle ran too early to ever see them.
+    // `line()` returns '' for null, so a pin-less submission just omits the row.
+    line(
+      'Map pin',
+      Number.isFinite(d.latitude) && Number.isFinite(d.longitude)
+        ? `${d.latitude}, ${d.longitude} (${d.precision === 'street' ? 'street level' : 'approximate'}` +
+            `${d.geocodeSource === 'adjusted' ? ', dealer positioned it themselves' : ''}) ` +
+            `https://www.google.com/maps/search/?api=1&query=${d.latitude},${d.longitude}`
+        : '',
+    ) +
     line('Motor Dealer Licence name', d.motorDealerLicenceName) +
     line('Motor Dealer Licence number', d.motorDealerLicenceNumber) +
     line('Multiple locations', d.multipleLocations ? 'Yes' : 'No') +

@@ -35,11 +35,23 @@ const EARTH_RADIUS_KM = 6371;
 type Centroids = Record<string, [number, number]>;
 const CENTROIDS = centroids as unknown as Centroids;
 
+/**
+ * Exactly the six coordinate attributes on dealer-submission. The controller
+ * spreads this whole object into `data`, so the keys must stay in step with the
+ * schema: Strapi's validateInput throws on any root key with no matching
+ * attribute (it runs BEFORE sanitizeInput and ignores strictParams), so a key
+ * here without a column 400s every pinned submission.
+ */
 export type DealerPinRow = {
   latitude: number;
   longitude: number;
   precision: 'street' | 'approx';
-  source: 'geocoded' | 'adjusted';
+  /**
+   * Narrower than the schema enum on purpose. The column also accepts
+   * 'imported' and 'admin', but those describe provenance only the backend may
+   * assert (the boot backfill, or a staff edit) — never a form submission.
+   */
+  geocodeSource: 'geocoded' | 'adjusted';
   matchedAddress: string;
   geocodedAddress: string;
 };
@@ -82,10 +94,14 @@ const cleanAddress = (value: unknown): string => {
       .replace(/\s+/g, ' ')
       // Angle brackets encoded for the same reason encodeAngles exists for the
       // rest of the payload: no stored value should be parseable as HTML by a
-      // future consumer. These two fields bypass encodeAngles because the pin is
-      // stripped from `data` before that call runs. Not reachable today (neither
-      // field is in PUBLIC_DEALER_FIELDS and the frontend never renders them),
-      // which is exactly why it would be easy to expose later by accident.
+      // future consumer. These two fields now also pass THROUGH encodeAngles
+      // (the validated pin is merged into `data` before that call), which is
+      // harmless — encodeAngles rewrites only `<` and `>`, never `&`, so it is a
+      // no-op on output that is already `&lt;`. Kept here rather than deleted so
+      // this stays correct if the merge order ever moves back. Not reachable
+      // today (neither field is in PUBLIC_DEALER_FIELDS, both are `private`, and
+      // the frontend never renders them), which is exactly why it would be easy
+      // to expose later by accident.
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       // Leading =, +, - or @ makes a spreadsheet treat the cell as a formula on
@@ -116,10 +132,10 @@ export function validateDealerPin(
   if (lat < AU_BOUNDS.minLat || lat > AU_BOUNDS.maxLat) return null;
   if (lng < AU_BOUNDS.minLng || lng > AU_BOUNDS.maxLng) return null;
 
-  // Never trust a client-supplied `source`. `imported` and `admin` describe
-  // provenance only this backend can assert (a migration, or a staff edit); a
-  // form submission is one of exactly two things.
-  const source: DealerPinRow['source'] =
+  // Never trust a client-supplied source. `imported` and `admin` describe
+  // provenance only this backend can assert (the boot backfill, or a staff
+  // edit); a form submission is one of exactly two things.
+  const geocodeSource: DealerPinRow['geocodeSource'] =
     pin.source === 'adjusted' ? 'adjusted' : 'geocoded';
 
   let precision: DealerPinRow['precision'] =
@@ -138,7 +154,7 @@ export function validateDealerPin(
     latitude: Number(lat.toFixed(6)),
     longitude: Number(lng.toFixed(6)),
     precision,
-    source,
+    geocodeSource,
     matchedAddress: cleanAddress(pin.matchedAddress),
     geocodedAddress: cleanAddress(pin.geocodedAddress),
   };
