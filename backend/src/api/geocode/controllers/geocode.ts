@@ -1,12 +1,24 @@
 /**
- * dealer-geocode controller
+ * geocode controller
  *
  * Exposes address -> coordinates lookup so the public dealer onboarding form can
  * show a dealer a pin on their own building and let them correct it.
  *
+ * This API has NO content type, deliberately. It owns no data — it is a rate-
+ * limited proxy in front of Nominatim, and the coordinates it returns are stored
+ * as columns on dealer-submission. Strapi is happy with a content-type-less api
+ * folder: the loader tolerates a missing content-types directory, the controller
+ * registry accepts a plain object, and the route handler resolves against the
+ * FOLDER name (`api::geocode.geocode`), not the URL path.
+ *
+ * It lives apart from dealer-submission on purpose. This is a public,
+ * unauthenticated endpoint reachable by anyone; dealer-submission's controller
+ * owns dealer PII and its own allow-list. Keeping them in separate files keeps
+ * each one's audit story readable.
+ *
  * Two routes, one handler (see routes/geocode-address.ts):
  *   * POST /geocode-address          public, IP rate-limited — the onboarding form
- *   * POST /dealer-geocodes/resolve  API token required, no IP limit — scripts
+ *   * POST /geocode-address/resolve  API token required, no IP limit — scripts
  *
  * The split is deliberate. Detecting "is this caller holding a valid API token"
  * from inside a route declared `auth: false` means reaching into Strapi's auth
@@ -19,11 +31,8 @@
  * directory's geocoding down with it.
  */
 
-import { factories } from '@strapi/strapi';
 import { geocodeAddress, GeocodeBusyError } from '../../../utils/geocode-address';
 import { hashIp } from '../../../utils/hash-ip';
-
-const GEOCODE_UID = 'api::dealer-geocode.dealer-geocode';
 
 // A dealer legitimately geocodes once when their address is complete, plus a
 // few times if they correct it. 30 per 10 minutes is generous for a human and
@@ -161,7 +170,7 @@ async function handleLookup(ctx): Promise<void> {
     // depend on that promise. Never surface the upstream error text: it can
     // carry the outbound URL and Nominatim's own diagnostics.
     strapi.log.warn(
-      `[dealer-geocode] lookup failed: ${
+      `[geocode] lookup failed: ${
         error instanceof Error ? error.message : String(error)
       }`,
     );
@@ -169,7 +178,10 @@ async function handleLookup(ctx): Promise<void> {
   }
 }
 
-export default factories.createCoreController(GEOCODE_UID, () => ({
+// A plain object, not factories.createCoreController: that factory needs a
+// content-type UID and this API has none. Strapi's controller registry calls a
+// function controller but takes an object as-is, so both forms are supported.
+export default {
   /** Public, IP rate-limited. Called by the dealer onboarding form. */
   async geocodeAddress(ctx) {
     const ipKey = hashIp(ctx);
@@ -190,4 +202,4 @@ export default factories.createCoreController(GEOCODE_UID, () => ({
   async resolveAddress(ctx) {
     return handleLookup(ctx);
   },
-}));
+};

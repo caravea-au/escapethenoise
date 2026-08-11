@@ -54,8 +54,20 @@ Use the actual Ploi site path in place of `/home/ploi/[cms-domain]`.
 cd /home/ploi/[cms-domain]
 git pull origin main
 npm ci --prefix backend
+npm run clean --prefix backend
 npm run build --prefix backend
 ```
+
+**Do not drop the `clean` step.** `strapi build` compiles into `backend/dist/` but never removes
+what is already there, so a deleted content type or API keeps running from stale output: the content
+type stays registered (its table is never dropped) and a moved route can end up declared twice, with
+the stale copy winning on load order. It looks like it worked. `npm run clean` removes `dist/`,
+`.strapi/` and `.cache/` first.
+
+Coordinates for the dealer map are backfilled automatically on the first boot after deploy
+(`backend/src/index.ts`), so there is no seed command to run. Check the startup log for
+`[bootstrap] dealer coordinates:` and treat a warning there as a failed deploy — every dealer would
+silently fall back to their postcode centroid on `/find-dealer`.
 
 Backend runtime command:
 
