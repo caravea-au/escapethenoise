@@ -15,9 +15,15 @@ const CAPTION: Record<Variant, string> = {
 
 type Props = {
   variant: Variant;
+  /**
+   * Overrides the caption. The defaults above point at the dealer list, which
+   * is right on /find-dealer and wrong everywhere else — the onboarding form
+   * reuses this skin and needs to talk about the address fields instead.
+   */
+  caption?: string;
 };
 
-export function MapFallback({ variant }: Props) {
+export function MapFallback({ variant, caption }: Props) {
   return (
     <div className="relative h-full w-full overflow-hidden rounded-card border border-line-strong bg-map-land">
       <div className="absolute inset-0 bg-[linear-gradient(135deg,var(--color-cream-deep),var(--color-map-land))]" />
@@ -31,7 +37,7 @@ export function MapFallback({ variant }: Props) {
           role="status"
           className="rounded-input border border-line-strong bg-white/90 px-4 py-2 text-[13px] font-medium text-green shadow-[0_4px_14px_rgba(22,39,28,.15)]"
         >
-          {CAPTION[variant]}
+          {caption ?? CAPTION[variant]}
         </p>
       </div>
     </div>

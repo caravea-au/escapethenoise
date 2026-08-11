@@ -15,6 +15,7 @@ import {
   Textarea,
   ToggleLine,
 } from "./Controls";
+import { LocationPin, type DealerPin } from "./LocationPin";
 import { MultiSelect } from "./MultiSelect";
 import { PhotoUploader } from "./PhotoUploader";
 import { TradingHours, defaultHours, type Hours } from "./TradingHours";
@@ -77,6 +78,7 @@ type DealerOnboardingFormProps = {
   recaptchaEnabled?: boolean;
   recaptchaSiteKey?: string | null;
   supportEmail?: string | null;
+  mapboxToken?: string | null;
 };
 
 // Scalar string fields (camelCase = Strapi attribute names).
@@ -115,6 +117,7 @@ export function DealerOnboardingForm({
   recaptchaEnabled = false,
   recaptchaSiteKey = null,
   supportEmail = null,
+  mapboxToken = null,
 }: DealerOnboardingFormProps = {}) {
   const router = useRouter();
   const recaptchaActive = recaptchaEnabled && !!recaptchaSiteKey;
@@ -127,6 +130,11 @@ export function DealerOnboardingForm({
   const [hours, setHours] = useState<Hours>(defaultHours);
   const [logo, setLogo] = useState<File | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
+  // Map pin. NOT a key in `fields`: that object is string-only and mirrors
+  // dealer-submission's attribute names, and these coordinates are numbers
+  // stored in a different collection entirely (dealer-geocode). Optional by
+  // design — never validated, never counted in the progress bar.
+  const [pin, setPin] = useState<DealerPin | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [consentError, setConsentError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -402,6 +410,12 @@ export function DealerOnboardingForm({
         photos: photoUrls,
         mediaErrors: failures,
         submittedAt: new Date().toISOString(),
+        // Transient: dealer-submission has no coordinate attributes (and by
+        // design never will), so Strapi's sanitizeInput would silently drop
+        // these. The controller reads them off the body before stripping them
+        // and writes a dealer-geocode row instead. Omitted entirely when the
+        // address never resolved, rather than sent as nulls.
+        ...(pin ? { pin } : {}),
         comment,
         elapsedMs: loadedAt.current ? Date.now() - loadedAt.current : 0,
         ...(recaptchaToken ? { recaptchaToken } : {}),
@@ -551,6 +565,17 @@ export function DealerOnboardingForm({
             <Field full label="Postcode" required htmlFor="postcode" hint="Used to match you with nearby buyers." error={errors.postcode}>
               <span data-field="postcode" />
               <Input id="postcode" inputMode="numeric" maxLength={4} className="max-w-[160px]" value={fields.postcode} onChange={(e) => set("postcode", e.target.value)} aria-invalid={!!errors.postcode} placeholder="e.g. 3175" />
+            </Field>
+            <Field full label="Your spot on the map" optional htmlFor="locationPin" hint="We place this from your address — check it's right so buyers arrive at the correct gate.">
+              <LocationPin
+                street={fields.street}
+                suburb={fields.suburb}
+                state={fields.state}
+                postcode={fields.postcode}
+                mapboxToken={mapboxToken}
+                pin={pin}
+                onChange={setPin}
+              />
             </Field>
             {/* Shown for every dealer; mandatory only for NSW (NSW Motor Dealer Licence law). */}
             <Field label="Motor Dealer Licence name" required={nswLicenceRequired} optional={!nswLicenceRequired} htmlFor="motorDealerLicenceName" hint="Mandatory for NSW dealers — the name your NSW Motor Dealer Licence is held under." error={errors.motorDealerLicenceName}>
