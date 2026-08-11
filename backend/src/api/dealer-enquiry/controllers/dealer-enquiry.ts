@@ -13,11 +13,11 @@
  * is a separate, later concern.
  */
 
-import crypto from 'crypto';
 import { factories } from '@strapi/strapi';
 import { verifyRecaptcha } from '../../../utils/verify-recaptcha';
 import { encodeAngles } from '../../../utils/encode-angles';
 import { DEALER_NOT_SPAM_FILTER } from '../../../utils/dealer-not-spam-filter';
+import { hashIp } from '../../../utils/hash-ip';
 
 const DEALER_UID = 'api::dealer-submission.dealer-submission';
 const ENQUIRY_UID = 'api::dealer-enquiry.dealer-enquiry';
@@ -65,15 +65,6 @@ async function findDealerRow(dealerDocumentId: string): Promise<DealerRow | null
     where: { documentId: dealerDocumentId, ...DEALER_NOT_SPAM_FILTER },
     select: ['id', 'documentId', 'dealershipName'],
   }) as Promise<DealerRow | null>;
-}
-
-function hashIp(ctx: { request: { ip?: string } }): string {
-  const appKeys = strapi.config.get('server.app.keys') as string[] | undefined;
-  const appKey = Array.isArray(appKeys) && appKeys[0] ? appKeys[0] : '';
-  return crypto
-    .createHash('sha256')
-    .update(`${ctx.request.ip ?? ''}${appKey}`)
-    .digest('hex');
 }
 
 export default factories.createCoreController(ENQUIRY_UID, () => ({

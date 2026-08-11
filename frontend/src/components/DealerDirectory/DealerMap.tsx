@@ -12,6 +12,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import type { DirectoryDealer } from "@/lib/strapi";
 import { dealerPoint, dealerPinType, prefersReducedMotion } from "@/lib/dealers";
 import { MapFallback } from "./MapFallback";
+import { MapZoomControls } from "@/components/MapZoomControls/MapZoomControls";
 
 // The v3 "standard" default style is a 3D style whose layers don't respond to
 // setPaintProperty the way ours needs to — light-v11 is the flat vector style
@@ -350,28 +351,7 @@ export function DealerMap({ dealers, selectedId, onPinClick, mapboxToken }: Prop
         createPortal(<PinContent key={id} type={type} selected={id === selectedId} />, el),
       )}
 
-      <div
-        role="group"
-        aria-label="Map zoom controls"
-        className="absolute right-3.5 top-3.5 flex flex-col overflow-hidden rounded-[9px] bg-white shadow-[0_4px_14px_rgba(22,39,28,.18)]"
-      >
-        <button
-          type="button"
-          aria-label="Zoom in"
-          onClick={zoomIn}
-          className="flex h-[38px] w-[38px] items-center justify-center border-b border-line text-[21px] text-green"
-        >
-          +
-        </button>
-        <button
-          type="button"
-          aria-label="Zoom out"
-          onClick={zoomOut}
-          className="flex h-[38px] w-[38px] items-center justify-center text-[21px] text-green"
-        >
-          −
-        </button>
-      </div>
+      <MapZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} />
 
       <div
         aria-label="Map legend"

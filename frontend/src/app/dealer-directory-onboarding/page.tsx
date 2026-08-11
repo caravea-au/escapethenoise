@@ -54,6 +54,9 @@ export default async function DealerDirectoryOnboardingPage() {
       recaptchaEnabled={enabled}
       recaptchaSiteKey={siteKey}
       supportEmail={supportEmail}
+      // Read here rather than inside the client island, matching find-dealer.
+      // A missing token degrades to MapFallback; the form stays submittable.
+      mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? null}
     />
   );
 }
