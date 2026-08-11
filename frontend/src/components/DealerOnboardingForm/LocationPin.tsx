@@ -37,8 +37,9 @@ const LOOKUP_TIMEOUT_MS = 15_000;
 // authoritative version of this check.
 const FAR_FROM_POSTCODE_KM = 25;
 
-// mapbox-gl is ~230KB gzipped and this route never loaded it before. Gated on a
-// resolved pin below, so a dealer who abandons the form early never fetches it.
+// mapbox-gl v3 is ~499KB gzipped (measured) and this route never loaded it
+// before. Gated on a resolved pin below, so a dealer who abandons the form early
+// never fetches it, and it shares one chunk with /find-dealer's DealerMap.
 const PinMap = dynamic(() => import("./PinMap").then((m) => m.PinMap), {
   ssr: false,
   loading: () => <MapFallback variant="loading" caption="Loading map…" />,

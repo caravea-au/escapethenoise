@@ -3,10 +3,11 @@
 // The mapbox-gl half of the onboarding form's "confirm your location" field.
 //
 // Split out from LocationPin.tsx so it can be next/dynamic'd with ssr:false:
-// mapbox-gl is ~230KB gzipped and must never land in the initial bundle of a
-// form most visitors will not finish. LocationPin only mounts this once an
-// address has actually resolved to a pin. Same discipline as DealerMap on
-// /find-dealer — see DealerDirectory.tsx.
+// mapbox-gl v3 is ~499KB gzipped (measured, and it shares one chunk with
+// DealerMap) and must never land in the initial bundle of a form most visitors
+// will not finish. LocationPin only mounts this once an address has actually
+// resolved to a pin. Same discipline as DealerMap on /find-dealer — see
+// DealerDirectory.tsx, whose own comment still quotes a stale ~230KB.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
