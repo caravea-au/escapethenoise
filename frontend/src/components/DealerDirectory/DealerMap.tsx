@@ -10,7 +10,7 @@ import { createPortal } from "react-dom";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { DirectoryDealer } from "@/lib/strapi";
-import { dealerPoint, dealerPinType, prefersReducedMotion } from "@/lib/dealers";
+import { dealerPoint, dealerPinType, prefersReducedMotion, haversineKm, type DealerOrigin } from "@/lib/dealers";
 import { MapFallback } from "./MapFallback";
 import { MapZoomControls } from "@/components/MapZoomControls/MapZoomControls";
 
@@ -50,6 +50,12 @@ type Props = {
   selectedId: string | null;
   onPinClick: (documentId: string) => void;
   mapboxToken: string;
+  origin: DealerOrigin | null;
+  // True while `origin` is null because the query didn't resolve (e.g.
+  // "zzzzz"), as distinct from `origin` being null because the search was
+  // cleared — the camera must not move for the former (AC2) but must
+  // re-fit for the latter (AC3).
+  unresolvedQuery: boolean;
 };
 
 function toLngLat(coords: [number, number]): [number, number] {
@@ -127,12 +133,18 @@ function PinContent({ type, selected }: { type: PinType; selected: boolean }) {
   );
 }
 
-export function DealerMap({ dealers, selectedId, onPinClick, mapboxToken }: Props) {
+export function DealerMap({ dealers, selectedId, onPinClick, mapboxToken, origin, unresolvedQuery }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<string, MarkerEntry>>(new Map());
   const userMovedMapRef = useRef(false);
   const prevIdsKeyRef = useRef<string | null>(null);
+  // `undefined` is a "never ran" sentinel distinct from `null` (no origin) —
+  // without it, mounting with no search in progress would look identical to
+  // a just-cleared search and would fire the all-dealers re-fit below on
+  // first render, duplicating the marker-diffing effect's own first-mount
+  // fitBounds.
+  const prevOriginKeyRef = useRef<string | null | undefined>(undefined);
   const onPinClickRef = useRef(onPinClick);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(false);
@@ -335,6 +347,116 @@ export function DealerMap({ dealers, selectedId, onPinClick, mapboxToken }: Prop
       }
     }
   }, [selectedId, dealers, mapReady, mapError]);
+
+  // ---- Search origin -> camera -------------------------------------------
+  // `prevOriginKeyRef` means "the origin the camera was last moved to, or
+  // null when it's currently showing all dealers" — NOT simply "the last
+  // origin value seen". That distinction is what keeps an unresolved query
+  // (camera stays exactly where it is) separate from a cleared search
+  // (re-fit over everything shown).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || mapError) return;
+
+    // An unresolved query (e.g. "zzzzz") also renders origin === null, same
+    // as a genuine clear — but the camera must stay exactly where it was
+    // while the "couldn't find that location" notice shows, rather than
+    // yanking the user back out to the full map on a typo.
+    // Bail out WITHOUT writing prevOriginKeyRef: the ref tracks where the
+    // camera actually is, so leaving it untouched means a later genuine
+    // clear still sees a real change from it and re-fits correctly.
+    if (origin === null && unresolvedQuery) return;
+
+    // Gate on the origin's COORDS, not the object or label. `dealers` gets a
+    // brand-new array reference on unrelated re-renders (re-sorts, the
+    // mounted-clock effect) — keying on coords rather than reference means
+    // `dealers` can stay in the dep array below without re-firing the
+    // camera. Search is also debounced (commitSearch), so a resolved origin
+    // that hasn't actually changed between commits must not restart the
+    // animation either.
+    const originKey = origin ? `${origin.coords[0]},${origin.coords[1]}` : null;
+    const isFirstRun = prevOriginKeyRef.current === undefined;
+    const changed = originKey !== prevOriginKeyRef.current;
+    prevOriginKeyRef.current = originKey;
+
+    // A plain first mount with no search yet has nowhere to move to — skip.
+    // But DealerMap mounts lazily behind an IntersectionObserver
+    // (`mapVisible` in DealerDirectory), so a user can commit a search
+    // before the map has ever scrolled into view, mounting with `origin`
+    // already set — that case must still fly to it. This effect runs after
+    // (and its map.stop() cancels) the marker-diffing effect's own
+    // first-mount fitBounds over all dealers: the same double-fire-then-
+    // settle-on-the-last-one pattern the card-selected flyTo effect already
+    // relies on when it mounts with a pre-selected dealer.
+    if (isFirstRun && origin === null) return;
+    if (!isFirstRun && !changed) return;
+
+    // A committed search (or "Near Me") is explicit user intent and must
+    // override a previous manual pan/zoom — otherwise this would silently
+    // do nothing for anyone who had already dragged the map before searching.
+    userMovedMapRef.current = false;
+
+    const bounds = new mapboxgl.LngLatBounds();
+    let hasBoundsPoint = false;
+
+    if (origin) {
+      // origin.coords is [lat, lng], same order as dealerPoint() — both need
+      // toLngLat() for Mapbox. haversineKm below takes the unconverted
+      // [lat, lng] form.
+      bounds.extend(toLngLat(origin.coords));
+      hasBoundsPoint = true;
+
+      const nearest = dealers
+        .map((d) => {
+          const point = dealerPoint(d);
+          return point ? { coords: point.coords, km: haversineKm(origin.coords, point.coords) } : null;
+        })
+        .filter((x): x is { coords: [number, number]; km: number } => x !== null)
+        .sort((a, b) => a.km - b.km)
+        .slice(0, 3);
+      for (const { coords } of nearest) {
+        bounds.extend(toLngLat(coords));
+      }
+    } else {
+      // Genuine clear (origin went non-null -> null, with no unresolved
+      // query): re-fit over everything currently shown rather than
+      // stranding the camera at the old search location.
+      for (const dealer of dealers) {
+        const point = dealerPoint(dealer);
+        if (!point) continue;
+        bounds.extend(toLngLat(point.coords));
+        hasBoundsPoint = true;
+      }
+    }
+
+    if (!hasBoundsPoint) return;
+
+    map.stop();
+    try {
+      // Same duration ladder as the marker-diffing effect's fitBounds: only
+      // set `duration` at all for the reduced-motion (instant) case, never
+      // explicit `undefined`, which clobbers mapbox-gl's own default and
+      // poisons the transform with a NaN zoom.
+      map.fitBounds(
+        bounds,
+        prefersReducedMotion() ? { padding: 60, maxZoom: 12, duration: 0 } : { padding: 60, maxZoom: 12 },
+      );
+    } catch {
+      try {
+        // Only the origin fit implies a close zoom is correct — the cleared
+        // case's bounds can span the whole shown dealer set, so forcing
+        // zoom: 12 there would slam an Australia-wide view down to street
+        // level. Keep whatever zoom the map already has instead.
+        if (origin) {
+          map.jumpTo({ center: bounds.getCenter(), zoom: 12 });
+        } else {
+          map.jumpTo({ center: bounds.getCenter() });
+        }
+      } catch {
+        setMapError(true);
+      }
+    }
+  }, [origin, unresolvedQuery, dealers, mapReady, mapError]);
 
   const zoomIn = useCallback(() => mapRef.current?.zoomIn(), []);
   const zoomOut = useCallback(() => mapRef.current?.zoomOut(), []);
