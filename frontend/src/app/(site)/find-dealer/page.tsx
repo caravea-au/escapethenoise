@@ -147,7 +147,7 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
           <Heading as="h2" className="text-[24px] text-green md:text-[28px] lg:text-[32px]">
             {FALLBACK.stateHeading}
           </Heading>
-          <div className="mx-auto mt-8 grid max-w-[980px] grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3.5">
+          <div className="mx-auto mt-8 grid max-w-[980px] grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3.5 lg:grid-cols-8">
             {STATE_ORDER.map((abbr) => {
               const count = counts?.[abbr];
               const isEmpty = count === 0;
