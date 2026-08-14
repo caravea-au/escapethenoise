@@ -49,6 +49,24 @@ section needs it.
 - Spacing/layout: flex/grid with `gap` — never margin-based inline spacing (per `design.md` §5).
 - Honour `prefers-reduced-motion` on every animation.
 
+### Layout priority — `absolute` is the last resort
+
+Document flow → **flex** → **grid** → `position: absolute`. Absolute positioning removes the element
+from flow, so siblings stop accounting for it and responsive alignment starts depending on
+breakpoint-specific `top`/`left` nudges — fragile, and it breaks the DOM-order/visual-order match that
+screen readers and keyboard focus rely on. Reach for it only here:
+
+| Acceptable use | Notes |
+|---|---|
+| Decorative overlays | Non-interactive visuals that must sit over a photo or surface |
+| Badges / small affordances | Inside a `relative` wrapper that defines the anchor |
+| Sticky header, modal backdrop | Use the established shell or modal pattern |
+| Known one-off effects | Isolate masks/clipping in a dedicated wrapper |
+
+Before shipping a positioned element, check: could flex/grid + `gap` express this hierarchy? If things
+overlap, is there **one** containing block with few positioned children? Does reading order still match
+visual order? Are breakpoints handled by layout rules rather than one-off offsets?
+
 ## 3. Server vs Client components
 
 - **Server Component by default** (no directive). Most marketing markup is static — keep it server.

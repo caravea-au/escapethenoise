@@ -1,0 +1,147 @@
+name: Ploi Deploy
+
+# Push to main    -> deploy PRODUCTION ([frontend-domain] / [cms-domain])
+# Push to staging -> deploy STAGING    ([staging-frontend-domain] / [staging-cms-domain])
+# Only the workspace that changed (frontend / backend) is redeployed.
+# The build/restart commands live in each site's Ploi Deploy Script (see docs/deploy/).
+#
+# TEMPLATE: written into a project by `/deployment`. If this repo has no staging
+# environment, delete `staging` from the branch list and the STAGING_* env lines.
+
+on:
+  push:
+    branches: [main, staging]
+  workflow_dispatch:
+    inputs:
+      deploy_frontend:
+        description: "Force frontend deploy"
+        type: boolean
+        default: false
+      deploy_backend:
+        description: "Force backend deploy"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Serialise deploys per branch. Two pushes landing close together otherwise run
+# `npm ci` / `strapi build` concurrently in the same directory on the server, and
+# the deploy-status poll cannot tell the two deployments apart. Queue, never cancel:
+# a cancelled deploy would leave the box half-updated.
+concurrency:
+  group: ploi-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    name: Detect changed workspaces
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.detect.outputs.frontend }}
+      backend: ${{ steps.detect.outputs.backend }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          frontend=false
+          backend=false
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            frontend="${{ inputs.deploy_frontend }}"
+            backend="${{ inputs.deploy_backend }}"
+          else
+            before="${{ github.event.before }}"
+            after="${{ github.sha }}"
+
+            # The push baseline is not always usable. It is all zeros for a brand-new
+            # branch, and after a force-push or a branch reset the previous tip becomes
+            # unreachable, so actions/checkout never fetches it and `git diff` dies with
+            # "fatal: bad object". Redeploy both workspaces rather than guess: an extra
+            # deploy is idempotent, a skipped one silently ships nothing.
+            if [[ "$before" =~ ^0+$ ]] || ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+              echo "baseline $before is unusable (new branch, or history rewritten): deploying both"
+              frontend=true
+              backend=true
+            else
+              changed_files="$(git diff --name-only "$before" "$after")"
+
+              while IFS= read -r file; do
+                [[ -z "$file" ]] && continue
+
+                case "$file" in
+                  frontend/*|app.js)
+                    frontend=true
+                    ;;
+                  backend/public/uploads/*)
+                    ;;
+                  backend/*)
+                    backend=true
+                    ;;
+                  package.json|package-lock.json)
+                    frontend=true
+                    backend=true
+                    ;;
+                esac
+              done <<< "$changed_files"
+            fi
+          fi
+
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend"
+          echo "backend=$backend"
+
+  deploy-frontend:
+    name: Deploy frontend
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy frontend and wait for the result
+        env:
+          PROD_WEBHOOK: ${{ secrets.PLOI_FRONTEND_DEPLOY_WEBHOOK }}
+          STAGING_WEBHOOK: ${{ secrets.STAGING_PLOI_FRONTEND_DEPLOY_WEBHOOK }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            WEBHOOK="$PROD_WEBHOOK"
+          else
+            WEBHOOK="$STAGING_WEBHOOK"
+          fi
+          test -n "$WEBHOOK"
+          WEBHOOK="$WEBHOOK" bash .github/scripts/ploi-deploy.sh
+
+  deploy-backend:
+    name: Deploy backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy backend and wait for the result
+        env:
+          PROD_WEBHOOK: ${{ secrets.PLOI_BACKEND_DEPLOY_WEBHOOK }}
+          STAGING_WEBHOOK: ${{ secrets.STAGING_PLOI_BACKEND_DEPLOY_WEBHOOK }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            WEBHOOK="$PROD_WEBHOOK"
+          else
+            WEBHOOK="$STAGING_WEBHOOK"
+          fi
+          test -n "$WEBHOOK"
+          WEBHOOK="$WEBHOOK" bash .github/scripts/ploi-deploy.sh
