@@ -25,9 +25,21 @@ For each, attempt one cheap call. If its tools aren't available this session, ma
 > All four are wired in `.mcp.json` (base `.mcp.json` ships `figma` as an HTTP MCP for `/agentic-team`).
 
 ## 1b. Sync drift (read-only)
-Run `npx claude-brain sync --check` and report the result:
-- ✅ "in sync" if it exits 0 (no drift).
-- ⚠️ "kit drift — run `npx claude-brain sync`" if it reports any create/update/prune, listing the changed paths.
+Read `.claude/KIT-VERSION` (the synced kit version — a client repo does **not** install the kit as a
+dependency), then run the drift check pinned to that version:
+
+```
+npx github:caravea-au/claude-brain#v<KIT-VERSION> sync --check
+```
+
+- ✅ "in sync on v<version>" if it exits 0 (no drift).
+- ⚠️ "kit drift — run the same command without `--check`" if it reports any create/update/prune,
+  listing the changed paths. Drift means someone hand-edited a generated file: the fix belongs
+  **upstream in `claude-brain`**, because the next sync reverts it.
+- ❌ if `.claude/KIT-VERSION` is missing — the repo predates the stamp; sync it once to create it.
+
+**Never run a bare `npx claude-brain`.** With no local install that resolves against the public npm
+registry, which is a different package entirely.
 
 ## 2. Toolchain (PowerShell)
 Run and report each:
@@ -41,7 +53,11 @@ Run and report each:
 - If `better-sqlite3` errors with `NODE_MODULE_VERSION`: fix = `npm rebuild better-sqlite3` from `backend/`.
 
 ## 3. Kit & inputs present
-- `.claude/skills/` has `nextjs-component-standards`, `motion-standards`, `design-taste-frontend`, `caveman`, `ponytail`, `ponytail-review`.
+- `.claude/skills/` has `nextjs-component-standards`, `motion-standards`, `design-taste-frontend`, `caveman`, `ponytail`, `ponytail-review`, `ploi-deployment`.
+- **`claude-brain` is NOT in any `package.json`.** It is a private repo, so leaving it as a dependency
+  makes `npm ci` on a deploy box abort the whole workspace install (`could not read Username for
+  'https://github.com'`) and nothing builds. If you find it there, that's ❌ — remove it; the kit is
+  run with `npx github:caravea-au/claude-brain#v<KIT-VERSION> sync`, no install required.
 - `motion` + `lenis` installed in `frontend/` (`npm ls motion lenis -w frontend`) — needed by the motion kit.
 - Kit docs exist: `.claude/COMPONENTS.md` · `.claude/QUALITY-BAR.md` · `.claude/PROJECT-PLAN.md` · `.claude/design-brief.md`.
 - `design-input/` exists and is git-ignored (`git check-ignore design-input/anything` should print a path).

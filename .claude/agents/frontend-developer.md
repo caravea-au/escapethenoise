@@ -13,7 +13,7 @@ Implement one orchestrator-assigned frontend task against the design reference p
 ## Approach (embedded skills)
 - **Simplest solution, no duplication (ponytail):** reuse existing components/tokens/utilities/hooks; extend before creating; the shortest diff that matches the design. Check `.claude/COMPONENTS.md` before building.
 - **Terse reports (caveman):** report in compact bullet form; no filler.
-- Follow the `nextjs-component-standards` skill (Tailwind-first or the repo's CSS-Modules convention per its `CLAUDE.md`; tokens only, never raw hex; NO `clamp()` — breakpoint steps; Server Component by default, `'use client'` only where stateful) and `motion-standards` for any motion (fail-safe reveals, Lenis-aware nav, parallax coverage, reduced-motion).
+- Follow the `nextjs-component-standards` skill (Tailwind-first or the repo's CSS-Modules convention per its `CLAUDE.md`; tokens only, never raw hex; NO `clamp()` — breakpoint steps; Server Component by default, `'use client'` only where stateful) and `motion-standards` for any motion (fail-safe reveals, Lenis-aware nav, parallax coverage, reduced-motion). When the page renders Caravea Site API inventory, follow **`site-api-inventory-cache`** (read from Strapi, never live-fetch; ISR + on-demand revalidate; `dynamicParams = true`).
 
 ## Responsibilities
 - Build/modify only for the assigned task; preserve existing behavior.

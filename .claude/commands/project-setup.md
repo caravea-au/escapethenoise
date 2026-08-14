@@ -22,6 +22,14 @@ needs must exist before that page is built.** Ask, don't assume.
 2. **Content model (Strapi)** — FIRST read what already exists via the `strapi` MCP (`strapi_get_content_types`)
    and list it. Then interview for the rest: content types + fields + relationships (model to the real
    domain — e.g. `Article`, `Author`, `Category`). Reconcile with the sitemap.
+   **All content lives in Strapi** — model every page's headings, body/rich text, CTA labels+targets,
+   and content imagery as fields. Two standards every project gets: a shared **`seo` component**
+   (metaTitle, metaDescription, ogImage, canonicalURL, keywords, structured-data) on **every** page
+   single-type + collection entry, and a **`navigation` global** carrying header/footer nav **labels +
+   URLs**. What stays in **code, not Strapi** (the content↔code boundary): form field definitions ·
+   page routing + the nav *tree structure* (which routes exist) · system/UI microcopy · empty/error-state
+   copy. Collection types especially (events, in-stock, full range, blogs) hold their entries in Strapi —
+   no hardcoded arrays.
 3. **Infra readiness** — an ✅/❌ checklist that **BLOCKS per-page development until green**:
    Strapi running locally (`npm run dev:backend`) · Strapi staging/prod URL + `NEXT_PUBLIC_STRAPI_URL` set ·
    staging/deploy target reachable · git remote + protected `main` · domain (if known) · export present in
@@ -33,7 +41,20 @@ proceeding**. If infra has ❌s, record them and note that `/criteria` + `/build
 ## Phase 0b — Create the planned Strapi content types (foundation-first)
 With the plan confirmed, create the not-yet-existing content types via the `strapi` MCP (fields + relationships
 from the plan). Check for duplicate `collectionName` values first. Never write unconditional seed scripts. Don't
-build a page that consumes a type before the type exists.
+build a page that consumes a type before the type exists. Also create the two standards from the plan:
+the shared **`seo` component** and attach it to every page single-type + collection entry, and the
+**`navigation` global** (repeatable header/footer items: label + url). These are the backbone that lets
+SEO and nav be Strapi-driven instead of hardcoded.
+
+## Phase 0c — Seed globals + singletons into LOCAL Strapi (foundation-first)
+Types exist but are empty. Seed the **global/singleton** content from the export so the shell + home
+render from Strapi, not placeholders: the **`navigation` global** (header/footer labels + URLs), global
+**SEO defaults**, and any home/landing singleton copy — from `design-input/<export>/content/`. Upload
+content imagery to Strapi Media (WebP budgets, `alt` set); brand/system assets (logo, icons) stay in
+`public/`. Upsert idempotently (match on a stable key; create/update/skip — never duplicate), live via
+the `strapi` MCP. **Never invent copy** — missing values → ask. Collections + per-page content are seeded
+later by **`/seed <page|collection>`** (run before that page is built). Local only; promote with Strapi
+Transfer, not git.
 
 ## Phase 1 — Brand foundation (from the export)
 
@@ -97,5 +118,7 @@ copy as-is. **Never reference `design-input/` at runtime** — `public/` only. L
 
 ## 7. Report
 Summarize: inconsistency table + resolutions, tokens registered, clamp→breakpoint mappings, fonts wired,
-Tier-1 components created (+ registry rows). End with: "Foundation ready — run /criteria <page>/<section>."
-Do **not** build pages here. Do **not** push. Commit via `/commit`.
+Tier-1 components created (+ registry rows), **content types + `seo` component + `navigation` global
+created**, and **globals/singletons seeded** into local Strapi (Phase 0c). End with: "Foundation ready —
+seed a page's content with `/seed <page>`, then `/criteria <page>/<section>`." Do **not** build pages
+here. Do **not** push. Commit via `/commit`.

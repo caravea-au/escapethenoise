@@ -21,6 +21,12 @@ approved `art-direction.md`, not against opinion). This is what makes the premiu
 - [ ] `prefers-reduced-motion` on → content fully visible, motion disabled
 - [ ] Images: `next/image`, WebP, ≤200 KB desktop / ≤100 KB mobile
 - [ ] No raw hex in components (tokens only); nothing references `design-input/` at runtime
+- [ ] **Content provenance:** all editorial content (copy, headings, images, CTA labels, SEO) is
+      **fetched from Strapi** — no hardcoded content strings / image paths / SEO literals, and **no
+      hardcoded fallback defaults**; collection lists (events / stock / range / blogs) render from Strapi
+      entries, not an inline array; a missing/empty field renders an empty/error state, not a default
+      string. Code-only exceptions: form field definitions, routing/nav tree, system microcopy,
+      empty-state copy.
 
 ## B. Conformance checks (against the approved art-direction.md)
 
@@ -31,6 +37,7 @@ approved `art-direction.md`, not against opinion). This is what makes the premiu
 - [ ] Banned decoration absent (no decorative gradients, no type drop-shadows, ≤2 accents,
       no centered body copy) — per the art direction
 - [ ] Reuse map honoured — existing components reused, nothing rebuilt
+- [ ] Content matches what's **seeded in Strapi** (no drift, no invented copy); SEO comes from the `seo` component
 
 ## C. Taste audit (structured, not vibes)
 
