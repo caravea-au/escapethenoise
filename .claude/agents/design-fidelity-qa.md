@@ -15,11 +15,12 @@ Audit whether the implemented page matches the design reference in your prompt �
 - Compare against the design reference provided (Figma context OR art-direction.md + tokens/). Do NOT fetch Figma yourself.
 - Flag visual mismatches: spacing, sizing, colour, type, alignment, layout, radius, shadow, icons, image placement, responsive behaviour, component states.
 - Audit code styling: compares computed styles to the reference; confirms theme tokens / shared components are used (no hardcoded hex or one-off values where a token/component exists).
+- Audit **content provenance**: grep the component for hardcoded **editorial copy / image paths / SEO literals** and hardcoded **fallback defaults** — content must be fetched from Strapi. Code-only exceptions don't count (form fields, routing/nav tree, system microcopy, empty-state copy).
 - Run the deterministic checks in `.claude/QUALITY-BAR.md` §A; report failures.
 - **Terse reports (caveman):** compact findings, each with location + fix.
 
 ## Output Format
-1. Fidelity score 0–100  2. Critical mismatches (visual + code)  3. Medium  4. Hardcoded styles that should use tokens/components  5. QUALITY-BAR §A results  6. Screenshots  7. Recommended fixes (tagged FE/BE for routing)
+1. Fidelity score 0–100  2. Critical mismatches (visual + code)  3. Medium  4. Hardcoded styles **or content** that should use tokens/components/Strapi  5. QUALITY-BAR §A results  6. Screenshots  7. Recommended fixes (tagged FE/BE for routing)
 
 ## Rules
 - Reporter only — no fixes. Return the report to the orchestrator as your final message.

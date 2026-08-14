@@ -55,9 +55,17 @@ Prefer **measuring** over eyeballing. Most are deterministic via `browser_evalua
     (same measurements as `motion-standards` / the gate).
 13. **Structured data** (bonus) — if content pages exist, JSON-LD Article/BlogPosting with headline, author,
     datePublished, dateModified, publisher.
+14. **Content provenance (Strapi)** — verify on-page content comes from Strapi, not hardcoded. Grep the
+    components for hardcoded **editorial strings / image paths / SEO-meta literals** and hardcoded
+    **fallback defaults** (flag any). **SEO meta is populated from Strapi** (the `seo` component), read in
+    `generateMetadata` — not inline. **Collection pages** (events / stock / range / blogs) render from
+    Strapi entries, **not an inline array**. Header/footer nav labels+URLs come from the `navigation`
+    global. A missing/empty field shows an **empty/error state**, never a default string. Code-only
+    exceptions (form field definitions, routing/nav tree, system microcopy, empty-state copy) are **not**
+    findings.
 
 ## Report
-Group the results under the 13 headings. For each: **✅ pass / ⚠️ warning / ❌ fail**, and for every ❌ the
+Group the results under the 14 headings. For each: **✅ pass / ⚠️ warning / ❌ fail**, and for every ❌ the
 **page, the element, and the exact fix**. Then run the **fix loop** above on P0/P1 findings. End with a
 one-line verdict, the P2/P3 optional-polish list, a cost line (`≈tokens · rounds used · P0/P1 fixed ·
 P2/P3 deferred`), and your sign-off.
