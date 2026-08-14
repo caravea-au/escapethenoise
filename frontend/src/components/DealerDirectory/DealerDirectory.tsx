@@ -351,6 +351,8 @@ export function DealerDirectory({
                 selectedId={selectedId}
                 onPinClick={handlePinClick}
                 mapboxToken={mapboxToken}
+                origin={origin}
+                unresolvedQuery={Boolean(queryNotice)}
               />
             )}
           </div>
