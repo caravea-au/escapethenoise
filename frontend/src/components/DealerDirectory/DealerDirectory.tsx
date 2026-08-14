@@ -36,6 +36,7 @@ const DealerMap = dynamic(() => import("./DealerMap").then((m) => m.DealerMap), 
 const CHIP_KEYS = Object.keys(CHIP_PREDICATES) as ChipKey[];
 const NO_LOCATION_NOTICE = "We couldn't get your location. Enter a suburb or postcode instead.";
 const NO_MATCH_NOTICE = "We couldn't find that location. Try a nearby suburb or postcode.";
+const SEARCH_DEBOUNCE_MS = 500;
 
 type Props = {
   dealers: DirectoryDealer[];
@@ -72,7 +73,10 @@ export function DealerDirectory({
   const sortParamRaw = searchParams.get("sort");
 
   const pushParams = useCallback(
-    (next: Partial<{ q: string; state: string; brand: string; type: string; service: string; chip: string; sort: string }>) => {
+    (
+      next: Partial<{ q: string; state: string; brand: string; type: string; service: string; chip: string; sort: string }>,
+      options?: { history?: "push" | "replace" },
+    ) => {
       const merged = {
         q: next.q ?? qParam,
         state: next.state ?? stateParam,
@@ -87,11 +91,18 @@ export function DealerDirectory({
         if (value) usp.set(key, value);
       }
       const qs = usp.toString();
+      const url = `/find-dealer${qs ? `?${qs}` : ""}`;
       // push (not replace): each user-initiated filter commit — dropdown
-      // change, chip click, sort change, search submit, clear-all — should
-      // land its own history entry so Back/Forward step through the filter
-      // journey one change at a time (see BUG 1).
-      router.push(`/find-dealer${qs ? `?${qs}` : ""}`, { scroll: false });
+      // change, chip click, sort change, Enter, Search button, clear-all —
+      // should land its own history entry so Back/Forward step through the
+      // filter journey one change at a time (see BUG 1). `replace` is only
+      // for the debounced auto-search commit, so typing doesn't fill the
+      // history stack with one entry per pause.
+      if (options?.history === "replace") {
+        router.replace(url, { scroll: false });
+      } else {
+        router.push(url, { scroll: false });
+      }
     },
     [router, qParam, stateParam, brandParam, typeParam, serviceParam, chipParam, sortParamRaw],
   );
@@ -103,6 +114,8 @@ export function DealerDirectory({
   const [geoNotice, setGeoNotice] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(qParam);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastCommittedQRef = useRef(qParam);
 
   // Map: gate the mapbox-gl chunk behind visibility so mobile users who never
   // scroll to it never fetch it. cardRefs lets a pin click scroll its list
@@ -140,12 +153,44 @@ export function DealerDirectory({
   // and clears itself the moment `q` is cleared or resolves (BUG 2).
   const queryNotice = qParam.trim() && !queryOrigin ? NO_MATCH_NOTICE : null;
 
-  function commitSearch() {
+  // Keeps the visible input in sync when `q` changes from outside typing —
+  // Back/Forward and the "Clear all filters" link (href `/find-dealer`).
+  // Guarded on lastCommittedQRef so a commit's own URL echo doesn't clobber
+  // characters typed after it (commitSearch sets the ref before pushParams).
+  useEffect(() => {
+    if (qParam === lastCommittedQRef.current) return;
+    lastCommittedQRef.current = qParam;
+    setSearchInput(qParam);
+  }, [qParam]);
+
+  const commitSearch = useCallback(
+    (historyMode: "push" | "replace" = "push") => {
+      if (debounceRef.current !== null) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+      const trimmed = searchInput.trim();
+      lastCommittedQRef.current = trimmed;
+      setGeoOrigin(null);
+      setGeoNotice(null);
+      pushParams({ q: trimmed }, { history: historyMode });
+    },
+    [searchInput, pushParams],
+  );
+
+  // Auto-applies typed input SEARCH_DEBOUNCE_MS after the user stops typing,
+  // using `replace` so a run of keystrokes doesn't fill the history stack.
+  // The qParam check also covers the initial mount (searchInput === qParam).
+  useEffect(() => {
     const trimmed = searchInput.trim();
-    setGeoOrigin(null);
-    setGeoNotice(null);
-    pushParams({ q: trimmed });
-  }
+    if (trimmed === qParam) return;
+    const timer = setTimeout(() => commitSearch("replace"), SEARCH_DEBOUNCE_MS);
+    debounceRef.current = timer;
+    return () => {
+      clearTimeout(timer);
+      if (debounceRef.current === timer) debounceRef.current = null;
+    };
+  }, [searchInput, qParam, commitSearch]);
 
   function handleNearMe() {
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
@@ -259,7 +304,7 @@ export function DealerDirectory({
           searchInputRef={searchInputRef}
           searchValue={searchInput}
           onSearchChange={setSearchInput}
-          onSearchSubmit={commitSearch}
+          onSearchSubmit={() => commitSearch()}
           options={options}
           stateValue={stateParam}
           onStateChange={(v) => pushParams({ state: v })}

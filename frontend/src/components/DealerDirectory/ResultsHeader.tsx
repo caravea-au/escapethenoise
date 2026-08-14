@@ -14,7 +14,7 @@ type Props = {
 export function ResultsHeader({ count, originLabel, sort, sortDisabled, onSortChange }: Props) {
   return (
     <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2.5">
-      <div className="text-[15px] text-ink">
+      <div className="text-[15px] text-ink" aria-live="polite" aria-atomic="true">
         <strong className="text-green">
           Showing {count} {count === 1 ? "dealer" : "dealers"}
         </strong>

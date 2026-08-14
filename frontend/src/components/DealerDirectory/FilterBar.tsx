@@ -55,6 +55,12 @@ export function FilterBar({
           <input
             ref={searchInputRef}
             type="text"
+            // Results now also commit on a typing pause, so this field carries
+            // more of the interaction than it used to — it needs a name that
+            // survives being typed into (the placeholder doesn't) and the
+            // site-wide focus ring globals.css already gives every other
+            // control here. `outline-none` was suppressing that ring.
+            aria-label="Search by suburb, city or postcode"
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
             onKeyDown={(e) => {
@@ -64,7 +70,7 @@ export function FilterBar({
               }
             }}
             placeholder="Suburb, city or postcode…"
-            className="w-full border-0 bg-transparent py-[13px] text-[15px] text-ink outline-none placeholder:text-muted"
+            className="w-full border-0 bg-transparent py-[13px] text-[15px] text-ink placeholder:text-muted"
           />
         </div>
 
