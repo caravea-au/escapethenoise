@@ -63,10 +63,21 @@ Building pages from a Claude design export follows a fixed loop (commands in `.c
 /preflight        check MCP (strapi, next-devtools) + node + build + lint + kit
 /project-setup <export>      ONCE: brand tokens, fonts, global CSS, Tier-1 primitives
 ─ per page/section ─
+/seed <page|collection>      real content into local Strapi, before the page is built
 /criteria <page>/<section>   read design → fidelity spec + reuse map → you approve
 /build-component <page>/<section>   reuse-first build → light gate → register → stop
 /commit                      small local commits, never push
+/qa <page|all>               full QA panel + fix loop
+/pr                          the only command that pushes: branch → PR, then cleanup
+/deployment main|staging     bring one Ploi environment up end to end
 ```
+
+The commands, agents, skills and `QUALITY-BAR.md` under `.claude/` are **generated** by the shared kit
+(`caravea-au/claude-brain`, version recorded in `.claude/KIT-VERSION`). Never hand-edit them here: fix
+them upstream and re-run `npx github:caravea-au/claude-brain#v<version> sync`. Project-local files
+(`.claude/COMPONENTS.md`, `PROJECT-PLAN.md`, `specs/`, `design-brief.md`, `settings.local.json`,
+`worktrees/`) are never touched by sync. **Never add `claude-brain` to `package.json`**: it is a private
+repo, so `npm ci` on the deploy box fails and the whole workspace install aborts.
 
 - **Exports go in `design-input/<export>/`** (git-ignored, drop-zone). **`design.md` is the brand source of truth**; if it disagrees with the exported HTML, follow `design.md`.
 - **NEVER reference `design-input/` from committed code.** It is git-ignored and excluded from the deploy package, so any import/`src`/`url()`/path pointing into `design-input/` breaks the build/deploy. Copy assets into `frontend/public/` and reference them from there; read design files only at authoring time, never at runtime.

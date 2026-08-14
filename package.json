@@ -17,8 +17,5 @@
     "start": "node app.js",
     "start:frontend": "npm run start --workspace=frontend",
     "lint": "npm run lint --workspace=frontend"
-  },
-  "devDependencies": {
-    "claude-brain": "github:caravea-au/claude-brain#v0.1.4"
   }
 }

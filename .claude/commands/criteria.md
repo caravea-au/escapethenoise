@@ -7,7 +7,7 @@ Write a **fidelity spec** for ONE page/section so it can be built right the firs
 Read the design, map what to **reuse vs build new**, define what "done" looks like, self-check, then
 hand it to the user to approve.
 
-> **Delegation:** capture the design reference once (export: `art-direction.md` + `tokens/` + the section's HTML; or the Figma node), then invoke `frontend-architect` and `backend-architect` **in parallel** (read-only) with that reference pasted into each prompt, default model Sonnet; on `--deep`, invoke them with an Opus model override for complex pages. Consolidate their blueprints into the spec below. Backend architect only if the section needs Strapi data.
+> **Delegation:** capture the design reference once (export: `art-direction.md` + `tokens/` + the section's HTML; or the Figma node), then invoke `frontend-architect` and `backend-architect` **in parallel** (read-only) with that reference pasted into each prompt, default model Sonnet; on `--deep`, invoke them with an Opus model override for complex pages. Consolidate their blueprints into the spec below. Invoke `backend-architect` **whenever the section renders content** — nearly always, since content is Strapi-driven — to plan the fields/types, the `seo` component, and what must be seeded; skip it only for a purely system/form-only section with no editorial content.
 
 Input: `$ARGUMENTS` = `<page>/<section>` + optional export folder (default: the single export, else ask).
 
@@ -23,14 +23,20 @@ Input: `$ARGUMENTS` = `<page>/<section>` + optional export folder (default: the 
 - **REUSE MAP (the core):** for each element, check `.claude/COMPONENTS.md` + `frontend/src/components/`.
   Mark each as **REUSE `<Component>`**, **EXTEND `<Component>`**, or **NEW (Tier 2/3)**. Building something
   the registry already has is a hard reject — that's the duplication this kit prevents.
-- **Content source:** which copy/images are static vs **Strapi**-driven (flag CMS fields). Never invent copy
-  (`CLAUDE.md`): if copy is missing from the export, list it as a question.
+- **Content model + provenance (a core section):** map **every** content element to a **Strapi**
+  field/type — text, heading, rich text, image (→ Strapi Media), CTA label+target, **SEO** (via the
+  `seo` component), and relations for collection entries (events / stock / range / blogs). Content is
+  Strapi-driven; **nothing editorial is hardcoded**. Mark each element's **seed status** (already in
+  local Strapi / needs `/seed <page|collection>` first). List the **code-only** exceptions explicitly,
+  with a reason: form field definitions · routing + nav *tree structure* · system/UI microcopy ·
+  empty/error-state copy. Header/footer nav labels+URLs come from the `navigation` global (Strapi), not
+  code. Never invent copy (`CLAUDE.md`): if copy is missing from the export, list it as a question.
 - **MOTION (from `<page>.motion.md`):** for each element, the intent → the kit primitive that implements it
   (hero mask-reveal / fade-up / scroll-text-reveal / parallax / marquee / nav transparent→solid). Per the
   `motion-standards` skill. If the spec has no motion for a section, say "none".
 - **Responsive:** breakpoint behaviour as steps (no clamp). Note layout shifts at 320 / 768 / 1024 / 1440.
 - **Interactions:** anything stateful (modal, filter, map pin, carousel) → needs `'use client'`; describe the behaviour.
-- **Acceptance = visual fidelity** at the 4 breakpoints + the motion intent + a11y (semantic, focus, alt) + `prefers-reduced-motion`.
+- **Acceptance = visual fidelity** at the 4 breakpoints + the motion intent + a11y (semantic, focus, alt) + `prefers-reduced-motion` + **all content fetched from Strapi** (no hardcoded copy/images/SEO; missing field → empty/error state, never a default string).
 
 ## 3. Light self-review (3 quick passes — not a committee)
 - **Faithful?** matches `tokens/` + `art-direction.md` (colours, type, spacing, motion) at all breakpoints.
@@ -51,10 +57,12 @@ WHAT YOU'LL SEE        <1–2 plain sentences>
 ELEMENTS              <ordered list>
 REUSE MAP
   • <element> → REUSE <Component> | EXTEND <Component> | NEW (Tier 2 <Name> / Tier 3 inline)
-CONTENT               static: <…>   ·   Strapi: <fields>   ·   ❓missing copy: <…>
+CONTENT (Strapi)      <element → seo/field/type>   ·   seed: <in local Strapi | run /seed X>
+CODE-ONLY             <form fields | routing | microcopy | empty-state — + reason> | none
+❓ MISSING COPY        <from export, to ask> | none
 MOTION                <element → primitive> (e.g. headline → MaskReveal load) | none
 RESPONSIVE            320 / 768 / 1024 / 1440 → <behaviour, breakpoint steps, no clamp>
 INTERACTIONS          <stateful bits → 'use client'> | none (static)
-ACCEPTANCE            fidelity @ 4 breakpoints · motion intent · a11y · reduced-motion
+ACCEPTANCE            fidelity @ 4 breakpoints · motion intent · a11y · reduced-motion · content from Strapi (no hardcode)
 ✅ APPROVED: ☐        ← ticked by the user
 ```

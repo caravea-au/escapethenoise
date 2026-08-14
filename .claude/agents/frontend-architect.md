@@ -26,6 +26,7 @@ Design the frontend implementation structure before developers start work.
 ## Repository Rules
 
 - Follow `CLAUDE.md` and the `nextjs-component-standards` skill (the authoritative styling/structure rules).
+- **Site API / inventory:** never plan a build-time or client-side fetch of the Caravea Site API — read inventory from Strapi (the cache). Follow the **`site-api-inventory-cache`** skill (ISR + on-demand `revalidateTag`; `dynamicParams = true` for lazy detail pages).
 - **Tailwind-first, tokens only — never raw hex.** Use the theme token utilities (`bg-brand-primary`, `text-brand-ink`); add a token to `@theme` before using a new colour.
 - Do not specify or approve CSS `clamp()` for responsive sizing (it misbehaves on iOS/Safari). Use explicit Tailwind breakpoint steps (e.g. `text-[40px] md:text-[60px] lg:text-[78px]`).
 - Component tiers (see `nextjs-component-standards`): Tier-1 global primitives in `frontend/src/components/ui/`; Tier-2 shared patterns in `frontend/src/components/<Name>/`; Tier-3 one-offs stay inline in the route until a second section needs them.
