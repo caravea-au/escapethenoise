@@ -83,8 +83,18 @@ export function DealerCard({ dealer, now, origin, selected, onSelect, onOpenModa
                   </>
                 )}
               </span>
-              <span className="ml-auto shrink-0 rounded-chip bg-badge-accredited-bg px-[7px] py-[2px] text-[10.5px] font-bold text-rust-deep">
-                ✓ Accredited
+              {/* Accreditation is a CLAIM, so it tracks `approved` rather than
+                  being decoration on every card. A dealer Connect has not
+                  approved reads "Pending" in neutral tokens — deliberately
+                  without the ✓, which is the mark that asserts the claim. */}
+              <span
+                className={`ml-auto shrink-0 rounded-chip px-[7px] py-[2px] text-[10.5px] font-bold ${
+                  dealer.approved
+                    ? "bg-badge-accredited-bg text-rust-deep"
+                    : "bg-badge-closed-bg text-badge-closed"
+                }`}
+              >
+                {dealer.approved ? "✓ Accredited" : "Pending"}
               </span>
             </div>
           </div>
