@@ -5,7 +5,7 @@ import { Container } from "@/components/ui/Container";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
 import { Eyebrow } from "@/components/ui/Eyebrow";
-import { getDealers, getDealerStateCounts } from "@/lib/strapi";
+import { connectStateCounts, getConnectDealers } from "@/lib/connect";
 import { getRecaptchaConfig } from "@/lib/recaptcha";
 import { CHIP_PREDICATES, type ChipKey, type DealerFilters } from "@/lib/dealers";
 import { DealerDirectory } from "@/components/DealerDirectory/DealerDirectory";
@@ -74,26 +74,30 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
   const sp = await searchParams;
   const stateParam = typeof sp.state === "string" ? sp.state.toUpperCase() : undefined;
 
-  // strapiFetch throws on a Strapi outage and this app has no route-level error
-  // boundary above (site)/, so both calls are caught here — the branded page
-  // must still render, just without live data. getRecaptchaConfig() never
-  // throws — but unlike /dealer-directory-onboarding, a recaptcha-config
-  // outage must NOT fail this page closed: the directory itself has nothing
-  // to do with enquiries, so it renders normally either way (see
-  // DealerDirectory's `recaptchaConfigError`, which only affects the enquiry
-  // form's copy).
-  const [dealers, counts, recaptcha] = await Promise.all([
-    getDealers().catch(() => null),
-    getDealerStateCounts().catch(() => null),
+  // getConnectDealers throws when Connect is unreachable or unconfigured, and
+  // this app has no route-level error boundary above (site)/, so it is caught
+  // here — the branded page must still render, just without live data. Note
+  // the distinction the catch preserves: `null` means we could not read the
+  // directory (outage panel), whereas an empty array means Connect answered
+  // and holds no dealers for us (DealerDirectory's own "none listed yet"
+  // panel). Right now the empty case is the honest one.
+  //
+  // getRecaptchaConfig() never throws — and unlike
+  // /dealer-directory-onboarding, a recaptcha-config outage must NOT fail this
+  // page closed: the directory itself has nothing to do with enquiries, so it
+  // renders normally either way (see DealerDirectory's `recaptchaConfigError`,
+  // which only affects the enquiry form's copy).
+  const [dealers, recaptcha] = await Promise.all([
+    getConnectDealers().catch(() => null),
     getRecaptchaConfig(),
   ]);
 
-  // Total comes from summing the real per-state counts (or the dealer list
-  // length as a fallback) — never a hardcoded figure. The export's own numbers
+  // State tiles are derived from the very list they link to, so a tile can
+  // never advertise a count the filtered page cannot produce. Total is the sum
+  // of those counts — never a hardcoded figure. The export's own numbers
   // (403+, 480+, tiles summing to 465) contradicted each other and aren't used.
-  const total = counts
-    ? Object.values(counts).reduce((sum, n) => sum + n, 0)
-    : (dealers?.length ?? null);
+  const counts = dealers ? connectStateCounts(dealers) : null;
+  const total = dealers?.length ?? null;
 
   const chipParam = typeof sp.chip === "string" && CHIP_KEYS.includes(sp.chip as ChipKey) ? (sp.chip as ChipKey) : null;
   const initialFilters: DealerFilters = {
@@ -149,7 +153,10 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
           </Heading>
           <div className="mx-auto mt-8 grid max-w-[980px] grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3.5 lg:grid-cols-8">
             {STATE_ORDER.map((abbr) => {
-              const count = counts?.[abbr];
+              // A state Connect has no dealer in is absent from the derived
+              // counts, which is a real zero — not unknown data. Only a failed
+              // read leaves the count off the tile entirely.
+              const count = counts ? (counts[abbr] ?? 0) : undefined;
               const isEmpty = count === 0;
               return (
                 <NextLink

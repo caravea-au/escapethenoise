@@ -244,13 +244,27 @@ export function DealerModal({
             </div>
           )}
 
-          <DealerEnquiryForm
-            dealer={dealer}
-            recaptchaEnabled={recaptchaEnabled}
-            recaptchaSiteKey={recaptchaSiteKey}
-            recaptchaConfigError={recaptchaConfigError}
-            onDone={onClose}
-          />
+          {/* Enquiry form only for dealers Connect has approved. An unapproved
+              dealer keeps everything above — name, address, hours, services,
+              brands, directions, website — they simply cannot be sent a lead.
+              Nothing is rendered in the form's place: there is no client-
+              approved copy for "this dealer can't be contacted yet", and
+              inventing some would be worse than the absence.
+              TODO(client): confirm whether an unapproved dealer should show a
+              short explanatory line here instead of nothing.
+
+              This is presentation only. The dealer-enquiry controller re-checks
+              approval against Connect before storing anything, because a hidden
+              form stops nobody from POSTing directly. */}
+          {dealer.approved && (
+            <DealerEnquiryForm
+              dealer={dealer}
+              recaptchaEnabled={recaptchaEnabled}
+              recaptchaSiteKey={recaptchaSiteKey}
+              recaptchaConfigError={recaptchaConfigError}
+              onDone={onClose}
+            />
+          )}
         </div>
       </div>
     </div>,

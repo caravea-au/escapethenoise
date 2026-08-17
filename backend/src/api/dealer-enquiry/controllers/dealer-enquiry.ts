@@ -18,6 +18,7 @@ import { verifyRecaptcha } from '../../../utils/verify-recaptcha';
 import { encodeAngles } from '../../../utils/encode-angles';
 import { DEALER_NOT_SPAM_FILTER } from '../../../utils/dealer-not-spam-filter';
 import { hashIp } from '../../../utils/hash-ip';
+import { fetchConnectDealer } from '../../../utils/connect-lookup';
 
 const DEALER_UID = 'api::dealer-submission.dealer-submission';
 const ENQUIRY_UID = 'api::dealer-enquiry.dealer-enquiry';
@@ -42,6 +43,10 @@ const MAX_LENGTHS = {
   postcode: 8,
   interest: 160,
   message: 2000,
+  // Connect's submission ids are 26-character ULIDs; the cap only stops an
+  // unbounded string being stored on the honeypot path, which is the one place
+  // this value is recorded without having been resolved against Connect first.
+  dealerExternalId: 64,
 };
 
 // Single valid address only — no comma/semicolon-separated lists.
@@ -65,6 +70,72 @@ async function findDealerRow(dealerDocumentId: string): Promise<DealerRow | null
     where: { documentId: dealerDocumentId, ...DEALER_NOT_SPAM_FILTER },
     select: ['id', 'documentId', 'dealershipName'],
   }) as Promise<DealerRow | null>;
+}
+
+/**
+ * A dealer an enquiry can be filed against, from either source.
+ *
+ * /find-dealer now lists dealers pulled from Caravea Connect, so the id in
+ * `data.dealer` is normally a Connect `submission_id` that matches no local
+ * row. The local lookup still runs first — it is a cheap SQLite read, it keeps
+ * any enquiry sent from a cached page still holding Strapi documentIds working,
+ * and it avoids a network round trip on those.
+ *
+ * `name` is ALWAYS taken from whichever source resolved the dealer, never from
+ * the request body: it is denormalised onto the stored row, so an attacker who
+ * could set it could write whatever they liked into an admin's view of who an
+ * enquiry was for.
+ */
+type ResolvedDealer = {
+  row: DealerRow | null;
+  externalId: string | null;
+  name: string;
+};
+
+/**
+ * Resolves the dealer or returns the `error` the caller should send back.
+ *
+ * Every failure path DENIES. An enquiry is a lead with a consumer's contact
+ * details attached, so an unapproved dealer, an unknown id, or a Connect we
+ * cannot reach must all stop the write rather than store a lead against a
+ * dealer whose standing we could not confirm.
+ */
+async function resolveDealer(
+  dealerDocumentId: string,
+): Promise<{ dealer?: ResolvedDealer; error?: { code: string; message: string } }> {
+  const row = await findDealerRow(dealerDocumentId);
+  if (row) {
+    return { dealer: { row, externalId: null, name: row.dealershipName } };
+  }
+
+  const lookup = await fetchConnectDealer(strapi, dealerDocumentId);
+
+  if (!lookup.ok) {
+    // `connect-disabled` (no CONNECT_API_URL/KEY on this box) is reported as
+    // unavailable rather than not-found: the dealer may well exist, this
+    // environment simply cannot check. Telling the visitor their dealer
+    // "couldn't be found" would be a lie about our own misconfiguration.
+    if (lookup.code === 'dealer-not-found') {
+      return { error: { code: 'dealer-not-found', message: 'Unknown dealer.' } };
+    }
+    return {
+      error: {
+        code: 'connect-unavailable',
+        message: 'Dealer details are temporarily unavailable.',
+      },
+    };
+  }
+
+  if (!lookup.approved) {
+    return {
+      error: {
+        code: 'dealer-not-approved',
+        message: 'This dealer is not accepting enquiries yet.',
+      },
+    };
+  }
+
+  return { dealer: { row: null, externalId: dealerDocumentId, name: lookup.name } };
 }
 
 export default factories.createCoreController(ENQUIRY_UID, () => ({
@@ -108,9 +179,15 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
 
     if (honeypotTripped) {
       try {
+        // Local lookup only — deliberately no Connect round trip on this path.
+        // The caller is a bot; the id is recorded as-is (capped) so the row is
+        // still traceable, without spending a network call on it.
         const dealerRow = await findDealerRow(dealerDocumentId);
         const payload = encodeAngles({
           dealer: dealerRow?.documentId,
+          dealerExternalId: dealerRow
+            ? undefined
+            : cleanSingleLine(dealerDocumentId, MAX_LENGTHS.dealerExternalId),
           dealerName: dealerRow?.dealershipName,
           name: cleanSingleLine(data.name, MAX_LENGTHS.name) ?? '',
           email: cleanSingleLine(data.email, MAX_LENGTHS.email) ?? '',
@@ -164,21 +241,31 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
       });
     }
 
-    const dealerRow = await findDealerRow(dealerDocumentId);
-    if (!dealerRow) {
-      return ctx.badRequest('Unknown dealer.', { code: 'dealer-not-found' });
+    // Resolves against the local table first, then Caravea Connect — and also
+    // enforces the approval gate. DealerModal hides the enquiry form for an
+    // unapproved dealer, but hiding a form stops nobody from POSTing to this
+    // endpoint directly, so approval is checked again here where it counts.
+    const resolved = await resolveDealer(dealerDocumentId);
+    if (resolved.error) {
+      return ctx.badRequest(resolved.error.message, { code: resolved.error.code });
     }
+    const dealer = resolved.dealer;
 
     // Second, narrower limit: the same visitor repeatedly messaging ONE dealer.
     // Needs the resolved dealer, so it can only run here; the broad per-IP
-    // limit above already bounds total writes.
+    // limit above already bounds total writes. The `where` matches on whichever
+    // identifier this dealer actually has — a Connect-sourced dealer has no
+    // relation to count on, and matching only `dealer` would leave every
+    // Connect dealer with no per-dealer limit at all.
     const sixtyMinAgo = new Date(now - RATE_LIMIT_WINDOW_IP_DEALER_MS);
 
     const recentByIpAndDealer = await strapi.db.query(ENQUIRY_UID).count({
       where: {
         ipHash,
-        dealer: dealerRow.id,
         createdAt: { $gte: sixtyMinAgo },
+        ...(dealer.row
+          ? { dealer: dealer.row.id }
+          : { dealerExternalId: dealer.externalId }),
       },
     });
     if (recentByIpAndDealer >= RATE_LIMIT_PER_IP_DEALER) {
@@ -220,8 +307,11 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
     const interest = cleanSingleLine(data.interest, MAX_LENGTHS.interest);
 
     const payload = encodeAngles({
-      dealer: dealerRow.documentId,
-      dealerName: dealerRow.dealershipName,
+      // Exactly one of these is set: the relation for a local dealer, the
+      // Connect submission_id for a pulled one.
+      dealer: dealer.row?.documentId,
+      dealerExternalId: dealer.externalId ?? undefined,
+      dealerName: dealer.name,
       name,
       email,
       message,
