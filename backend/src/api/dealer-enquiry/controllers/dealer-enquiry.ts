@@ -43,9 +43,11 @@ const MAX_LENGTHS = {
   postcode: 8,
   interest: 160,
   message: 2000,
-  // Connect's submission ids are 26-character ULIDs; the cap only stops an
-  // unbounded string being stored on the honeypot path, which is the one place
-  // this value is recorded without having been resolved against Connect first.
+  // Connect ids are either a 26-character ULID `submission_id` or a `reference`
+  // like `caraveacomp|Vrpb3uPIK2QxIgYyeHWA` (33 characters). The cap only stops
+  // an unbounded string being stored on the honeypot path, which is the one
+  // place this value is recorded without having been resolved against Connect
+  // first — do not shrink it to fit either format exactly.
   dealerExternalId: 64,
 };
 
@@ -76,10 +78,12 @@ async function findDealerRow(dealerDocumentId: string): Promise<DealerRow | null
  * A dealer an enquiry can be filed against, from either source.
  *
  * /find-dealer now lists dealers pulled from Caravea Connect, so the id in
- * `data.dealer` is normally a Connect `submission_id` that matches no local
- * row. The local lookup still runs first — it is a cheap SQLite read, it keeps
- * any enquiry sent from a cached page still holding Strapi documentIds working,
- * and it avoids a network round trip on those.
+ * `data.dealer` is normally a Connect id (a `reference` such as
+ * `caraveacomp|Vrpb3uPIK2QxIgYyeHWA`, or a `submission_id` from a page cached
+ * before Connect's 2026-08-17 redeploy) that matches no local row. The local
+ * lookup still runs first — it is a cheap SQLite read, it keeps any enquiry
+ * sent from a cached page still holding Strapi documentIds working, and it
+ * avoids a network round trip on those.
  *
  * `name` is ALWAYS taken from whichever source resolved the dealer, never from
  * the request body: it is denormalised onto the stored row, so an attacker who
