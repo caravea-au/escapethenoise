@@ -9,6 +9,9 @@
 
 import nodemailer from 'nodemailer';
 
+import { isConnectEnabled, postDealerRegistration } from '../../../../utils/connect-client';
+import { shouldPushToConnect, toConnectRegistration } from '../../../../utils/connect-registration';
+
 type AnyRecord = Record<string, unknown>;
 
 function line(label: string, value: unknown): string {
@@ -102,6 +105,34 @@ function buildSummary(d: AnyRecord): string {
 export default {
   async afterCreate(event: { result: AnyRecord }) {
     const d = event.result;
+
+    // Caravea Connect forward — its OWN try/catch, placed BEFORE the SMTP
+    // block below on purpose. That block RETURNS EARLY whenever the "SMTP
+    // Settings" single type is missing, disabled, or hostless — true on
+    // every environment without SMTP configured — so anything placed after
+    // that return would be dead code there. Best-effort only: afterCreate
+    // runs inside the create's DB write transaction, so there is no retry;
+    // a miss is covered by a separate re-push, not automatically here.
+    try {
+      if (isConnectEnabled()) {
+        const documentId = String(d.documentId ?? '');
+        const gate = shouldPushToConnect(d);
+        if (gate.ok) {
+          const payload = toConnectRegistration(d);
+          await postDealerRegistration(strapi, documentId, payload);
+        } else {
+          strapi.log.warn(
+            `[dealer-submission] Connect push skipped (documentId=${documentId}, reason=${gate.reason})`,
+          );
+        }
+      }
+    } catch (err) {
+      strapi.log.error(
+        `[dealer-submission] Connect forward failed (submission still saved): ${
+          (err as Error)?.message ?? err
+        }`,
+      );
+    }
 
     try {
       const cfg = (await strapi
