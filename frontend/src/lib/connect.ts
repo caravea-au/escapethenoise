@@ -26,13 +26,18 @@ import type { DirectoryDealer, DealerTradingHours } from "@/lib/strapi";
 
 const REGISTRATIONS_PATH = "/api/public/dealer-registrations";
 
-// Connect pins its own page size at 15 and IGNORES `per_page`/`limit`
-// (measured: both come back with `meta.per_page: 15`), so a full read is
-// `ceil(total / 15)` sequential requests. The staging deploy script wipes
-// `.next/cache/fetch-cache`, so the first visitor after every deploy pays all
-// of them — hence the per-request timeout and the page cap below.
-const PAGE_SIZE = 15;
-const MAX_PAGES = 40;
+// Connect honours `per_page` since its 2026-08-17 redeploy: the default is 10
+// and 100 is the ceiling (`per_page=200` → `422 {"message":"The per page field
+// must not be greater than 100."}`). Asking for the maximum turns the current
+// 119-dealer read from 12 sequential requests into 2. `limit` / `page_size` /
+// `pageSize` are still ignored and silently fall through to the default 10, so
+// the parameter name below is load-bearing.
+//
+// The staging deploy script wipes `.next/cache/fetch-cache`, so the first
+// visitor after every deploy pays the whole read — hence the per-request
+// timeout and the page cap.
+const PAGE_SIZE = 100;
+const MAX_PAGES = 20;
 const REQUEST_TIMEOUT_MS = 8_000;
 
 // Cache lifetime for the whole pull. This is the ONLY thing making /find-dealer
@@ -157,26 +162,89 @@ function tradingHours(value: unknown): DealerTradingHours {
  * form renders for them (see DealerModal).
  *
  * Connect is adding an explicit approval boolean to the outbound payload. It is
- * not on the read shape yet, so this checks for it first under each of the
- * names it could plausibly ship as, then falls back to what the tree exposes
- * today: `company.status` (currently `"pending"` on every record) and
- * `company.approved_at`. Default is FALSE — an unreadable or unrecognised
- * approval state must not open the form.
+ * STILL not on the read shape (re-checked 2026-08-17 across all 119 records:
+ * no `approved` / `is_approved` / `isApproved` at any key path), so this checks
+ * for it first under each of the names it could plausibly ship as, then falls
+ * back to what the tree exposes today: `status` (currently `"pending"` on every
+ * record) and `approved_at` (null on every record). Default is FALSE — an
+ * unreadable or unrecognised approval state must not open the form.
+ *
+ * `registration` is the level those fields live on, which moved in the v2
+ * response — see `normaliseRecord`. `record` is still checked as a fallback so
+ * one reader serves both shapes.
  *
  * This is a display gate only. The real enforcement is server-side in the
  * dealer-enquiry controller, which re-checks approval against Connect before
  * storing anything.
  */
-function isApproved(record: Json, company: Json): boolean {
+function isApproved(record: Json, registration: Json): boolean {
   for (const key of ["approved", "is_approved", "isApproved"]) {
-    const explicit = bool(company[key]) ?? bool(record[key]);
+    const explicit = bool(registration[key]) ?? bool(record[key]);
     if (explicit !== null) return explicit;
   }
 
-  const status = str(company.status) ?? str(record.status);
+  const status = str(registration.status) ?? str(record.status);
   if (status) return status.toLowerCase() === "approved";
 
-  return str(company.approved_at) !== null;
+  return (str(registration.approved_at) ?? str(record.approved_at)) !== null;
+}
+
+// ── Response shape ───────────────────────────────────────────────────────────
+
+/**
+ * The four levels the mapper reads, plus the id, lifted out of whichever
+ * response shape Connect returned.
+ *
+ * Connect ships TWO shapes today and we read both, because the two endpoints
+ * disagree with each other:
+ *
+ *   OLD (nested) — still what `GET /dealer-registrations/{submission_id}`
+ *   returns:
+ *     { submission_id, status, company: { reference, status, approved_at,
+ *         company: {…profile}, location: {…}, information: {…} } }
+ *
+ *   NEW (flat) — what `GET /dealer-registrations` has returned since Connect's
+ *   2026-08-17 redeploy. The `company` wrapper collapsed up one level and
+ *   `submission_id` disappeared entirely:
+ *     { reference, caravea_company_id, status, approved_at,
+ *       company: {…profile}, location: {…}, information: {…} }
+ *
+ * The tell is `company.company`: an object there means the old wrapper is still
+ * present. This is a structural check rather than a version flag because
+ * Connect ships neither, and it degrades safely — an unrecognised third shape
+ * yields no id and no name, which `toDirectoryDealer` turns into a skipped
+ * record and `getConnectDealers` turns into a loud outage (see the guard there).
+ */
+type NormalisedRecord = {
+  /** Connect's stable id for this registration, whichever name it arrived under. */
+  id: string | null;
+  /** Where `status` / `approved_at` / `reference` live. */
+  registration: Json;
+  /** The dealership profile: name, phone, website, socials, logo. */
+  profile: Json;
+  location: Json;
+  information: Json;
+};
+
+function normaliseRecord(record: Json): NormalisedRecord {
+  const wrapper = obj(record.company);
+  const isNested = wrapper.company !== undefined && !Array.isArray(wrapper.company);
+  const registration = isNested ? wrapper : record;
+
+  return {
+    // `submission_id` first: it is the only id the by-id show endpoint accepts,
+    // so preferring it keeps the enquiry lookup on its cheap single-request
+    // path for anything still arriving in the old shape. The flat list emits
+    // `reference` and `caravea_company_id` with identical values.
+    id:
+      str(record.submission_id) ??
+      str(registration.reference) ??
+      str(registration.caravea_company_id),
+    registration,
+    profile: obj(isNested ? wrapper.company : record.company),
+    location: obj(registration.location),
+    information: obj(registration.information),
+  };
 }
 
 // ── Mapping ──────────────────────────────────────────────────────────────────
@@ -187,17 +255,16 @@ function isApproved(record: Json, company: Json): boolean {
  * half-formed row is skipped rather than rendered as a blank card.
  */
 function toDirectoryDealer(record: Json): DirectoryDealer | null {
-  const company = obj(record.company);
-  const profile = obj(company.company);
-  const location = obj(company.location);
-  const information = obj(company.information);
+  const { id, registration, profile, location, information } = normaliseRecord(record);
 
-  // `submission_id` is Connect's stable per-registration id and the only
-  // identifier both sides can name. It becomes `documentId` here because that
+  // Connect's stable per-registration id becomes `documentId` here because that
   // is what the directory keys cards, map pins and the enquiry POST on — it is
   // NOT a Strapi documentId any more, which is exactly why the enquiry
-  // controller had to learn to resolve an external dealer.
-  const documentId = str(record.submission_id);
+  // controller had to learn to resolve an external dealer. Since the v2 list
+  // dropped `submission_id`, this is usually `reference`
+  // (`caraveacomp|Vrpb3uPIK2QxIgYyeHWA`), which the by-id show endpoint does
+  // NOT accept — `connect-lookup.ts` resolves it by scanning the list instead.
+  const documentId = id;
   const dealershipName = str(profile.name);
   if (!documentId || !dealershipName) return null;
 
@@ -252,7 +319,7 @@ function toDirectoryDealer(record: Json): DirectoryDealer | null {
     // coordinate for fall back to their postcode centroid in `dealerPoint`.
     precision: null,
 
-    approved: isApproved(record, company),
+    approved: isApproved(record, registration),
   };
 }
 
@@ -273,7 +340,9 @@ async function fetchPage(baseUrl: string, apiKey: string, page: number): Promise
   // not 400 — it 302s to its own login page, which then "succeeds" as HTML and
   // fails to parse. This is also why `links.next` from the response is never
   // followed: their pagination URLs drop the parameter.
-  const url = `${baseUrl.replace(/\/+$/, "")}${REGISTRATIONS_PATH}?source=nobettertime&page=${page}`;
+  const url =
+    `${baseUrl.replace(/\/+$/, "")}${REGISTRATIONS_PATH}` +
+    `?source=nobettertime&per_page=${PAGE_SIZE}&page=${page}`;
 
   const response = await fetch(url, {
     headers: { "X-Caravea-Key": apiKey, Accept: "application/json" },
@@ -299,12 +368,11 @@ async function fetchPage(baseUrl: string, apiKey: string, page: number): Promise
 /**
  * Every dealer Connect holds for this site, mapped to the directory shape.
  *
- * Throws when Connect is unreachable or misconfigured — same contract as the
- * Strapi collection getters it replaces, so find-dealer/page.tsx can tell an
- * outage (show the "can't load" panel) apart from a genuinely empty directory
- * (show the "no dealers listed yet" panel). Those are very different messages
- * to a visitor, and right now the empty one is the truthful case: Connect
- * staging holds three test registrations and no approved dealer.
+ * Throws when Connect is unreachable, misconfigured, or answering in a shape
+ * this module cannot read — same contract as the Strapi collection getters it
+ * replaces, so find-dealer/page.tsx can tell an outage (show the "can't load"
+ * panel) apart from a genuinely empty directory (show the "no dealers listed
+ * yet" panel). Those are very different messages to a visitor.
  */
 export async function getConnectDealers(): Promise<DirectoryDealer[]> {
   const baseUrl = process.env.CONNECT_API_URL;
@@ -330,9 +398,28 @@ export async function getConnectDealers(): Promise<DirectoryDealer[]> {
     );
   }
 
-  return records
+  const dealers = records
     .map(toDirectoryDealer)
     .filter((dealer): dealer is DirectoryDealer => dealer !== null);
+
+  // Connect answered with records and NONE of them mapped. That is a response
+  // shape we no longer understand, not an empty directory — and the difference
+  // matters, because the page renders a calm "no accredited dealers listed yet"
+  // for `[]` and an outage panel for a throw. This exact case shipped silently
+  // on 2026-08-17: Connect flattened the list shape, all 119 records mapped to
+  // null, and the page cheerfully reported that no dealers existed.
+  //
+  // Throwing here routes it to the outage panel and puts a line in the server
+  // log. A single unmappable record is still skipped quietly, as before — only
+  // a total wipeout trips this.
+  if (records.length > 0 && dealers.length === 0) {
+    console.error(
+      `[connect] read ${records.length} registrations and mapped none — Connect's response shape has changed`,
+    );
+    throw new Error("Connect returned an unrecognised dealer-registration shape");
+  }
+
+  return dealers;
 }
 
 /**
