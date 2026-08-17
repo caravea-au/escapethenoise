@@ -17,6 +17,7 @@
     "seed:industry-partners": "node scripts/seed-industry-partners.mjs",
     "seed:vehicle-listings-page": "node scripts/seed-vehicle-listings-page.mjs",
     "seed:dealer-geo": "node scripts/geocode-dealers.mjs",
+    "connect:push": "node scripts/connect-push-dealers.mjs",
     "dev:clean": "npm run clean && strapi develop",
     "develop": "strapi develop",
     "start": "strapi start",
