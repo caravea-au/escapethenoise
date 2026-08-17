@@ -7,10 +7,14 @@ The public dealer payloads, as they exist on `staging`: what the two forms POST 
 | --- | --- | --- | --- |
 | Dealer onboarding (write) | `/dealer-directory-onboarding` | `POST /api/dealer-submissions` | `dealer-submission` |
 | Consumer enquiry (write) | `/find-dealer` (dealer modal) | `POST /api/dealer-enquiries` | `dealer-enquiry` |
-| Directory profile (read) | `/find-dealer` | `GET /api/dealers` | `dealer-submission` |
+| Directory profile (read) | ~~`/find-dealer`~~ (no longer read by the site) | `GET /api/dealers` | `dealer-submission` |
 
 Base URLs: staging `https://staging-cms.nobettertime.com.au`, production
 `https://cms.nobettertime.com.au`.
+
+> **`/find-dealer` no longer reads `GET /api/dealers`.** The directory is pulled from Caravea Connect
+> instead, so the "Directory profile (read)" payload below documents an endpoint that still exists and
+> still serves the same JSON, but which nothing on the site calls. See `docs/CONNECT-FIND-DEALER.md`.
 
 Both routes are public (`auth: false`), take a JSON body wrapped in `data`, and answer with
 `{"ok": true}` only. Neither ever echoes the stored record back.
@@ -203,8 +207,13 @@ onboarding page above.
 
 ### Field notes
 
-- **`dealer`** is the dealer-submission **`documentId`** string. It must resolve to a non-spam
-  dealer, or the request fails with `code: "dealer-not-found"`.
+- **`dealer`** is normally Caravea Connect's **`submission_id`**, since that is what `/find-dealer`
+  now lists dealers by. A dealer-submission `documentId` still resolves too (it is tried first), for
+  enquiries sent from a page cached before the switch. Failure codes:
+  `dealer-not-found` (neither source knows the id), `dealer-not-approved` (Connect holds the dealer
+  but has not approved them, so they take no enquiries), `connect-unavailable` (Connect could not be
+  reached, or this environment has no `CONNECT_API_URL`/`CONNECT_API_KEY`, so approval could not be
+  confirmed). All three refuse the write.
 - **Required:** `name`, `email`, `message`. **Optional:** `phone`, `postcode`, `interest`.
 - **Max lengths** (enforced server-side by truncation, not rejection): name 120, email 180,
   phone 40, postcode 8, interest 160, message 2000.
@@ -212,7 +221,9 @@ onboarding page above.
 
 ### Server-added fields
 
-`dealerName` (denormalised from the dealer row), `ipHash`, `submittedAt`, `sourcePage`
+`dealerName` (denormalised from whichever source resolved the dealer, the local row or Connect's own
+response, never from the request body), `dealerExternalId` (the Connect `submission_id`, set instead
+of the `dealer` relation when the dealer came from Connect), `ipHash`, `submittedAt`, `sourcePage`
 (`"/find-dealer"`), `spamSuspect`. Client-sent values for these are ignored.
 
 ### Rate limits
@@ -334,8 +345,10 @@ Only the non-spam gate: `spamSuspect` is `false` **or** `null`. `spamSuspect` is
 genuine dealers (the heuristics never fired), so a plain `{ spamSuspect: false }` filter would
 hide them; use `DEALER_NOT_SPAM_FILTER`.
 
-There is currently **no publication gate**: any dealer-submission row that is not spam-flagged is
-live on `/find-dealer` as soon as it is written, subject to the cache below.
+There is **no publication gate on this endpoint**: any dealer-submission row that is not spam-flagged
+is returned as soon as it is written, subject to the cache below. That used to mean it went straight
+onto `/find-dealer`; it no longer does, because the page reads Connect instead, and Connect's own
+approval state now decides whether a dealer can be sent an enquiry.
 
 ### Caching
 

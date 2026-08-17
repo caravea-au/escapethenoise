@@ -5,7 +5,7 @@
     "singularName": "dealer-enquiry",
     "pluralName": "dealer-enquiries",
     "displayName": "Dealer Enquiry",
-    "description": "Consumer enquiries sent to a dealer from /find-dealer. HOLDS CONSUMER PII (name, email, phone, message) — the `find` and `findOne` actions must NEVER be granted to the Public role. Only `create` (via routes/dealer-enquiry.ts, auth: false) is public."
+    "description": "Consumer enquiries sent to a dealer from /find-dealer. HOLDS CONSUMER PII (name, email, phone, message) — the `find` and `findOne` actions must NEVER be granted to the Public role. Only `create` (via routes/dealer-enquiry.ts, auth: false) is public. Since /find-dealer switched to listing dealers pulled from Caravea Connect, an enquiry usually has NO local dealer row to relate to: it carries `dealerExternalId` (Connect's submission_id) and an empty `dealer` relation. `dealerName` is always resolved from a trusted source (the local row, or Connect's own response) and never taken from the request body."
   },
   "options": {
     "draftAndPublish": false
@@ -18,6 +18,7 @@
       "target": "api::dealer-submission.dealer-submission"
     },
     "dealerName": { "type": "string" },
+    "dealerExternalId": { "type": "string" },
 
     "name": { "type": "string", "required": true },
     "email": { "type": "email", "required": true },

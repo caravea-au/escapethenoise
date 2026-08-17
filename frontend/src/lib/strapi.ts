@@ -450,9 +450,14 @@ export async function getVehicleListingsPage(): Promise<VehicleListingsPage | nu
   }
 }
 
-// ── Dealer directory (public /api/dealers + /api/dealer-counts) ─────────────
-// Sanitised, allow-listed shape emitted by backend/src/api/dealer-submission —
-// no PII, no fields beyond this list exist on the public response.
+// ── Dealer directory shape ───────────────────────────────────────────────────
+// Sanitised, allow-listed shape rendered by /find-dealer. The type stays here
+// because every DealerDirectory component imports it from this module, but the
+// DATA no longer comes from Strapi: /find-dealer now reads Caravea Connect (see
+// lib/connect.ts), and the Strapi getters that used to fill this shape from
+// /api/dealers + /api/dealer-counts have been removed with that swap. Both
+// Strapi endpoints still exist and still serve the same JSON — nothing in this
+// app calls them any more.
 
 export type DealerTradingDay = { open: boolean; openTime: string; closeTime: string };
 export type DealerTradingHours = Record<
@@ -461,6 +466,8 @@ export type DealerTradingHours = Record<
 > | null;
 
 export type DirectoryDealer = {
+  // Connect's `submission_id`, not a Strapi documentId. Kept under this name
+  // because it is what cards, map pins and the enquiry POST key on.
   documentId: string;
   dealershipName: string;
   street: string | null;
@@ -500,23 +507,13 @@ export type DirectoryDealer = {
   latitude: number | null;
   longitude: number | null;
   precision: "street" | "approx" | null;
+
+  // Whether Connect has approved this dealer. Only approved dealers get an
+  // enquiry form (DealerModal); an unapproved dealer still appears in the list,
+  // on the map and in their own modal. Defaults to false on anything we can't
+  // read, so the form fails closed.
+  approved: boolean;
 };
-
-/** All accredited dealers for the directory. Throws on a Strapi outage (house collection-getter contract). */
-export async function getDealers(): Promise<DirectoryDealer[]> {
-  const json = await strapiFetch<{ data: DirectoryDealer[]; meta: { total: number } }>(
-    "/api/dealers",
-  );
-  return json.data;
-}
-
-/** Dealer counts per state (e.g. `{ VIC: 28, NSW: 46 }`). Throws on a Strapi outage. */
-export async function getDealerStateCounts(): Promise<Record<string, number>> {
-  const json = await strapiFetch<{ data: Record<string, number>; meta: { total: number } }>(
-    "/api/dealer-counts",
-  );
-  return json.data;
-}
 
 // Dealer photos/logo are absolute DigitalOcean Spaces URLs, not Strapi media —
 // never run them through strapiMedia (which would wrongly prefix them with STRAPI_URL).

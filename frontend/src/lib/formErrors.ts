@@ -31,6 +31,14 @@ export function messageForCode(code: string, supportEmail: string | null): strin
       return "You've sent a few enquiries in a short space of time. Please wait a bit before trying again.";
     case "dealer-not-found":
       return "This dealer listing couldn't be found. Please refresh the page and try again.";
+    // Both of the below are only reachable by posting to the endpoint outside
+    // the UI, or from a page cached before the dealer's status changed — the
+    // enquiry form isn't rendered for an unapproved dealer in the first place.
+    // TODO(client): confirm the wording for these two.
+    case "dealer-not-approved":
+      return "This dealer isn't taking enquiries through the directory yet.";
+    case "connect-unavailable":
+      return "We couldn't confirm this dealer's details just now. Please try again in a moment.";
     default:
       return GENERIC_SUBMIT_ERROR;
   }
