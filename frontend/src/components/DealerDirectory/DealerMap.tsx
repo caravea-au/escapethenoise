@@ -297,7 +297,17 @@ export function DealerMap({ dealers, selectedId, onPinClick, mapboxToken, origin
     prevIdsKeyRef.current = idsKey;
     if (membershipChanged) userMovedMapRef.current = false;
 
-    if (hasBoundsPoint && (isFirstRun || membershipChanged) && !userMovedMapRef.current) {
+    // An unresolved query must leave the camera EXACTLY where it was (see the
+    // origin effect below, which bails for the same reason). Since results are
+    // now constrained to a radius, a typo un-constrains them — the shown set
+    // jumps back to every dealer — and without this guard that membership
+    // change would re-fit the camera out to the whole country, which is the
+    // yank the "couldn't find that location" notice exists to avoid.
+    // `isFirstRun` is deliberately still allowed through: landing directly on a
+    // shared `?q=<typo>` link has no previous camera to preserve, and skipping
+    // the initial fit would strand the map at its constructor view.
+    const mayFit = isFirstRun || (membershipChanged && !unresolvedQuery);
+    if (hasBoundsPoint && mayFit && !userMovedMapRef.current) {
       try {
         map.stop();
         // Building this options object with an explicit `duration: undefined`
@@ -313,7 +323,11 @@ export function DealerMap({ dealers, selectedId, onPinClick, mapboxToken, origin
         // Defensive: keep whatever view the map already has rather than crash.
       }
     }
-  }, [dealers, mapReady, mapError]);
+    // `unresolvedQuery` flips in the SAME render as the `dealers` change it
+    // guards against, so this effect sees both together. A re-run on the flag
+    // alone diffs to an identical marker set, leaving membershipChanged false
+    // and fitting nothing.
+  }, [dealers, mapReady, mapError, unresolvedQuery]);
 
   // ---- Card-selected -> flyTo -------------------------------------------
   useEffect(() => {
