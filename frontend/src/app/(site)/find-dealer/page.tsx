@@ -29,7 +29,7 @@ const FALLBACK = {
   subtitleNoCount: "Accredited caravan dealers across Australia. Search by location, brand or van type.",
   subtitleWithCount: (n: number) =>
     `${n} accredited caravan dealers across Australia. Search by location, brand or van type.`,
-  stateHeading: "Select Your State or Territory",
+  stateHeading: "Select Your State",
   outageHeading: "We can't load the dealer directory right now",
   outageBody: "Please try again shortly, or search for your state below.",
 } as const;
