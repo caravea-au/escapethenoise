@@ -23,12 +23,12 @@ const PARTICIPATING_STATES = ["NSW", "VIC", "QLD"] as const;
 const FALLBACK = {
   metaTitle: "Find a Dealer Near You",
   metaDescription:
-    "Find accredited caravan dealers near you across Australia. Search by location, brand or van type.",
+    "Find caravan dealers near you across Australia. Search by location, brand or van type.",
   eyebrow: "Dealer directory",
   heading: "Find a Dealer Near You",
-  subtitleNoCount: "Accredited caravan dealers across Australia. Search by location, brand or van type.",
+  subtitleNoCount: "Caravan dealers across Australia. Search by location, brand or van type.",
   subtitleWithCount: (n: number) =>
-    `${n} accredited caravan dealers across Australia. Search by location, brand or van type.`,
+    `${n} caravan dealers across Australia. Search by location, brand or van type.`,
   stateHeading: "Select Your State",
   outageHeading: "We can't load the dealer directory right now",
   outageBody: "Please try again shortly, or search for your state below.",
@@ -49,7 +49,7 @@ export async function generateMetadata({
 
   const title = state ? `Caravan Dealers in ${state}` : FALLBACK.metaTitle;
   const description = state
-    ? `Accredited caravan dealers in ${state}. Search by location, brand or van type.`
+    ? `Caravan dealers in ${state}. Search by location, brand or van type.`
     : FALLBACK.metaDescription;
   const ogImage = "/og-image.png";
 
