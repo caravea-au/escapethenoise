@@ -12,8 +12,11 @@ import { DealerDirectory } from "@/components/DealerDirectory/DealerDirectory";
 
 const CHIP_KEYS = Object.keys(CHIP_PREDICATES) as ChipKey[];
 
-// Real AU state/territory order matches the design export's state-grid tiles.
-const STATE_ORDER = ["NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"] as const;
+// The states this dealer programme actually operates in. Drives the state
+// TILES ONLY: dealers in every other state and territory stay listed, mapped
+// and filterable (?state=SA still works and the filter dropdown still offers
+// it), because they are still real dealers in the directory.
+const PARTICIPATING_STATES = ["NSW", "VIC", "QLD"] as const;
 
 // Fallback copy — used when live data (dealer count) can't be resolved, so the
 // page still reads honestly rather than printing a fabricated number.
@@ -26,7 +29,7 @@ const FALLBACK = {
   subtitleNoCount: "Accredited caravan dealers across Australia. Search by location, brand or van type.",
   subtitleWithCount: (n: number) =>
     `${n} accredited caravan dealers across Australia. Search by location, brand or van type.`,
-  stateHeading: "Select Your State or Territory",
+  stateHeading: "Select Your State",
   outageHeading: "We can't load the dealer directory right now",
   outageBody: "Please try again shortly, or search for your state below.",
 } as const;
@@ -93,9 +96,12 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
   ]);
 
   // State tiles are derived from the very list they link to, so a tile can
-  // never advertise a count the filtered page cannot produce. Total is the sum
-  // of those counts — never a hardcoded figure. The export's own numbers
-  // (403+, 480+, tiles summing to 465) contradicted each other and aren't used.
+  // never advertise a count the filtered page cannot produce. `total` is the
+  // whole directory and NOT the sum of the tiles: only participating states
+  // get a tile, so the tile counts deliberately sum to less than the
+  // subtitle's total. That gap is intended, not a counting bug. Neither
+  // figure is ever hardcoded — the export's own numbers (403+, 480+, tiles
+  // summing to 465) contradicted each other and aren't used.
   const counts = dealers ? connectStateCounts(dealers) : null;
   const total = dealers?.length ?? null;
 
@@ -151,8 +157,8 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
           <Heading as="h2" className="text-[24px] text-green md:text-[28px] lg:text-[32px]">
             {FALLBACK.stateHeading}
           </Heading>
-          <div className="mx-auto mt-8 grid max-w-[980px] grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3.5 lg:grid-cols-8">
-            {STATE_ORDER.map((abbr) => {
+          <div className="mx-auto mt-8 grid max-w-[980px] grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3.5 lg:grid-cols-3">
+            {PARTICIPATING_STATES.map((abbr) => {
               // A state Connect has no dealer in is absent from the derived
               // counts, which is a real zero — not unknown data. Only a failed
               // read leaves the count off the tile entirely.
