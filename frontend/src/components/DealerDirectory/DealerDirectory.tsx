@@ -284,7 +284,7 @@ export function DealerDirectory({
       <Container width="marketing" className="py-16">
         <div className="rounded-card border border-line bg-white px-6 py-10 text-center">
           <Heading as="h2" className="text-[22px] text-green">
-            No accredited dealers listed yet
+            No dealers listed yet
           </Heading>
           <Text variant="lead" className="mx-auto mt-2.5 max-w-[520px] text-muted">
             Check back again soon — or if you run a dealership, get listed today.

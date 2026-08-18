@@ -16,7 +16,7 @@ export default function FindDealerLoading() {
             Find a Dealer Near You
           </Heading>
           <Text variant="lead" className="mt-2 max-w-[620px] text-sand">
-            Accredited caravan dealers across Australia. Search by location, brand or van type.
+            Caravan dealers across Australia. Search by location, brand or van type.
           </Text>
         </Container>
       </section>
