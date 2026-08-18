@@ -146,18 +146,16 @@ export function DealerModal({
             <h3 id={titleId} className="font-oswald text-2xl font-bold tracking-[-.4px] text-green">
               {dealer.dealershipName}
             </h3>
-            {/* Mirrors DealerCard: the ✓ Accredited claim is only made for a
-                dealer Connect has approved. Same dealer, same badge, whether
-                you read it in the list or the modal. */}
-            <span
-              className={`rounded-chip px-[9px] py-[3px] text-[10.5px] font-bold tracking-[.3px] ${
-                dealer.approved
-                  ? "bg-badge-accredited-bg text-rust-deep"
-                  : "bg-badge-closed-bg text-badge-closed"
-              }`}
-            >
-              {dealer.approved ? "✓ Accredited" : "Pending"}
-            </span>
+            {/* Mirrors DealerCard: the ✓ badge is only shown for a dealer
+                Connect has approved, and every other dealer gets no pill at
+                all rather than a neutral placeholder. Same dealer, same badge,
+                same place beside the name, whether you read it in the list or
+                the modal. */}
+            {dealer.approved && (
+              <span className="rounded-chip bg-badge-accredited-bg px-[9px] py-[3px] text-[10.5px] font-bold tracking-[.3px] text-rust-deep">
+                ✓ Accredited
+              </span>
+            )}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-[5px] text-[13.5px] text-muted">
             <PinIcon className="text-rust" />
