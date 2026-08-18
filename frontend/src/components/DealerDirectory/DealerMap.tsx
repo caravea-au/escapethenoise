@@ -494,9 +494,15 @@ export function DealerMap({ dealers, selectedId, onPinClick, mapboxToken, origin
         </div>
         {/* The only place the map credits now appear — the on-map control
             stack is hidden in globals.css. Do not remove: ODbL requires the
-            OpenStreetMap credit for the dealer geocodes we store and show. */}
+            OpenStreetMap credit for the dealer geocodes we store and show, and
+            CC BY 4.0 requires the GeoNames credit (a link is the form the
+            licence itself names) for the postcode/suburb data the location
+            search resolves against. */}
         <div className="mt-2.5 border-t border-line pt-2 text-[10.5px] leading-[1.4] text-muted">
-          © Mapbox © OpenStreetMap contributors
+          © Mapbox © OpenStreetMap contributors{" "}
+          <a href="https://www.geonames.org" target="_blank" rel="noreferrer" className="underline">
+            © GeoNames
+          </a>
           {skippedCount > 0 && (
             <>
               {" "}
