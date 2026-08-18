@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/Button";
 import type { DirectoryDealer } from "@/lib/strapi";
 import {
   applyFilters,
+  dealerPoint,
   deriveFilterOptions,
+  haversineKm,
   prefersReducedMotion,
   resolveOriginFromQuery,
   SORTS,
@@ -38,6 +40,12 @@ const NO_LOCATION_NOTICE = "We couldn't get your location. Enter a suburb or pos
 const NO_MATCH_NOTICE = "We couldn't find that location. Try a nearby suburb or postcode.";
 const SEARCH_DEBOUNCE_MS = 500;
 
+// Once a location resolves, the results are constrained to dealers within this
+// many kilometres of it — a search whose count never moves is not a search
+// (ETN-008 D1). The header says the radius out loud and offers a way back to
+// the whole directory, so the constraint is never silent.
+const SEARCH_RADIUS_KM = 150;
+
 type Props = {
   dealers: DirectoryDealer[];
   initialFilters: DealerFilters;
@@ -46,6 +54,16 @@ type Props = {
   mapboxToken: string | null;
   // See find-dealer/page.tsx — true only when the config fetch itself failed.
   recaptchaConfigError?: boolean;
+  /**
+   * The typed query resolved on the server against the full AU locality
+   * dataset, which is far too large to ship to the browser (ETN-008). `q` is
+   * carried alongside so the origin is always read together with the query it
+   * came from, rather than pairing one commit's text with another's origin.
+   *
+   * Omitted (the default) falls back to the in-bundle 89-entry lookup, so any
+   * other caller renders exactly as it did before.
+   */
+  resolvedQuery?: { q: string; origin: DealerOrigin | null } | null;
 };
 
 export function DealerDirectory({
@@ -55,6 +73,7 @@ export function DealerDirectory({
   recaptchaSiteKey,
   mapboxToken,
   recaptchaConfigError = false,
+  resolvedQuery = null,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -146,12 +165,22 @@ export function DealerDirectory({
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => setNow(Date.now()), []);
 
-  const queryOrigin = useMemo(() => resolveOriginFromQuery(qParam, dealers), [qParam, dealers]);
+  // Server-resolved when the prop is supplied, else the legacy in-bundle
+  // lookup. The origin and the notice are BOTH read off the same source: if a
+  // server payload ever lagged the URL by a commit, the whole search UI lags
+  // together rather than pairing "3000" with "we couldn't find that location".
+  const legacyOrigin = useMemo(
+    () => (resolvedQuery ? null : resolveOriginFromQuery(qParam, dealers)),
+    [resolvedQuery, qParam, dealers],
+  );
+  const queryOrigin = resolvedQuery ? resolvedQuery.origin : legacyOrigin;
   const origin = geoOrigin ?? queryOrigin;
-  // Derived straight from the URL (not local state) so the notice shows
-  // however `q` got there — typed + Enter, a shared link, or Back/Forward —
-  // and clears itself the moment `q` is cleared or resolves (BUG 2).
-  const queryNotice = qParam.trim() && !queryOrigin ? NO_MATCH_NOTICE : null;
+  // Derived straight from the resolved query (not local state) so the notice
+  // shows however `q` got there — typed + Enter, a shared link, or
+  // Back/Forward — and clears itself the moment `q` is cleared or resolves
+  // (BUG 2).
+  const activeQuery = resolvedQuery ? resolvedQuery.q : qParam.trim();
+  const queryNotice = activeQuery && !queryOrigin ? NO_MATCH_NOTICE : null;
 
   // Keeps the visible input in sync when `q` changes from outside typing —
   // Back/Forward and the "Clear all filters" link (href `/find-dealer`).
@@ -191,6 +220,22 @@ export function DealerDirectory({
       if (debounceRef.current === timer) debounceRef.current = null;
     };
   }, [searchInput, qParam, commitSearch]);
+
+  // The way back out of a located search: drops the query AND any "Near Me"
+  // fix, so the full directory returns. Mirrors commitSearch with an empty
+  // query rather than reusing it, because commitSearch reads `searchInput`
+  // from its closure and would still see the old text.
+  const showAllDealers = useCallback(() => {
+    if (debounceRef.current !== null) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    setSearchInput("");
+    setGeoOrigin(null);
+    setGeoNotice(null);
+    lastCommittedQRef.current = "";
+    pushParams({ q: "" });
+  }, [pushParams]);
 
   function handleNearMe() {
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
@@ -241,15 +286,40 @@ export function DealerDirectory({
     [chipParam, now],
   );
 
-  const allCount = useMemo(
-    () => applyFilters(dealers, baseFilters, now ?? 0).length,
-    [dealers, baseFilters, now],
+  // The location constraint, applied to any origin — a typed query or "Near
+  // Me". Both answer the same question ("who is near here?"), so a count that
+  // responds to one and not the other would just be a second bug.
+  //
+  // A dealer with no coordinates at all (3 of the Connect records) has no
+  // distance to test, so it cannot honestly be listed as "within 150km" and is
+  // left out of a located search. It is still in every unlocated load, and the
+  // map legend already discloses the gap.
+  const withinRadius = useCallback(
+    (list: DirectoryDealer[]) => {
+      if (!origin) return list;
+      return list.filter((d) => {
+        const point = dealerPoint(d);
+        return point ? haversineKm(origin.coords, point.coords) <= SEARCH_RADIUS_KM : false;
+      });
+    },
+    [origin],
   );
 
-  const filtered = useMemo(
+  const allCount = useMemo(
+    () => withinRadius(applyFilters(dealers, baseFilters, now ?? 0)).length,
+    [dealers, baseFilters, now, withinRadius],
+  );
+
+  // Kept separately so an empty result can say WHICH constraint emptied it:
+  // "nothing within 150km of Hobart" is a different message from "nothing
+  // matches these filters", and a search that resolves to a dealer-free region
+  // is a real answer rather than a failure.
+  const filteredBeforeRadius = useMemo(
     () => applyFilters(dealers, { ...baseFilters, chips: activeChips }, now ?? 0),
     [dealers, baseFilters, activeChips, now],
   );
+  const filtered = useMemo(() => withinRadius(filteredBeforeRadius), [filteredBeforeRadius, withinRadius]);
+  const radiusEmptied = Boolean(origin) && filtered.length === 0 && filteredBeforeRadius.length > 0;
 
   const sort: SortKey = origin ? (sortParamRaw === "name" ? "name" : "distance") : "name";
   const sorted = useMemo(() => SORTS[sort](filtered, origin?.coords ?? null), [filtered, sort, origin]);
@@ -366,6 +436,8 @@ export function DealerDirectory({
             <ResultsHeader
               count={sorted.length}
               originLabel={origin?.label ?? null}
+              radiusKm={origin ? SEARCH_RADIUS_KM : null}
+              onShowAll={origin ? showAllDealers : null}
               sort={sort}
               sortDisabled={!origin}
               onSortChange={handleSortChange}
@@ -373,12 +445,25 @@ export function DealerDirectory({
 
             {sorted.length === 0 ? (
               <div className="rounded-card border border-line bg-white px-6 py-10 text-center">
-                <Text variant="lead" className="text-muted">
-                  No dealers match these filters.
-                </Text>
-                <Button variant="secondary" href="/find-dealer" className="mt-4">
-                  Clear all filters
-                </Button>
+                {radiusEmptied && origin ? (
+                  <>
+                    <Text variant="lead" className="text-muted">
+                      No dealers within {SEARCH_RADIUS_KM}km of {origin.label}.
+                    </Text>
+                    <Button variant="secondary" onClick={() => showAllDealers()} className="mt-4">
+                      Show all dealers
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Text variant="lead" className="text-muted">
+                      No dealers match these filters.
+                    </Text>
+                    <Button variant="secondary" href="/find-dealer" className="mt-4">
+                      Clear all filters
+                    </Button>
+                  </>
+                )}
               </div>
             ) : (
               <div className="flex flex-col gap-[13px]">

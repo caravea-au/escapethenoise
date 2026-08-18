@@ -8,6 +8,7 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { connectStateCounts, getConnectDealers } from "@/lib/connect";
 import { getRecaptchaConfig } from "@/lib/recaptcha";
 import { CHIP_PREDICATES, type ChipKey, type DealerFilters } from "@/lib/dealers";
+import { resolveLocationQuery } from "@/lib/au-locations";
 import { DealerDirectory } from "@/components/DealerDirectory/DealerDirectory";
 
 const CHIP_KEYS = Object.keys(CHIP_PREDICATES) as ChipKey[];
@@ -105,6 +106,15 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
   const counts = dealers ? connectStateCounts(dealers) : null;
   const total = dealers?.length ?? null;
 
+  // The typed location query is resolved HERE, on the server, against the full
+  // AU locality dataset — the 89-entry table the client island searched missed
+  // every capital-city postcode (ETN-008). Resolving server-side is what keeps
+  // that ~768KB dataset out of the browser: only the resolved
+  // `{ coords, label }` crosses into DealerDirectory. `q` travels alongside the
+  // origin so the island can never pair one query's text with another's origin.
+  const q = typeof sp.q === "string" ? sp.q.trim() : "";
+  const resolvedQuery = { q, origin: q ? resolveLocationQuery(q) : null };
+
   const chipParam = typeof sp.chip === "string" && CHIP_KEYS.includes(sp.chip as ChipKey) ? (sp.chip as ChipKey) : null;
   const initialFilters: DealerFilters = {
     state: stateParam,
@@ -144,6 +154,7 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
           <DealerDirectory
             dealers={dealers}
             initialFilters={initialFilters}
+            resolvedQuery={resolvedQuery}
             recaptchaEnabled={recaptcha.enabled}
             recaptchaSiteKey={recaptcha.siteKey}
             recaptchaConfigError={recaptcha.configError}
