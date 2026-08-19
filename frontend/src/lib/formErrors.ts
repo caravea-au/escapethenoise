@@ -31,10 +31,9 @@ export function messageForCode(code: string, supportEmail: string | null): strin
       return "You've sent a few enquiries in a short space of time. Please wait a bit before trying again.";
     case "dealer-not-found":
       return "This dealer listing couldn't be found. Please refresh the page and try again.";
-    // Both of the below are only reachable by posting to the endpoint outside
-    // the UI, or from a page cached before the dealer's status changed — the
-    // enquiry form isn't rendered for an unapproved dealer in the first place.
-    // TODO(client): confirm the wording for these two.
+    // Since ETN-010 the backend no longer refuses an unapproved dealer, so
+    // this code is only reachable from a page cached against an older backend.
+    // Kept because it costs nothing and the alternative is the generic error.
     case "dealer-not-approved":
       return "This dealer isn't taking enquiries through the directory yet.";
     case "connect-unavailable":
