@@ -7,18 +7,21 @@ import { Text } from "@/components/ui/Text";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { connectStateCounts, getConnectDealers } from "@/lib/connect";
 import { getRecaptchaConfig } from "@/lib/recaptcha";
-import { CHIP_PREDICATES, PARTICIPATING_STATES, type ChipKey, type DealerFilters } from "@/lib/dealers";
+import {
+  CHIP_PREDICATES,
+  PARTICIPATING_STATES,
+  participatingDealers,
+  type ChipKey,
+  type DealerFilters,
+} from "@/lib/dealers";
 import { resolveLocationQuery } from "@/lib/au-locations";
 import { DealerDirectory } from "@/components/DealerDirectory/DealerDirectory";
 
 const CHIP_KEYS = Object.keys(CHIP_PREDICATES) as ChipKey[];
 
-// PARTICIPATING_STATES now lives in lib/dealers.ts, because it drives both the
-// state TILES here and the state filter dropdown in the client island
-// (ETN-011). Dealers in every other state and territory stay listed, mapped,
-// counted and filterable: ?state=SA still returns its 7 dealers and the
-// dropdown still shows that value when the URL carries it, it just is not
-// offered as a choice.
+// PARTICIPATING_STATES lives in lib/dealers.ts, because it drives the state
+// TILES here, the state filter dropdown in the client island (ETN-011) and,
+// since ETN-012, which dealers the page loads at all.
 
 // Fallback copy — used when live data (dealer count) can't be resolved, so the
 // page still reads honestly rather than printing a fabricated number.
@@ -46,8 +49,12 @@ export async function generateMetadata({
   const sp = await searchParams;
   const state = typeof sp.state === "string" ? sp.state.toUpperCase() : undefined;
   // Any filter permutation beyond ?state shouldn't be indexed — keeps only the
-  // 8 canonical state URLs (plus the unfiltered index) crawlable.
+  // canonical state URLs (plus the unfiltered index) crawlable. A state we no
+  // longer list is dropped from that set too: the page still resolves for
+  // anyone holding the link, but it has nothing on it to index.
   const hasOtherParams = Object.entries(sp).some(([key, value]) => key !== "state" && value !== undefined);
+  const isDelistedState = !!state && !PARTICIPATING_STATES.includes(state);
+  const noindex = hasOtherParams || isDelistedState;
 
   const title = state ? `Caravan Dealers in ${state}` : FALLBACK.metaTitle;
   const description = state
@@ -59,7 +66,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: "/find-dealer" },
-    ...(hasOtherParams ? { robots: { index: false, follow: true } } : {}),
+    ...(noindex ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       title,
       description,
@@ -92,18 +99,26 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
   // page closed: the directory itself has nothing to do with enquiries, so it
   // renders normally either way (see DealerDirectory's `recaptchaConfigError`,
   // which only affects the enquiry form's copy).
-  const [dealers, recaptcha] = await Promise.all([
+  const [allDealers, recaptcha] = await Promise.all([
     getConnectDealers().catch(() => null),
     getRecaptchaConfig(),
   ]);
 
+  // The single point where dealers enter the page, and so the only place the
+  // participating-states rule has to be applied: the subtitle count, the tiles,
+  // the map markers, the filter dropdown and every ?state= URL are all derived
+  // from `dealers` below, so they agree by construction. Deliberately NOT done
+  // inside lib/connect.ts, because the enquiry form looks a dealer up through
+  // Connect by id: narrowing there would break enquiries for a delisted dealer
+  // instead of just leaving them out of the directory.
+  const dealers = allDealers ? participatingDealers(allDealers) : null;
+
   // State tiles are derived from the very list they link to, so a tile can
-  // never advertise a count the filtered page cannot produce. `total` is the
-  // whole directory and NOT the sum of the tiles: only participating states
-  // get a tile, so the tile counts deliberately sum to less than the
-  // subtitle's total. That gap is intended, not a counting bug. Neither
-  // figure is ever hardcoded — the export's own numbers (403+, 480+, tiles
-  // summing to 465) contradicted each other and aren't used.
+  // never advertise a count the filtered page cannot produce. `total` is now
+  // the sum of the tiles as well, because both are counted off the same
+  // participating-states list. Neither figure is ever hardcoded: the export's
+  // own numbers (403+, 480+, tiles summing to 465) contradicted each other and
+  // aren't used.
   const counts = dealers ? connectStateCounts(dealers) : null;
   const total = dealers?.length ?? null;
 
