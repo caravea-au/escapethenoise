@@ -242,13 +242,28 @@ export const CHIP_PREDICATES: Record<ChipKey, (dealer: DirectoryDealer, nowMs: n
   "Open Now": (d, nowMs) => isOpenNow(d.tradingHours, d.state, nowMs) === true,
 };
 
-/**
- * The states this dealer programme operates in. Drives the state TILES on
- * /find-dealer and the state FILTER DROPDOWN, so the two can never disagree.
- * Dealers in every other state and territory stay listed, mapped, searchable
- * and counted; only the entry points are restricted (ETN-007, ETN-011).
- */
+// The states this dealer programme currently operates in. This is the ONE list
+// that decides which dealers reach the directory at all: the state tiles, the
+// listing, the map, the header count and the filter dropdown are every one of
+// them derived from it, so putting a code back here (or taking one out) is the
+// only edit needed to change which states appear anywhere on /find-dealer
+// (ETN-007 restricted the tiles, ETN-011 the dropdown, ETN-012 the rest).
+//
+// Excluding every other state and territory is TEMPORARY, and presentation
+// only: no dealer record is touched, and an excluded dealer still registers,
+// still exists in Caravea Connect and is still reachable by id for enquiries.
+// The permanent answer is a client-editable list (ETN-009); this constant is
+// the stopgap that buys time for it.
 export const PARTICIPATING_STATES: readonly string[] = ["NSW", "VIC", "QLD"];
+
+/**
+ * The dealers the directory is allowed to show. A dealer with no state at all
+ * is excluded too: it cannot be in a participating state, and leaving it in
+ * would put a card on the page that no tile, count or filter can account for.
+ */
+export function participatingDealers(dealers: DirectoryDealer[]): DirectoryDealer[] {
+  return dealers.filter((d) => !!d.state && PARTICIPATING_STATES.includes(d.state));
+}
 
 export type DealerFilterOptions = {
   states: string[];
