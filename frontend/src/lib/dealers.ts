@@ -242,6 +242,14 @@ export const CHIP_PREDICATES: Record<ChipKey, (dealer: DirectoryDealer, nowMs: n
   "Open Now": (d, nowMs) => isOpenNow(d.tradingHours, d.state, nowMs) === true,
 };
 
+/**
+ * The states this dealer programme operates in. Drives the state TILES on
+ * /find-dealer and the state FILTER DROPDOWN, so the two can never disagree.
+ * Dealers in every other state and territory stay listed, mapped, searchable
+ * and counted; only the entry points are restricted (ETN-007, ETN-011).
+ */
+export const PARTICIPATING_STATES: readonly string[] = ["NSW", "VIC", "QLD"];
+
 export type DealerFilterOptions = {
   states: string[];
   brands: string[];
@@ -249,14 +257,19 @@ export type DealerFilterOptions = {
   services: string[];
 };
 
-/** Sorted unique option lists actually present in the loaded dealers, so every dropdown option yields at least one result. */
+/**
+ * Sorted unique option lists actually present in the loaded dealers, so every dropdown option yields
+ * at least one result. `states` is additionally narrowed to PARTICIPATING_STATES: the dropdown mirrors
+ * Connect's data, so without this it re-offers every state Connect happens to hold. Brands, product
+ * types and services are unrestricted.
+ */
 export function deriveFilterOptions(dealers: DirectoryDealer[]): DealerFilterOptions {
   const states = new Set<string>();
   const brands = new Set<string>();
   const productTypes = new Set<string>();
   const services = new Set<string>();
   for (const d of dealers) {
-    if (d.state) states.add(d.state);
+    if (d.state && PARTICIPATING_STATES.includes(d.state)) states.add(d.state);
     d.brands.forEach((b) => brands.add(b));
     d.productTypes.forEach((t) => productTypes.add(t));
     d.services.forEach((s) => services.add(s));

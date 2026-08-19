@@ -7,17 +7,18 @@ import { Text } from "@/components/ui/Text";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { connectStateCounts, getConnectDealers } from "@/lib/connect";
 import { getRecaptchaConfig } from "@/lib/recaptcha";
-import { CHIP_PREDICATES, type ChipKey, type DealerFilters } from "@/lib/dealers";
+import { CHIP_PREDICATES, PARTICIPATING_STATES, type ChipKey, type DealerFilters } from "@/lib/dealers";
 import { resolveLocationQuery } from "@/lib/au-locations";
 import { DealerDirectory } from "@/components/DealerDirectory/DealerDirectory";
 
 const CHIP_KEYS = Object.keys(CHIP_PREDICATES) as ChipKey[];
 
-// The states this dealer programme actually operates in. Drives the state
-// TILES ONLY: dealers in every other state and territory stay listed, mapped
-// and filterable (?state=SA still works and the filter dropdown still offers
-// it), because they are still real dealers in the directory.
-const PARTICIPATING_STATES = ["NSW", "VIC", "QLD"] as const;
+// PARTICIPATING_STATES now lives in lib/dealers.ts, because it drives both the
+// state TILES here and the state filter dropdown in the client island
+// (ETN-011). Dealers in every other state and territory stay listed, mapped,
+// counted and filterable: ?state=SA still returns its 7 dealers and the
+// dropdown still shows that value when the URL carries it, it just is not
+// offered as a choice.
 
 // Fallback copy — used when live data (dealer count) can't be resolved, so the
 // page still reads honestly rather than printing a fabricated number.

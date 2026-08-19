@@ -267,7 +267,17 @@ export function DealerDirectory({
   }
 
   // ---- Filtering / sorting ---------------------------------------------------
-  const options = useMemo(() => deriveFilterOptions(dealers), [dealers]);
+  const options = useMemo(() => {
+    const derived = deriveFilterOptions(dealers);
+    // The dropdown only offers participating states (ETN-011), but ?state=SA
+    // still filters the list and those URLs are bookmarkable and crawlable.
+    // Keep the URL's value selectable so the control reads "SA" rather than
+    // rendering blank above 7 filtered dealers.
+    if (stateParam && !derived.states.includes(stateParam)) {
+      derived.states = [...derived.states, stateParam].sort((a, b) => a.localeCompare(b));
+    }
+    return derived;
+  }, [dealers, stateParam]);
 
   const baseFilters: DealerFilters = useMemo(
     () => ({
