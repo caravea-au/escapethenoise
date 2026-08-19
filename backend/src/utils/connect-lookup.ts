@@ -3,9 +3,10 @@
  *
  * Exists because /find-dealer now lists dealers pulled from Connect rather than
  * from `dealer-submission`, so the id an enquiry arrives with is a Connect id
- * and resolves to no local row. This is how the enquiry controller gets a
- * TRUSTED dealership name (never taking one from the request body) and confirms
- * the dealer is actually approved before storing a lead.
+ * and resolves to no local row. This is how the enquiry controller confirms the
+ * dealer exists at all, and gets a TRUSTED dealership name for the stored row
+ * rather than taking one from the request body. It does NOT gate on approval
+ * (see `approved` below).
  *
  * TWO lookup routes, because Connect's own two endpoints disagree:
  *
@@ -56,7 +57,15 @@ export type ConnectDealerLookup = {
   ok: boolean;
   /** Set only when `ok` — the dealership name as Connect holds it. */
   name?: string;
-  /** Set only when `ok`. False for a dealer Connect has not approved. */
+  /**
+   * Set only when `ok`. False for a dealer Connect has not approved.
+   *
+   * NOTHING GATES ON THIS ANY MORE. The enquiry controller stopped checking
+   * it in ETN-010, so an unapproved dealer can be sent an enquiry. Kept
+   * because it is the only server-side read of Connect's approval state and
+   * the open question of who may appear in the directory (ETN-009) is likely
+   * to want it. Do not read it as "this is enforced".
+   */
   approved?: boolean;
   code?: 'connect-disabled' | 'dealer-not-found' | 'connect-unavailable';
 };

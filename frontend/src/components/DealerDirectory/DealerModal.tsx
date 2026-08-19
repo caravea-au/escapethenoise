@@ -251,27 +251,19 @@ export function DealerModal({
             </div>
           )}
 
-          {/* Enquiry form only for dealers Connect has approved. An unapproved
-              dealer keeps everything above — name, address, hours, services,
-              brands, directions, website — they simply cannot be sent a lead.
-              Nothing is rendered in the form's place: there is no client-
-              approved copy for "this dealer can't be contacted yet", and
-              inventing some would be worse than the absence.
-              TODO(client): confirm whether an unapproved dealer should show a
-              short explanatory line here instead of nothing.
-
-              This is presentation only. The dealer-enquiry controller re-checks
-              approval against Connect before storing anything, because a hidden
-              form stops nobody from POSTing directly. */}
-          {dealer.approved && (
-            <DealerEnquiryForm
-              dealer={dealer}
-              recaptchaEnabled={recaptchaEnabled}
-              recaptchaSiteKey={recaptchaSiteKey}
-              recaptchaConfigError={recaptchaConfigError}
-              onDone={onClose}
-            />
-          )}
+          {/* Every dealer in the directory can be sent an enquiry, whether or
+              not Connect has approved them. The ✓ Accredited pill above stays
+              gated on `dealer.approved`: that pill is a claim about the dealer,
+              this form is only a way to reach them, and the two are separate
+              decisions. The dealer-enquiry controller no longer checks approval
+              either, so a direct POST behaves the same as this form. */}
+          <DealerEnquiryForm
+            dealer={dealer}
+            recaptchaEnabled={recaptchaEnabled}
+            recaptchaSiteKey={recaptchaSiteKey}
+            recaptchaConfigError={recaptchaConfigError}
+            onDone={onClose}
+          />
         </div>
       </div>
     </div>,

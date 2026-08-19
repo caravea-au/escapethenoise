@@ -120,10 +120,11 @@ export function DealerCard({ dealer, now, origin, selected, onSelect, onOpenModa
         </div>
       )}
 
-      {/* "& Enquire" only when there will actually be an enquiry form in the
-          modal — an unapproved dealer's card must not promise one. */}
+      {/* Every dealer's modal carries an enquiry form now, so "& Enquire" is
+          promised on any selected card. It is still only shown when selected,
+          because that is the state whose modal the button opens straight into. */}
       <Button variant={selected ? "primary" : "secondary"} fullWidth onClick={onOpenModal} className="mt-3">
-        {selected && dealer.approved ? "View Profile & Enquire →" : "View Profile →"}
+        {selected ? "View Profile & Enquire →" : "View Profile →"}
       </Button>
     </div>
   );

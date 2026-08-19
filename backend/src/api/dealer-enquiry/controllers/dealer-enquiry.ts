@@ -99,10 +99,13 @@ type ResolvedDealer = {
 /**
  * Resolves the dealer or returns the `error` the caller should send back.
  *
- * Every failure path DENIES. An enquiry is a lead with a consumer's contact
- * details attached, so an unapproved dealer, an unknown id, or a Connect we
- * cannot reach must all stop the write rather than store a lead against a
- * dealer whose standing we could not confirm.
+ * Approval is NOT checked. Every dealer in the directory can be sent an
+ * enquiry, approved by Connect or not. That is the deliberate change in ETN-010.
+ *
+ * Existence still has to be proven, though, and every remaining failure path
+ * DENIES: an enquiry is a lead with a consumer's contact details attached, so
+ * an unknown id or a Connect we cannot reach must stop the write rather than
+ * store a lead against a dealer we could not confirm exists at all.
  */
 async function resolveDealer(
   dealerDocumentId: string,
@@ -126,15 +129,6 @@ async function resolveDealer(
       error: {
         code: 'connect-unavailable',
         message: 'Dealer details are temporarily unavailable.',
-      },
-    };
-  }
-
-  if (!lookup.approved) {
-    return {
-      error: {
-        code: 'dealer-not-approved',
-        message: 'This dealer is not accepting enquiries yet.',
       },
     };
   }
@@ -245,10 +239,10 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
       });
     }
 
-    // Resolves against the local table first, then Caravea Connect — and also
-    // enforces the approval gate. DealerModal hides the enquiry form for an
-    // unapproved dealer, but hiding a form stops nobody from POSTing to this
-    // endpoint directly, so approval is checked again here where it counts.
+    // Resolves against the local table first, then Caravea Connect. This only
+    // proves the dealer exists and gets their name from the source of truth;
+    // it does not gate on approval, so an unapproved dealer can be enquired
+    // with here exactly as they can from DealerModal.
     const resolved = await resolveDealer(dealerDocumentId);
     if (resolved.error) {
       return ctx.badRequest(resolved.error.message, { code: resolved.error.code });
