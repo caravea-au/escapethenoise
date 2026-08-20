@@ -49,6 +49,7 @@ GET /api/dealers  (published only)   ->   /find-dealer
 | Instant path for the publish toggle | `backend/src/api/dealer/content-types/dealer/lifecycles.ts` → `frontend/src/app/api/revalidate/route.ts` |
 | Frontend getter | `getDirectoryDealers()` in `frontend/src/lib/strapi.ts` |
 | Enquiry resolution | `backend/src/utils/dealer-cache-lookup.ts` |
+| Admin role + list-view defaults | `backend/src/utils/ensure-dealer-visibility-role.ts`, `backend/src/utils/ensure-dealer-admin-view.ts` (both from `src/index.ts` bootstrap) |
 
 ### THE ONE RULE
 
@@ -151,7 +152,7 @@ dealer in the admin and the next sweep re-resolves them.
 
 | | Owner |
 | --- | --- |
-| Every display field | **Connect.** The sweep overwrites freely. Fix a wrong phone number on Connect, not in Strapi, or it reverts within one cron interval. |
+| Every display field | **Connect.** The sweep overwrites freely. Fix a wrong phone number on Connect, not in Strapi, or it reverts within one cron interval — and the **Dealer Visibility** role cannot edit them at all (below). |
 | Publication state (visible / hidden) | **Strapi.** Never touched by the sweep except to publish what is already published. |
 | The six coordinate fields | **Local**, per the ranking above. |
 | `approved` | Connect. **Badge only** — see below. |
@@ -160,6 +161,40 @@ dealer in the admin and the next sweep re-resolves them.
 This is why ETN-009's objection to a local hide-list does not apply: Connect keeps 100% ownership of
 dealer content, and the only locally owned editorial bit is one boolean-shaped state Connect has no
 field for. There is nothing for the two systems to disagree *about*.
+
+## The admin panel
+
+Two things are set up on boot, because both live in the DATABASE rather than the
+repo and would otherwise be a click-path that has to be remembered once per
+environment and silently is not. Both are idempotent and additive: they run once
+and then leave any human customisation alone.
+
+**The `Dealer Visibility` admin role** (`ensure-dealer-visibility-role.ts`) is
+`read` + `publish` on `dealer` with **no `update`**, which is D2 enforced by the
+API rather than by the sweep winning a race. Measured on Strapi 5.40 Community:
+
+| Action | Result |
+| --- | --- |
+| read | 200 |
+| publish / unpublish | 200 |
+| **update** | **403 Policy Failed** |
+| **delete** | **403 Policy Failed** |
+
+The form renders read-only and only the publish/unpublish buttons work. Assigning
+people to the role is still a human step, in Settings → Administration Panel →
+Users. **Super Admins keep full access**, deliberately — someone has to be able to
+fix a broken row, and a manual edit is overwritten by the next sweep anyway, so it
+is self-healing rather than a data-integrity problem.
+
+**The list view** (`ensure-dealer-admin-view.ts`) is set to
+`dealershipName + website`, sorted by name. Strapi derives the layout from schema
+field order, and `connectRef` is the first attribute because it is the match key,
+so the default was `id | connectRef | connectSubmissionId | dealershipName` sorted
+by `connectRef` — three columns of opaque Connect ids
+(`caraveacomp|Vrpb3uPIK2QxIgYyeHWA`) with the dealership name last, and
+`connectRef` as the record label everywhere else in the panel. Unusable for the one
+job this collection exists for. It re-applies only while `mainField` is still the
+auto-derived `connectRef`, so configuring the view by hand is never reverted.
 
 ## Approval and the enquiry form
 
