@@ -18,7 +18,7 @@ import { verifyRecaptcha } from '../../../utils/verify-recaptcha';
 import { encodeAngles } from '../../../utils/encode-angles';
 import { DEALER_NOT_SPAM_FILTER } from '../../../utils/dealer-not-spam-filter';
 import { hashIp } from '../../../utils/hash-ip';
-import { fetchConnectDealer } from '../../../utils/connect-lookup';
+import { fetchCachedDealer } from '../../../utils/dealer-cache-lookup';
 
 const DEALER_UID = 'api::dealer-submission.dealer-submission';
 const ENQUIRY_UID = 'api::dealer-enquiry.dealer-enquiry';
@@ -77,13 +77,16 @@ async function findDealerRow(dealerDocumentId: string): Promise<DealerRow | null
 /**
  * A dealer an enquiry can be filed against, from either source.
  *
- * /find-dealer now lists dealers pulled from Caravea Connect, so the id in
- * `data.dealer` is normally a Connect id (a `reference` such as
- * `caraveacomp|Vrpb3uPIK2QxIgYyeHWA`, or a `submission_id` from a page cached
- * before Connect's 2026-08-17 redeploy) that matches no local row. The local
- * lookup still runs first — it is a cheap SQLite read, it keeps any enquiry
- * sent from a cached page still holding Strapi documentIds working, and it
- * avoids a network round trip on those.
+ * /find-dealer lists dealers out of the local `dealer` cache, so the id in
+ * `data.dealer` is normally a Connect `reference` (`caraveacomp|Vrpb3uPIK2Qx…`)
+ * matching a cached row rather than a dealer-submission documentId. The
+ * dealer-submission lookup still runs FIRST: it is a cheap SQLite read and it
+ * keeps an enquiry sent from a page cached before any of these swaps working.
+ *
+ * Since ETN-013 neither path leaves this server. The cache read replaced a SCAN
+ * of Connect's paginated list — up to 20 sequential outbound requests per
+ * submission, on a public endpoint whose only protection is a rate limit of 5
+ * per IP per 15 minutes.
  *
  * `name` is ALWAYS taken from whichever source resolved the dealer, never from
  * the request body: it is denormalised onto the stored row, so an attacker who
@@ -99,13 +102,20 @@ type ResolvedDealer = {
 /**
  * Resolves the dealer or returns the `error` the caller should send back.
  *
- * Approval is NOT checked. Every dealer in the directory can be sent an
- * enquiry, approved by Connect or not. That is the deliberate change in ETN-010.
+ * Approval is NOT checked. Every dealer in the directory can be sent an enquiry,
+ * approved by Connect or not — the deliberate change in ETN-010.
  *
- * Existence still has to be proven, though, and every remaining failure path
- * DENIES: an enquiry is a lead with a consumer's contact details attached, so
- * an unknown id or a Connect we cannot reach must stop the write rather than
- * store a lead against a dealer we could not confirm exists at all.
+ * PUBLICATION STATE IS checked, inside `fetchCachedDealer`. A dealer staff have
+ * unpublished in Strapi is REFUSED here, not merely hidden on the page: the
+ * enquiry form is gone from their card, but a held link or a plain curl would
+ * otherwise still file leads against a dealership the client has delisted. That
+ * is ETN-013 D3, and it is what makes a hidden dealer genuinely invisible rather
+ * than just absent from a list.
+ *
+ * Existence still has to be proven, and every failure path DENIES: an enquiry is
+ * a lead with a consumer's contact details attached, so an id we cannot resolve
+ * must stop the write rather than store a lead against a dealer we could not
+ * confirm exists.
  */
 async function resolveDealer(
   dealerDocumentId: string,
@@ -115,22 +125,13 @@ async function resolveDealer(
     return { dealer: { row, externalId: null, name: row.dealershipName } };
   }
 
-  const lookup = await fetchConnectDealer(strapi, dealerDocumentId);
+  const lookup = await fetchCachedDealer(dealerDocumentId);
 
   if (!lookup.ok) {
-    // `connect-disabled` (no CONNECT_API_URL/KEY on this box) is reported as
-    // unavailable rather than not-found: the dealer may well exist, this
-    // environment simply cannot check. Telling the visitor their dealer
-    // "couldn't be found" would be a lie about our own misconfiguration.
-    if (lookup.code === 'dealer-not-found') {
-      return { error: { code: 'dealer-not-found', message: 'Unknown dealer.' } };
-    }
-    return {
-      error: {
-        code: 'connect-unavailable',
-        message: 'Dealer details are temporarily unavailable.',
-      },
-    };
+    // A hidden dealer and an id that was never real answer identically. Telling
+    // an enquirer that a dealership exists but has been delisted is not ours to
+    // disclose and is nothing they can act on.
+    return { error: { code: 'dealer-not-found', message: 'Unknown dealer.' } };
   }
 
   return { dealer: { row: null, externalId: dealerDocumentId, name: lookup.name } };
@@ -177,9 +178,9 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
 
     if (honeypotTripped) {
       try {
-        // Local lookup only — deliberately no Connect round trip on this path.
-        // The caller is a bot; the id is recorded as-is (capped) so the row is
-        // still traceable, without spending a network call on it.
+        // dealer-submission lookup only — deliberately no cache read on this
+        // path. The caller is a bot; the id is recorded as-is (capped) so the
+        // row stays traceable, without spending a query on it.
         const dealerRow = await findDealerRow(dealerDocumentId);
         const payload = encodeAngles({
           dealer: dealerRow?.documentId,
@@ -239,10 +240,11 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
       });
     }
 
-    // Resolves against the local table first, then Caravea Connect. This only
-    // proves the dealer exists and gets their name from the source of truth;
-    // it does not gate on approval, so an unapproved dealer can be enquired
-    // with here exactly as they can from DealerModal.
+    // Resolves against dealer-submission first, then the `dealer` cache. Proves
+    // the dealer exists AND is published (ETN-013 D3), and takes their name from
+    // the row rather than the request body. Still does not gate on approval, so
+    // an unapproved dealer can be enquired with here exactly as they can from
+    // DealerModal.
     const resolved = await resolveDealer(dealerDocumentId);
     if (resolved.error) {
       return ctx.badRequest(resolved.error.message, { code: resolved.error.code });
