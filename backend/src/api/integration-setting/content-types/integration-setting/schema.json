@@ -1,0 +1,27 @@
+{
+  "kind": "singleType",
+  "collectionName": "integration_settings",
+  "info": {
+    "singularName": "integration-setting",
+    "pluralName": "integration-settings",
+    "displayName": "Integration Setting",
+    "description": "Operational read-out for the Caravea Connect dealer sync: when it last ran, whether it worked, and what it did. Admin panel only — there is deliberately no controller, service or route folder here, so this single type has no public content API and no Settings → Roles checkbox. CREDENTIALS ARE NOT HERE and must never be added: CONNECT_API_URL / CONNECT_API_KEY live in the server .env. Putting operational secrets in the database is what armed real SMTP against real dealer addresses when a live data.db was copied down for local work."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "connectSyncEnabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Second, in-database guard. The MASTER switch is CONNECT_SYNC_ENABLED in the server .env, which is what gates the cron registration itself; this only lets an admin stop the sync on one environment without a deploy. Both must be on for a sweep to run."
+    },
+    "lastSyncAt": { "type": "datetime" },
+    "lastSyncStatus": {
+      "type": "enumeration",
+      "enum": ["ok", "failed"]
+    },
+    "lastSyncSummary": { "type": "text" }
+  }
+}

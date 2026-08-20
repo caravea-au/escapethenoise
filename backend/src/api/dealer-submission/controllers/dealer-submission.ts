@@ -17,9 +17,7 @@
 import { factories } from '@strapi/strapi';
 import { verifyRecaptcha } from '../../../utils/verify-recaptcha';
 import { encodeAngles } from '../../../utils/encode-angles';
-import { DEALER_NOT_SPAM_FILTER } from '../../../utils/dealer-not-spam-filter';
 import { validateDealerPin } from '../../../utils/dealer-pin';
-import { PUBLIC_DEALER_FIELDS, toPublicDealer } from '../dto/public-dealer';
 
 // reCAPTCHA actions minted by the frontend. The pre-check uses its own action so
 // it doesn't pollute the score distribution for real submissions in the console.
@@ -52,9 +50,13 @@ const TRANSIENT_KEYS = [
 // PUBLIC_ACTIONS in src/index.ts). Left unstripped, a caller with curl could set
 // coordinates directly, skipping every control in validateDealerPin (AU bounds,
 // the far-from-postcode precision downgrade, cleanAddress and its
-// CSV-formula-injection guard) and assert `geocodeSource: 'admin'`. Those forged
-// coordinates would then be published on /find-dealer, because latitude,
-// longitude and precision are in PUBLIC_DEALER_FIELDS.
+// CSV-formula-injection guard) and assert `geocodeSource: 'admin'`.
+//
+// These coordinates no longer reach /find-dealer directly — the directory reads
+// the `dealer` cache now (ETN-013), and this table is one of the SOURCES the
+// sync resolves a pin from. Forged coordinates here would therefore be copied
+// onto a cached dealer and published from there, which is the same exposure by a
+// longer route, so the strip below stays load-bearing.
 //
 // So: strip all six from client input, then write only what validateDealerPin
 // returns. These are server-owned.
@@ -166,64 +168,6 @@ export default factories.createCoreController(
       // throwing. Keep it that way; do not add `required`, a `maxLength`, or a
       // unique index to any of them.
       return super.create(ctx);
-    },
-
-    /**
-     * Public, sanitized dealer directory listing. Bypasses the core
-     * find/document-service entirely: `config/api.ts` caps maxLimit at 100 and
-     * there are 147 dealers, and the core controller has no way to select an
-     * allow-list of fields at the DB layer (PII would still be fetched from
-     * SQLite even if stripped after). `strapi.db.query` lets us pass `select`
-     * so PII never leaves SQLite in the first place.
-     */
-    async findPublic(ctx) {
-      const rows = await strapi.db
-        .query('api::dealer-submission.dealer-submission')
-        .findMany({
-          select: PUBLIC_DEALER_FIELDS as unknown as string[],
-          where: DEALER_NOT_SPAM_FILTER,
-          orderBy: [{ state: 'asc' }, { dealershipName: 'asc' }],
-        });
-
-      // Coordinates are columns on this row, so they ride PUBLIC_DEALER_FIELDS
-      // like everything else and need no second query. toPublicDealer's
-      // `row[field] ?? null` gives the explicit nulls the frontend depends on:
-      // it always sees the same shape and falls back to the postcode centroid.
-      //
-      // geocodeSource, matchedAddress and geocodedAddress are deliberately NOT
-      // in that array. It is both the DB `select` and the output allow-list, so
-      // they never leave SQLite — matchedAddress in particular is raw upstream
-      // Nominatim text. They are also `private` in the schema, which covers the
-      // paths that go through Strapi's own sanitizeOutput rather than this one.
-      const data = (rows as Record<string, unknown>[]).map(toPublicDealer);
-
-      ctx.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
-      ctx.body = { data, meta: { total: data.length } };
-    },
-
-    /**
-     * Public dealer counts per state, for the directory's state filter UI.
-     * Route is `/dealer-counts` (not `/dealers/counts`) so it never depends on
-     * route-registration order against a future `/dealers/:key` route.
-     */
-    async stateCounts(ctx) {
-      const rows = await strapi.db
-        .query('api::dealer-submission.dealer-submission')
-        .findMany({
-          select: ['state'],
-          where: DEALER_NOT_SPAM_FILTER,
-        });
-
-      const counts: Record<string, number> = {};
-      let total = 0;
-      for (const row of rows as { state?: string | null }[]) {
-        if (!row.state) continue;
-        counts[row.state] = (counts[row.state] ?? 0) + 1;
-        total += 1;
-      }
-
-      ctx.set('Cache-Control', 'public, max-age=300');
-      ctx.body = { data: counts, meta: { total } };
     },
   }),
 );

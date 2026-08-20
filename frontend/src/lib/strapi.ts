@@ -101,17 +101,23 @@ export function guideHeroImage(g: BuyingGuide): string {
   return strapiMedia(g.heroImage?.url) ?? strapiMedia(g.cardImage?.url) ?? guidePlaceholder(g.slug);
 }
 
-async function strapiFetch<T>(path: string): Promise<T> {
+async function strapiFetch<T>(path: string, next?: NextFetchOptions): Promise<T> {
   const res = await fetch(`${STRAPI_URL}${path}`, {
     headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {},
     // ISR: revalidate periodically so CMS edits surface without a redeploy.
-    next: { revalidate: 60 },
+    // A caller may also register a cache TAG, which is what lets Strapi push an
+    // invalidation the moment an editor changes something instead of the page
+    // waiting out the window (see app/api/revalidate/route.ts).
+    next: { revalidate: 60, ...next },
   });
   if (!res.ok) {
     throw new Error(`Strapi request failed (${res.status}) for ${path}`);
   }
   return res.json() as Promise<T>;
 }
+
+/** Per-call overrides for the Next data cache. Same shape as `RequestInit["next"]`. */
+type NextFetchOptions = { revalidate?: number | false; tags?: string[] };
 
 type ListResponse = { data: BuyingGuide[] };
 
@@ -450,14 +456,22 @@ export async function getVehicleListingsPage(): Promise<VehicleListingsPage | nu
   }
 }
 
-// ── Dealer directory shape ───────────────────────────────────────────────────
-// Sanitised, allow-listed shape rendered by /find-dealer. The type stays here
-// because every DealerDirectory component imports it from this module, but the
-// DATA no longer comes from Strapi: /find-dealer now reads Caravea Connect (see
-// lib/connect.ts), and the Strapi getters that used to fill this shape from
-// /api/dealers + /api/dealer-counts have been removed with that swap. Both
-// Strapi endpoints still exist and still serve the same JSON — nothing in this
-// app calls them any more.
+// ── Dealer directory ─────────────────────────────────────────────────────────
+// Sanitised, allow-listed shape rendered by /find-dealer, read from Strapi via
+// GET /api/dealers.
+//
+// That endpoint no longer serves the onboarding table. Since ETN-013 it serves
+// the `dealer` collection: a CACHE of the Caravea Connect dealer feed, filled by
+// a cron sweep inside Strapi and gated by Strapi own draft/publish state. The
+// frontend therefore makes ZERO requests to Connect, deliberately, and it is
+// worth keeping it that way — reading Connect live from here made it
+// simultaneously the source of truth, the availability dependency AND the only
+// place dealer visibility could be controlled, so an upstream wipe became a
+// client-facing content outage in under five minutes. That happened on
+// 2026-08-20 and the page reported it as a perfectly normal empty directory.
+//
+// The shape below is UNCHANGED by that swap, which is what leaves search, the
+// radius rule, the participating-states narrowing and the map camera alone.
 
 export type DealerTradingDay = { open: boolean; openTime: string; closeTime: string };
 export type DealerTradingHours = Record<
@@ -466,8 +480,11 @@ export type DealerTradingHours = Record<
 > | null;
 
 export type DirectoryDealer = {
-  // Connect's `submission_id`, not a Strapi documentId. Kept under this name
-  // because it is what cards, map pins and the enquiry POST key on.
+  // Connect's `reference`, not a Strapi documentId — /api/dealers publishes the
+  // cache row's `connectRef` under this name. Kept under this name because it is
+  // what cards, map pins and the enquiry POST key on, and it has to survive the
+  // cache being rebuilt from scratch: a Strapi documentId would not, and every
+  // enquiry ever filed would lose its subject.
   documentId: string;
   dealershipName: string;
   street: string | null;
@@ -508,10 +525,10 @@ export type DirectoryDealer = {
   longitude: number | null;
   precision: "street" | "approx" | null;
 
-  // Whether Connect has approved this dealer. Only approved dealers get an
-  // enquiry form (DealerModal); an unapproved dealer still appears in the list,
-  // on the map and in their own modal. Defaults to false on anything we can't
-  // read, so the form fails closed.
+  // Whether Connect has approved this dealer. BADGE ONLY (ETN-006): every dealer
+  // gets an enquiry form regardless (ETN-010), and visibility is the Strapi
+  // publish toggle (ETN-013), not this. Defaults to false on anything we cannot
+  // read, so an unreadable approval state never claims accreditation.
   approved: boolean;
 };
 
@@ -520,4 +537,40 @@ export type DirectoryDealer = {
 /** Card image: first photo → logo → null. */
 export function dealerCardImage(d: DirectoryDealer): string | null {
   return d.photos[0] ?? d.logo ?? null;
+}
+
+/** The Next cache tag the dealer read registers under. Strapi POSTs this to /api/revalidate. */
+export const DEALERS_TAG = "dealers";
+
+/**
+ * Every dealer the directory may show, from the Strapi cache.
+ *
+ * THROWS when Strapi is unreachable or answering in a shape this cannot read.
+ * find-dealer/page.tsx depends on that distinction: a throw means "we could not
+ * load the directory" (outage panel), an empty array means "Strapi answered and
+ * holds no published dealers" (the calm "none listed yet" panel). Those are very
+ * different messages to a visitor, and conflating them is exactly how two
+ * upstream incidents went unnoticed.
+ *
+ * Only PUBLISHED dealers come back — the endpoint filters on `publishedAt`, and
+ * that is the whole publication gate. Unpublishing a dealer in Strapi removes
+ * them from the cards, the subtitle count, the state tiles, the map markers and
+ * the filter dropdown at once, because all five are derived from this one array.
+ *
+ * Tagged so Strapi can invalidate it the instant someone flips that toggle rather
+ * than the change waiting out the 60 second window. Worth knowing why the tag
+ * earns its keep: Next data cache is stale-while-revalidate and does not move at
+ * all without traffic, so without it the first visitor after expiry still sees
+ * the old list and merely triggers a refresh for whoever comes next.
+ */
+export async function getDirectoryDealers(): Promise<DirectoryDealer[]> {
+  const json = await strapiFetch<{ data: DirectoryDealer[] }>("/api/dealers", {
+    tags: [DEALERS_TAG],
+  });
+
+  if (!Array.isArray(json.data)) {
+    throw new Error("Strapi /api/dealers returned an unrecognised shape");
+  }
+
+  return json.data;
 }
