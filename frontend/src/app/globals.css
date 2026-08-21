@@ -3,9 +3,12 @@
 
 html {
   scroll-behavior: smooth;
-  /* Offset programmatic scroll/anchor/focus targets by the sticky navbar height
-     (Navbar is h-[90px]) so route-change scroll-to-top doesn't tuck content under it. */
-  scroll-padding-top: 90px;
+  /* Offset programmatic scroll/anchor/focus targets by the sticky navbar so
+     route-change scroll-to-top and #hash links don't tuck content under it.
+     The navbar is min-h-[90px] PLUS a 1px bottom border = 91px, so the old
+     90px landed anchor targets 1px UNDER the header, clipping the heading.
+     91px alone leaves them flush against it, so add ~15px of breathing room. */
+  scroll-padding-top: 106px;
 }
 
 @layer base {
@@ -48,6 +51,20 @@ html {
     border-radius: 8px;
     border: 2px solid var(--color-cream);
   }
+}
+
+/* ── Mapbox GL overrides ─────────────────────────────────────────────────────
+   Hides the map's bottom-right control stack (the Mapbox wordmark and the
+   attribution toggle) on the dealer directory map.
+
+   The credits themselves have NOT been dropped — the map legend renders
+   "© Mapbox © OpenStreetMap contributors" as text, which is what keeps the
+   ODbL requirement on the stored geocodes satisfied. Keep that legend line.
+
+   Note: removing the Mapbox wordmark requires a Mapbox plan that permits it.
+   If the account is on standard terms, restore this by deleting the rule. */
+.mapboxgl-ctrl-bottom-right {
+  display: none;
 }
 
 /* ── Keyframes (design.md §8; tokens in tokens.css map these to animate-*) ── */

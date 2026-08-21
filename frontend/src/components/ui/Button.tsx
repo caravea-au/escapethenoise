@@ -5,7 +5,8 @@ const VARIANTS = {
   primary:
     "bg-rust hover:bg-rust-dark text-white shadow-[0_10px_24px_-6px_rgba(193,124,44,.5)] hover:-translate-y-0.5",
   // white fill, green text, hairline border
-  secondary: "bg-white text-green border-[1.5px] border-[#c9bda0] hover:border-green",
+  secondary:
+    "bg-white text-green border-[1.5px] border-line-button hover:border-green hover:bg-cream",
   // green outline on white
   outline: "bg-white text-green border-[1.5px] border-green",
   // translucent glass for dark/photo backgrounds

@@ -16,6 +16,8 @@
 
 import { factories } from '@strapi/strapi';
 import { verifyRecaptcha } from '../../../utils/verify-recaptcha';
+import { encodeAngles } from '../../../utils/encode-angles';
+import { validateDealerPin } from '../../../utils/dealer-pin';
 
 // reCAPTCHA actions minted by the frontend. The pre-check uses its own action so
 // it doesn't pollute the score distribution for real submissions in the console.
@@ -26,7 +28,46 @@ const ACTION_PRECHECK = 'dealer_precheck';
 const MIN_ELAPSED_MS = 3000;
 
 // Client-only keys that must never be persisted (none is a schema attribute).
-const TRANSIENT_KEYS = ['recaptchaToken', 'verifyOnly', 'comment', 'elapsedMs'];
+// `pin` carries the dealer's map coordinates as a nested object; `create`
+// captures and validates it, then writes the flat columns itself.
+//
+// This strip is LOAD-BEARING, not an optimisation. Strapi's core create runs
+// validateInput BEFORE sanitizeInput, and validateInput applies
+// throwUnrecognizedFields unconditionally — it is not gated by `strictParams`,
+// which this project never sets. So a root key with no matching attribute is a
+// 400, not a silent drop.
+const TRANSIENT_KEYS = [
+  'recaptchaToken',
+  'verifyOnly',
+  'comment',
+  'elapsedMs',
+  'pin',
+];
+
+// The six coordinate attributes. They ARE schema attributes, so unlike
+// TRANSIENT_KEYS Strapi would happily persist whatever arrives in them — and
+// `dealer-submission.create` is a PUBLIC, unauthenticated route (see
+// PUBLIC_ACTIONS in src/index.ts). Left unstripped, a caller with curl could set
+// coordinates directly, skipping every control in validateDealerPin (AU bounds,
+// the far-from-postcode precision downgrade, cleanAddress and its
+// CSV-formula-injection guard) and assert `geocodeSource: 'admin'`.
+//
+// These coordinates no longer reach /find-dealer directly — the directory reads
+// the `dealer` cache now (ETN-013), and this table is one of the SOURCES the
+// sync resolves a pin from. Forged coordinates here would therefore be copied
+// onto a cached dealer and published from there, which is the same exposure by a
+// longer route, so the strip below stays load-bearing.
+//
+// So: strip all six from client input, then write only what validateDealerPin
+// returns. These are server-owned.
+const SERVER_OWNED_KEYS = [
+  'latitude',
+  'longitude',
+  'precision',
+  'geocodeSource',
+  'matchedAddress',
+  'geocodedAddress',
+];
 
 export default factories.createCoreController(
   'api::dealer-submission.dealer-submission',
@@ -66,10 +107,16 @@ export default factories.createCoreController(
         return;
       }
 
-      // Strip transient keys before anything touches the DB. Strapi's
-      // sanitizeInput would drop unknown attributes anyway; this keeps the
-      // sanitiser below from walking values we never intend to store.
-      for (const key of TRANSIENT_KEYS) {
+      // Capture the map pin BEFORE the strip loop below removes it. Validation
+      // is authoritative here: this is public unauthenticated input, and the
+      // browser's own bounds/enum checks are a courtesy, not a control.
+      const capturedPin = validateDealerPin(data.pin, data.postcode);
+
+      // Strip transient AND server-owned keys before anything touches the DB.
+      // Both matter, for different reasons: a transient key would be REJECTED by
+      // validateInput (a 400 for the dealer), while a server-owned key would be
+      // ACCEPTED and persisted unvalidated. See the two comment blocks above.
+      for (const key of [...TRANSIENT_KEYS, ...SERVER_OWNED_KEYS]) {
         delete data[key];
       }
 
@@ -92,29 +139,35 @@ export default factories.createCoreController(
 
       // Sanitize every submitted string so no stored value can later be parsed
       // as HTML/script by a future consumer (a directory listing, CSV export,
-      // etc.). We HTML-entity-encode angle brackets rather than strip them: this
-      // is LOSSLESS, so legitimate copy like "vans < 3.5 tonne" survives while
-      // any "<script>" becomes inert "&lt;script&gt;". Recurses into the json
-      // fields (services/brands/productTypes arrays, tradingHours object) and
-      // leaves numbers/booleans untouched.
-      // NOTE: no SQL-keyword filtering — Strapi parameterizes all queries
-      // (SQLite here), and stripping keywords would corrupt legitimate values
-      // like a dealership named "Select Caravans".
+      // etc.). Recurses into the json fields (services/brands/productTypes
+      // arrays, tradingHours object) and leaves numbers/booleans untouched.
       // Side effect worth knowing: this also encodes brackets inside
       // mediaErrors messages, so the odd "&lt;" may show up in the admin email.
-      const encodeAngles = (v: unknown): unknown =>
-        typeof v === 'string'
-          ? v.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          : Array.isArray(v)
-            ? v.map(encodeAngles)
-            : v && typeof v === 'object'
-              ? Object.fromEntries(
-                  Object.entries(v).map(([k, x]) => [k, encodeAngles(x)]),
-                )
-              : v;
-      body.data = encodeAngles(data) as Record<string, unknown>;
+      //
+      // The validated pin is merged in HERE, before the call, so the coordinates
+      // ride the normal create path and land in `event.result` for the
+      // notification email. Passing it through encodeAngles is safe both ways:
+      // the numbers are returned untouched, and cleanAddress has already turned
+      // any angle bracket into `&lt;`, which encodeAngles leaves alone (it
+      // rewrites `<` and `>`, never `&`, so it cannot double-encode).
+      body.data = encodeAngles({
+        ...data,
+        ...(capturedPin ?? {}),
+      }) as Record<string, unknown>;
 
-      return await super.create(ctx);
+      // The coordinates are plain columns on this row now, so they are written
+      // by the create above — no second write keyed on the new documentId, and
+      // nothing to reconcile if that write were to fail.
+      //
+      // The trade-off, stated plainly: the old sidecar write was wrapped in a
+      // try/catch and only logged, so a coordinate problem could never cost a
+      // dealer their submission. It can now. Everything that could fail has been
+      // removed rather than caught — the six attributes are optional,
+      // defaultless, unconstrained, and `text` rather than a length-limited
+      // varchar, and validateDealerPin degrades bad input to null instead of
+      // throwing. Keep it that way; do not add `required`, a `maxLength`, or a
+      // unique index to any of them.
+      return super.create(ctx);
     },
   }),
 );

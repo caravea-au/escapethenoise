@@ -9,6 +9,9 @@
 
 import nodemailer from 'nodemailer';
 
+import { isConnectEnabled, postDealerRegistration } from '../../../../utils/connect-client';
+import { shouldPushToConnect, toConnectRegistration } from '../../../../utils/connect-registration';
+
 type AnyRecord = Record<string, unknown>;
 
 function line(label: string, value: unknown): string {
@@ -47,6 +50,19 @@ function buildSummary(d: AnyRecord): string {
     line('DMS', d.dmsOther || d.dms) +
     '\n' +
     line('Address', [d.street, d.suburb, d.state, d.postcode].filter(Boolean).join(', ')) +
+    // The pin the dealer placed on the map, if they placed one. Readable here
+    // because the coordinates are now columns on this row, written before
+    // `super.create`, so they are in `event.result` — when they lived in a
+    // separate collection this lifecycle ran too early to ever see them.
+    // `line()` returns '' for null, so a pin-less submission just omits the row.
+    line(
+      'Map pin',
+      Number.isFinite(d.latitude) && Number.isFinite(d.longitude)
+        ? `${d.latitude}, ${d.longitude} (${d.precision === 'street' ? 'street level' : 'approximate'}` +
+            `${d.geocodeSource === 'adjusted' ? ', dealer positioned it themselves' : ''}) ` +
+            `https://www.google.com/maps/search/?api=1&query=${d.latitude},${d.longitude}`
+        : '',
+    ) +
     line('Motor Dealer Licence name', d.motorDealerLicenceName) +
     line('Motor Dealer Licence number', d.motorDealerLicenceNumber) +
     line('Multiple locations', d.multipleLocations ? 'Yes' : 'No') +
@@ -89,6 +105,34 @@ function buildSummary(d: AnyRecord): string {
 export default {
   async afterCreate(event: { result: AnyRecord }) {
     const d = event.result;
+
+    // Caravea Connect forward — its OWN try/catch, placed BEFORE the SMTP
+    // block below on purpose. That block RETURNS EARLY whenever the "SMTP
+    // Settings" single type is missing, disabled, or hostless — true on
+    // every environment without SMTP configured — so anything placed after
+    // that return would be dead code there. Best-effort only: afterCreate
+    // runs inside the create's DB write transaction, so there is no retry;
+    // a miss is covered by a separate re-push, not automatically here.
+    try {
+      if (isConnectEnabled()) {
+        const documentId = String(d.documentId ?? '');
+        const gate = shouldPushToConnect(d);
+        if (gate.ok) {
+          const payload = toConnectRegistration(d);
+          await postDealerRegistration(strapi, documentId, payload);
+        } else {
+          strapi.log.warn(
+            `[dealer-submission] Connect push skipped (documentId=${documentId}, reason=${gate.reason})`,
+          );
+        }
+      }
+    } catch (err) {
+      strapi.log.error(
+        `[dealer-submission] Connect forward failed (submission still saved): ${
+          (err as Error)?.message ?? err
+        }`,
+      );
+    }
 
     try {
       const cfg = (await strapi

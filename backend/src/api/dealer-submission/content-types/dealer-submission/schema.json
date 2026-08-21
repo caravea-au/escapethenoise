@@ -5,7 +5,7 @@
     "singularName": "dealer-submission",
     "pluralName": "dealer-submissions",
     "displayName": "Dealer Submission",
-    "description": "Dealership onboarding form submissions from /dealer-directory-onboarding"
+    "description": "Dealership onboarding form submissions from /dealer-directory-onboarding. Map coordinates live here, on the dealer, so staff see the pin beside the address and lat/long can be exported to the CRM without a join. They previously sat in a separate dealer-geocode collection, kept apart because the client had forbidden adding fields here; that constraint was lifted 2026-08-11. latitude/longitude/precision are no longer served from this table — since ETN-013 /find-dealer reads the `dealer` cache, and this table is one of the sources its sync resolves a pin from (name+postcode, then a unique website domain stem). A pin here still reaches the public map, by that longer route. geocodeSource/matchedAddress/geocodedAddress are private and must stay that way — matchedAddress is raw upstream Nominatim text. All six are SERVER-OWNED: create() strips them from client input and writes only what validateDealerPin returns, because this collection's create is a public unauthenticated route."
   },
   "options": {
     "draftAndPublish": false
@@ -26,6 +26,18 @@
       "enum": ["VIC", "NSW", "QLD", "SA", "WA", "TAS", "NT", "ACT"]
     },
     "postcode": { "type": "string", "required": true },
+
+    "latitude": { "type": "float" },
+    "longitude": { "type": "float" },
+    "precision": { "type": "enumeration", "enum": ["street", "approx"] },
+    "geocodeSource": {
+      "type": "enumeration",
+      "enum": ["geocoded", "adjusted", "imported", "admin"],
+      "private": true
+    },
+    "matchedAddress": { "type": "text", "private": true },
+    "geocodedAddress": { "type": "text", "private": true },
+
     "motorDealerLicenceName": { "type": "string" },
     "motorDealerLicenceNumber": { "type": "string" },
     "multipleLocations": { "type": "boolean", "default": false },

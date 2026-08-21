@@ -1,9 +1,9 @@
 import { Hero } from "@/components/home/Hero";
-// import { TrustBar } from "@/components/home/TrustBar"; // hidden — Trusted across Australia / accredited caravan dealers section
-// import { OpenDayCTA } from "@/components/home/OpenDayCTA"; // hidden — Open Day banner
+import { TrustBar } from "@/components/home/TrustBar";
+// import { OpenDayCTA } from "@/components/home/OpenDayCTA"; // hidden — see the render below
 import { JourneySection } from "@/components/home/JourneySection";
 import { BuyingGuides } from "@/components/home/BuyingGuides";
-// import { LifestyleBand } from "@/components/home/LifestyleBand"; // hidden during design iteration — Open Road is Calling section
+import { LifestyleBand } from "@/components/home/LifestyleBand";
 import { getHomePage } from "@/lib/strapi";
 
 export default async function HomePage() {
@@ -13,12 +13,15 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero data={home?.hero} />
-      {/* <TrustBar data={home?.trustBar} /> hidden — Trusted across Australia / accredited caravan dealers section */}
-      {/* <OpenDayCTA /> hidden during design iteration — Open Day banner */}
+      <Hero data={home?.hero} showSearch />
+      <TrustBar data={home?.trustBar} />
+      {/* <OpenDayCTA data={home?.openDay} /> — hidden: the fallback date (12 July 2026)
+          is in the past and Strapi's openDay is still null, so this would publish a
+          finished event. Restore once the client supplies a live date + a real
+          registration URL for "Register Now". */}
       <JourneySection data={home?.journey} />
       <BuyingGuides header={home?.buyingGuidesHeader} />
-      {/* <LifestyleBand /> hidden during design iteration — Open Road is Calling section */}
+      <LifestyleBand data={home?.lifestyle} />
     </>
   );
 }

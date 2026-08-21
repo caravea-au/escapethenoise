@@ -1,5 +1,9 @@
 import type { Core } from "@strapi/strapi";
 
+import { backfillDealerCoordinates } from "./utils/backfill-dealer-coordinates";
+import { ensureDealerAdminView } from "./utils/ensure-dealer-admin-view";
+import { ensureDealerVisibilityRole } from "./utils/ensure-dealer-visibility-role";
+
 // Public read actions the frontend relies on (it queries these without a token).
 const PUBLIC_ACTIONS = [
   "api::buying-guide.buying-guide.find",
@@ -40,5 +44,18 @@ export default {
         strapi.log.info(`[bootstrap] granted Public role: ${action}`);
       }
     }
+
+    // Fill in dealer map coordinates on any database that has not had them yet.
+    // Flag-guarded, fills only NULLs, and never throws — see the module header
+    // for why this lives here rather than in database/migrations.
+    await backfillDealerCoordinates(strapi);
+
+    // The admin role that can publish and unpublish dealers but not edit them
+    // (ETN-013 D2). Idempotent, additive, never throws.
+    await ensureDealerVisibilityRole(strapi);
+
+    // A Dealer list view a human can actually scan, instead of three columns of
+    // opaque Connect ids. Runs once, then leaves any customisation alone.
+    await ensureDealerAdminView(strapi);
   },
 };

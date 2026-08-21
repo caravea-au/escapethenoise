@@ -23,13 +23,15 @@ const link = (label, url) => ({ label, url });
 const HEADER = {
   // Guides-first nav (#10) — topics route to the Buying Guides listing; the
   // hash is the category slug (BuyingGuidesExplorer.slugify) so the listing
-  // filters to that category and scrolls to the grid.
+  // filters to that category and scrolls to the grid. "Find a Dealer" leads,
+  // matching the export's header order (ETN-003).
   menuItems: [
+    link("Find a Dealer", "/find-dealer"),
     link("Education & Safety", "/buying-guides#education-safety"),
     link("Happy Campers", "/buying-guides#happy-campers"),
     link("Towing Guide", "/buying-guides#towing-guide"),
   ],
-  ctaButton: link("Visit a Dealer →", "#"),
+  ctaButton: link("Visit a Dealer →", "/find-dealer"),
 };
 
 const FOOTER = {

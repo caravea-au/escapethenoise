@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Eyebrow } from "@/components/ui/Eyebrow";
+import { GENERIC_SUBMIT_ERROR, messageForCode, readStrapiError } from "@/lib/formErrors";
 import {
   Field,
   FormSection,
@@ -14,6 +15,7 @@ import {
   Textarea,
   ToggleLine,
 } from "./Controls";
+import { LocationPin, type DealerPin } from "./LocationPin";
 import { MultiSelect } from "./MultiSelect";
 import { PhotoUploader } from "./PhotoUploader";
 import { TradingHours, defaultHours, type Hours } from "./TradingHours";
@@ -54,54 +56,6 @@ const SUBMIT_TIMEOUT_MS = 20_000;
 const UPLOAD_ATTEMPTS = 2;
 const UPLOAD_RETRY_DELAY_MS = 800;
 
-const GENERIC_SUBMIT_ERROR =
-  "Something went wrong sending your details. Please try again in a moment.";
-
-// Maps the backend's stable `error.details.code` values to what the dealer reads.
-// Never match on the message text — these codes are the contract.
-function messageForCode(code: string, supportEmail: string | null): string {
-  const emailSentence = supportEmail
-    ? ` If that's not possible, email us at ${supportEmail} and we'll list you manually.`
-    : "";
-  switch (code) {
-    case "recaptcha-browser-blocked":
-      return `Your browser or network is blocking our spam check, so we can't confirm you're human. Try turning off your ad blocker, or use a different browser or network.${emailSentence}`;
-    case "recaptcha-low-score":
-      // Unlike browser-blocked, a low v3 score is scored fresh on every attempt,
-      // so a second go genuinely often passes. Lead with "try again" — and your
-      // details are still on screen, so retrying costs nothing.
-      return supportEmail
-        ? `Our spam check wasn't sure about this one. Your details are still here, so please press the button again. If it keeps happening, email us at ${supportEmail} and we'll list you manually.`
-        : "Our spam check wasn't sure about this one. Your details are still here, so please press the button again.";
-    case "recaptcha-missing-token":
-    case "recaptcha-action-mismatch":
-      return "Our spam check didn't finish loading. Please refresh the page and try again.";
-    case "recaptcha-unavailable":
-      return "We couldn't reach our spam checker just now. Please try again in a moment.";
-    default:
-      return GENERIC_SUBMIT_ERROR;
-  }
-}
-
-// Strapi errors come back as { data: null, error: { status, message, details } }.
-// Pull out the code and message rather than throwing the body away.
-async function readStrapiError(
-  res: Response,
-): Promise<{ status: number; code: string; message: string }> {
-  let code = "";
-  let message = "";
-  try {
-    const parsed = (await res.json()) as {
-      error?: { message?: string; details?: { code?: string } };
-    };
-    code = parsed?.error?.details?.code ?? "";
-    message = parsed?.error?.message ?? "";
-  } catch {
-    // Non-JSON body (an nginx error page, say) — status is all we get.
-  }
-  return { status: res.status, code, message };
-}
-
 type MediaFailure = {
   field: "logo" | "photos";
   name: string;
@@ -124,6 +78,7 @@ type DealerOnboardingFormProps = {
   recaptchaEnabled?: boolean;
   recaptchaSiteKey?: string | null;
   supportEmail?: string | null;
+  mapboxToken?: string | null;
 };
 
 // Scalar string fields (camelCase = Strapi attribute names).
@@ -162,6 +117,7 @@ export function DealerOnboardingForm({
   recaptchaEnabled = false,
   recaptchaSiteKey = null,
   supportEmail = null,
+  mapboxToken = null,
 }: DealerOnboardingFormProps = {}) {
   const router = useRouter();
   const recaptchaActive = recaptchaEnabled && !!recaptchaSiteKey;
@@ -174,6 +130,10 @@ export function DealerOnboardingForm({
   const [hours, setHours] = useState<Hours>(defaultHours);
   const [logo, setLogo] = useState<File | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
+  // Map pin. NOT a key in `fields`: that object is string-only, and a pin is a
+  // nested object of numbers that the backend unpacks into its own columns.
+  // Optional by design — never validated, never counted in the progress bar.
+  const [pin, setPin] = useState<DealerPin | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [consentError, setConsentError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -449,6 +409,14 @@ export function DealerOnboardingForm({
         photos: photoUrls,
         mediaErrors: failures,
         submittedAt: new Date().toISOString(),
+        // Transient. The dealer's coordinates ARE columns on dealer-submission,
+        // but they are server-owned: the controller validates this nested `pin`
+        // and writes the flat columns itself, and it rejects those column names
+        // outright if a client sends them. So send the pin, never latitude and
+        // longitude. Omitted entirely when the address never resolved, rather
+        // than sent as nulls — Strapi 400s on any key with no matching
+        // attribute, so `pin` must be stripped server-side either way.
+        ...(pin ? { pin } : {}),
         comment,
         elapsedMs: loadedAt.current ? Date.now() - loadedAt.current : 0,
         ...(recaptchaToken ? { recaptchaToken } : {}),
@@ -598,6 +566,18 @@ export function DealerOnboardingForm({
             <Field full label="Postcode" required htmlFor="postcode" hint="Used to match you with nearby buyers." error={errors.postcode}>
               <span data-field="postcode" />
               <Input id="postcode" inputMode="numeric" maxLength={4} className="max-w-[160px]" value={fields.postcode} onChange={(e) => set("postcode", e.target.value)} aria-invalid={!!errors.postcode} placeholder="e.g. 3175" />
+            </Field>
+            <Field full label="Your spot on the map" optional htmlFor="locationPin" hint="We place this from your address — check it's right so buyers arrive at the correct gate.">
+              <LocationPin
+                id="locationPin"
+                street={fields.street}
+                suburb={fields.suburb}
+                state={fields.state}
+                postcode={fields.postcode}
+                mapboxToken={mapboxToken}
+                pin={pin}
+                onChange={setPin}
+              />
             </Field>
             {/* Shown for every dealer; mandatory only for NSW (NSW Motor Dealer Licence law). */}
             <Field label="Motor Dealer Licence name" required={nswLicenceRequired} optional={!nswLicenceRequired} htmlFor="motorDealerLicenceName" hint="Mandatory for NSW dealers — the name your NSW Motor Dealer Licence is held under." error={errors.motorDealerLicenceName}>
