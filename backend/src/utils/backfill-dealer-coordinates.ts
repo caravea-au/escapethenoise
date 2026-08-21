@@ -1,5 +1,5 @@
 /**
- * One-time backfill of the 142 dealer map coordinates onto dealer-submission.
+ * One-time backfill of the 175 dealer map coordinates onto dealer-submission.
  *
  * These coordinates used to live in a separate `dealer-geocode` collection.
  * When that collection was folded into dealer-submission, its rows had to come
@@ -25,6 +25,26 @@
  * verified identical to the table before the move: 142 keys, no key differences,
  * no value differences beyond 1e-9, and every row `source: 'imported'`.
  *
+ * REGENERATED 2026-08-20, 142 -> 175 entries, ahead of the first deploy to
+ * production. The original 142 came from dealer_geocodes; the 33 added here are
+ * dealers who arrived after that snapshot and were geocoded locally by
+ * scripts/geocode-dealers.mjs. Regenerating rather than appending was verified
+ * safe: the new file drops no key and drifts on none of the original 142 (zero
+ * coordinate, precision or address differences), so a database that already ran
+ * this backfill is unaffected either way.
+ *
+ * The seed is sized to production deliberately. Every one of the 175 documentIds
+ * exists in production's dealer_submissions (checked with a read-only query on
+ * the live box), and the 5 live dealers still missing a pin are absent on
+ * purpose: their source addresses are corrupt or fictional, so no geocoder will
+ * ever resolve them and a human has to fix the address first. Do not pad the
+ * file to 180 to make the numbers line up.
+ *
+ * To regenerate: geocode the gaps locally, then emit
+ * `documentId -> [latitude, longitude, precision, matchedAddress]` for every
+ * dealer_submissions row that has coordinates, sorted by documentId, and bump
+ * EXPECTED to match. Re-check the no-drift property before committing.
+ *
  * This is NOT a seed script that runs on every boot (which CLAUDE.md forbids).
  * It is flag-guarded in Strapi's core store, so it runs once per database, and
  * it only ever fills NULLs — a coordinate corrected by staff in the admin is
@@ -44,7 +64,7 @@ const FLAG = { type: 'core', key: 'dealer-coordinates-backfilled' } as const;
 
 // What we expect to place. Used only to decide how loudly to complain — the
 // backfill is never fatal.
-const EXPECTED = 142;
+const EXPECTED = 175;
 
 /** `documentId -> [latitude, longitude, precision, matchedAddress]`. */
 type SeedEntry = [number, number, string, string];
