@@ -1,10 +1,20 @@
 import type { Core } from '@strapi/strapi';
+import cronTasks from './cron-tasks';
 
 const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Server => ({
   host: env('HOST', '0.0.0.0'),
   port: env.int('PORT', 1337),
   app: {
     keys: env.array('APP_KEYS'),
+  },
+  // Master switch for the Caravea Connect dealer sync (config/cron-tasks.ts).
+  // Defaults OFF so a box with no Connect credentials — production today — never
+  // schedules a sweep that could only fail, and so staging and production are
+  // independent. The sweep needs CONNECT_API_URL + CONNECT_API_KEY as well;
+  // without them every run fails on rail 1 and writes nothing.
+  cron: {
+    enabled: env.bool('CONNECT_SYNC_ENABLED', false),
+    tasks: cronTasks,
   },
   // Behind nginx (production), Koa must trust X-Forwarded-For or
   // `ctx.request.ip` resolves to the proxy's IP for every request — turning

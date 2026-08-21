@@ -5,11 +5,12 @@ import { Container } from "@/components/ui/Container";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
 import { Eyebrow } from "@/components/ui/Eyebrow";
-import { connectStateCounts, getConnectDealers } from "@/lib/connect";
+import { getDirectoryDealers } from "@/lib/strapi";
 import { getRecaptchaConfig } from "@/lib/recaptcha";
 import {
   CHIP_PREDICATES,
   PARTICIPATING_STATES,
+  dealerStateCounts,
   participatingDealers,
   type ChipKey,
   type DealerFilters,
@@ -86,13 +87,19 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
   const sp = await searchParams;
   const stateParam = typeof sp.state === "string" ? sp.state.toUpperCase() : undefined;
 
-  // getConnectDealers throws when Connect is unreachable or unconfigured, and
-  // this app has no route-level error boundary above (site)/, so it is caught
-  // here — the branded page must still render, just without live data. Note
-  // the distinction the catch preserves: `null` means we could not read the
-  // directory (outage panel), whereas an empty array means Connect answered
-  // and holds no dealers for us (DealerDirectory's own "none listed yet"
-  // panel). Right now the empty case is the honest one.
+  // getDirectoryDealers throws when Strapi is unreachable or answering in a
+  // shape it cannot read, and this app has no route-level error boundary above
+  // (site)/, so it is caught here — the branded page must still render, just
+  // without live data. Note the distinction the catch preserves: `null` means we
+  // could not read the directory (outage panel), whereas an empty array means
+  // Strapi answered and holds no PUBLISHED dealers (DealerDirectory's own "none
+  // listed yet" panel).
+  //
+  // Since ETN-013 that read is a Strapi cache of the Caravea Connect feed rather
+  // than a live Connect request, which is what puts a last-good floor under this
+  // page: an upstream wipe or shape change is now a failed cron sweep in a log,
+  // and the directory keeps serving the last complete set it was given. There is
+  // deliberately NO live-Connect fallback here — last-good or nothing.
   //
   // getRecaptchaConfig() never throws — and unlike
   // /dealer-directory-onboarding, a recaptcha-config outage must NOT fail this
@@ -100,7 +107,7 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
   // renders normally either way (see DealerDirectory's `recaptchaConfigError`,
   // which only affects the enquiry form's copy).
   const [allDealers, recaptcha] = await Promise.all([
-    getConnectDealers().catch(() => null),
+    getDirectoryDealers().catch(() => null),
     getRecaptchaConfig(),
   ]);
 
@@ -108,9 +115,10 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
   // participating-states rule has to be applied: the subtitle count, the tiles,
   // the map markers, the filter dropdown and every ?state= URL are all derived
   // from `dealers` below, so they agree by construction. Deliberately NOT done
-  // inside lib/connect.ts, because the enquiry form looks a dealer up through
-  // Connect by id: narrowing there would break enquiries for a delisted dealer
-  // instead of just leaving them out of the directory.
+  // in the Strapi getter or in the sync, because the enquiry controller resolves
+  // a dealer by the same id: narrowing upstream of here would refuse enquiries
+  // from a delisted dealer's held link instead of just leaving them out of the
+  // directory. That is ETN-012's rule and this is where it stays.
   const dealers = allDealers ? participatingDealers(allDealers) : null;
 
   // State tiles are derived from the very list they link to, so a tile can
@@ -119,7 +127,7 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
   // participating-states list. Neither figure is ever hardcoded: the export's
   // own numbers (403+, 480+, tiles summing to 465) contradicted each other and
   // aren't used.
-  const counts = dealers ? connectStateCounts(dealers) : null;
+  const counts = dealers ? dealerStateCounts(dealers) : null;
   const total = dealers?.length ?? null;
 
   // The typed location query is resolved HERE, on the server, against the full
@@ -186,7 +194,7 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
           </Heading>
           <div className="mx-auto mt-8 grid max-w-[980px] grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3.5 lg:grid-cols-3">
             {PARTICIPATING_STATES.map((abbr) => {
-              // A state Connect has no dealer in is absent from the derived
+              // A state with no published dealer is absent from the derived
               // counts, which is a real zero — not unknown data. Only a failed
               // read leaves the count off the tile entirely.
               const count = counts ? (counts[abbr] ?? 0) : undefined;

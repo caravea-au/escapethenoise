@@ -265,6 +265,25 @@ export function participatingDealers(dealers: DirectoryDealer[]): DirectoryDeale
   return dealers.filter((d) => !!d.state && PARTICIPATING_STATES.includes(d.state));
 }
 
+/**
+ * Dealers per state (`{ VIC: 28, NSW: 46 }`) for the state tiles, derived from
+ * the same array the list renders.
+ *
+ * Deliberately NOT read from Strapi /api/dealer-counts, which still exists and
+ * still answers. The tiles used to come from that endpoint while the list came
+ * from somewhere else, which meant a tile could advertise a count the page it
+ * linked to could not produce. Counting off the rendered array makes the subtitle
+ * total the sum of the tiles by construction.
+ */
+export function dealerStateCounts(dealers: DirectoryDealer[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const dealer of dealers) {
+    if (!dealer.state) continue;
+    counts[dealer.state] = (counts[dealer.state] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export type DealerFilterOptions = {
   states: string[];
   brands: string[];

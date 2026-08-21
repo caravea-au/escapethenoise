@@ -104,7 +104,7 @@ export const cleanAddress = (value: unknown): string => {
       // harmless — encodeAngles rewrites only `<` and `>`, never `&`, so it is a
       // no-op on output that is already `&lt;`. Kept here rather than deleted so
       // this stays correct if the merge order ever moves back. Not reachable
-      // today (neither field is in PUBLIC_DEALER_FIELDS, both are `private`, and
+      // today (neither field is in the public dealer allow-list, both are `private`, and
       // the frontend never renders them), which is exactly why it would be easy
       // to expose later by accident.
       .replace(/</g, '&lt;')
