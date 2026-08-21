@@ -23,7 +23,8 @@
     "start": "strapi start",
     "strapi": "strapi",
     "upgrade": "npx @strapi/upgrade latest",
-    "upgrade:dry": "npx @strapi/upgrade latest --dry"
+    "upgrade:dry": "npx @strapi/upgrade latest --dry",
+    "seed:dealer-cache": "node scripts/seed-dealer-cache.cjs"
   },
   "dependencies": {
     "@strapi/plugin-cloud": "5.40.0",
