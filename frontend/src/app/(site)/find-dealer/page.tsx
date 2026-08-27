@@ -106,10 +106,21 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
   // page closed: the directory itself has nothing to do with enquiries, so it
   // renders normally either way (see DealerDirectory's `recaptchaConfigError`,
   // which only affects the enquiry form's copy).
-  const [allDealers, recaptcha] = await Promise.all([
+  const [directory, recaptcha] = await Promise.all([
     getDirectoryDealers().catch(() => null),
     getRecaptchaConfig(),
   ]);
+
+  // Destructured rather than returned flat so the null-versus-empty-array
+  // distinction above survives: `directory` is null only when the read failed,
+  // and `allDealers` keeps carrying exactly that meaning downstream.
+  const allDealers = directory?.dealers ?? null;
+
+  // The site-wide enquiry-form switch (Strapi’s Dealer Directory Settings
+  // single type), read out of the same response. Fails CLOSED: if we could not
+  // read the directory at all then we do not know the switch’s state either, and
+  // hiding the form is the safe assumption.
+  const enquiryFormEnabled = directory?.enquiryFormEnabled ?? false;
 
   // The single point where dealers enter the page, and so the only place the
   // participating-states rule has to be applied: the subtitle count, the tiles,
@@ -182,6 +193,7 @@ export default async function FindDealerPage({ searchParams }: { searchParams: S
             recaptchaEnabled={recaptcha.enabled}
             recaptchaSiteKey={recaptcha.siteKey}
             recaptchaConfigError={recaptcha.configError}
+            enquiryFormEnabled={enquiryFormEnabled}
             mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? null}
           />
         </Suspense>
