@@ -55,6 +55,12 @@ type Props = {
   // See find-dealer/page.tsx — true only when the config fetch itself failed.
   recaptchaConfigError?: boolean;
   /**
+   * The SITE-WIDE enquiry-form switch, from Strapi’s Dealer Directory Settings
+   * single type. One value for the whole directory, deliberately not a
+   * per-dealer field, so there is a single place to turn the form on or off.
+   */
+  enquiryFormEnabled: boolean;
+  /**
    * The typed query resolved on the server against the full AU locality
    * dataset, which is far too large to ship to the browser (ETN-008). `q` is
    * carried alongside so the origin is always read together with the query it
@@ -73,6 +79,7 @@ export function DealerDirectory({
   recaptchaSiteKey,
   mapboxToken,
   recaptchaConfigError = false,
+  enquiryFormEnabled,
   resolvedQuery = null,
 }: Props) {
   const router = useRouter();
@@ -489,6 +496,7 @@ export function DealerDirectory({
                       dealer={d}
                       now={now}
                       origin={origin}
+                      enquiryFormEnabled={enquiryFormEnabled}
                       selected={selectedId === d.documentId}
                       onSelect={() => setSelectedId(d.documentId)}
                       onOpenModal={() => {
@@ -512,6 +520,7 @@ export function DealerDirectory({
           recaptchaEnabled={recaptchaEnabled}
           recaptchaSiteKey={recaptchaSiteKey}
           recaptchaConfigError={recaptchaConfigError}
+          enquiryFormEnabled={enquiryFormEnabled}
           onClose={() => setModalDealer(null)}
         />
       )}

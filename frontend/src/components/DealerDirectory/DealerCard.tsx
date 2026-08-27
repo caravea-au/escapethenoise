@@ -19,11 +19,13 @@ type Props = {
   now: number | null;
   origin: DealerOrigin | null;
   selected: boolean;
+  // Site-wide switch, not a per-dealer field. See DealerDirectory’s Props.
+  enquiryFormEnabled: boolean;
   onSelect: () => void;
   onOpenModal: () => void;
 };
 
-export function DealerCard({ dealer, now, origin, selected, onSelect, onOpenModal }: Props) {
+export function DealerCard({ dealer, now, origin, selected, enquiryFormEnabled, onSelect, onOpenModal }: Props) {
   const openNow = now !== null ? isOpenNow(dealer.tradingHours, dealer.state, now) : null;
   const image = dealerCardImage(dealer);
   const location = [dealer.suburb, dealer.state].filter(Boolean).join(", ");
@@ -120,11 +122,15 @@ export function DealerCard({ dealer, now, origin, selected, onSelect, onOpenModa
         </div>
       )}
 
-      {/* Every dealer's modal carries an enquiry form now, so "& Enquire" is
-          promised on any selected card. It is still only shown when selected,
-          because that is the state whose modal the button opens straight into. */}
+      {/* "& Enquire" is only promised when the modal this button opens will
+          actually carry a form. `enquiryFormEnabled` is ONE site-wide switch
+          (Strapi’s Dealer Directory Settings), not a per-dealer field, so the
+          wording has to check it too, or every selected card would promise an
+          enquiry the modal does not offer. It is still only shown when
+          selected, because that is the state whose modal the button opens
+          straight into. */}
       <Button variant={selected ? "primary" : "secondary"} fullWidth onClick={onOpenModal} className="mt-3">
-        {selected ? "View Profile & Enquire →" : "View Profile →"}
+        {selected && enquiryFormEnabled ? "View Profile & Enquire →" : "View Profile →"}
       </Button>
     </div>
   );

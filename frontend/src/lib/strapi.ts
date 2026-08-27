@@ -557,14 +557,26 @@ export const DEALERS_TAG = "dealers";
  * them from the cards, the subtitle count, the state tiles, the map markers and
  * the filter dropdown at once, because all five are derived from this one array.
  *
+ * Also carries the SITE-WIDE enquiry-form switch out of the response meta. It
+ * rides here rather than having a fetch of its own because this page already
+ * calls this endpoint, and because the switch then sits under the same
+ * `dealers` cache tag, so one revalidation covers the list and the switch
+ * together instead of letting them disagree for up to a minute.
+ *
  * Tagged so Strapi can invalidate it the instant someone flips that toggle rather
  * than the change waiting out the 60 second window. Worth knowing why the tag
  * earns its keep: Next data cache is stale-while-revalidate and does not move at
  * all without traffic, so without it the first visitor after expiry still sees
  * the old list and merely triggers a refresh for whoever comes next.
  */
-export async function getDirectoryDealers(): Promise<DirectoryDealer[]> {
-  const json = await strapiFetch<{ data: DirectoryDealer[] }>("/api/dealers", {
+export async function getDirectoryDealers(): Promise<{
+  dealers: DirectoryDealer[];
+  enquiryFormEnabled: boolean;
+}> {
+  const json = await strapiFetch<{
+    data: DirectoryDealer[];
+    meta?: { enquiryFormEnabled?: unknown };
+  }>("/api/dealers", {
     tags: [DEALERS_TAG],
   });
 
@@ -572,5 +584,11 @@ export async function getDirectoryDealers(): Promise<DirectoryDealer[]> {
     throw new Error("Strapi /api/dealers returned an unrecognised shape");
   }
 
-  return json.data;
+  return {
+    dealers: json.data,
+    // === true, so a missing or malformed meta reads as OFF. This fails closed
+    // on purpose: not knowing the switch’s state must never be the thing that
+    // publishes an enquiry form.
+    enquiryFormEnabled: json.meta?.enquiryFormEnabled === true,
+  };
 }
