@@ -211,6 +211,53 @@ export function todayHoursLabel(
   return `Today · ${format12Hour(openMin)} – ${format12Hour(closeMin)}`;
 }
 
+/**
+ * Formats a dealer's `phone` field for display, plus the compact digit string
+ * to use as a `tel:` href (or `null` when the value isn't a phone number at
+ * all).
+ *
+ * The five recognised shapes below are exactly what was MEASURED across the
+ * 164 real dealer records: 10-digit mobiles (`04`), 10-digit 1300/1800
+ * numbers, 10-digit landlines (`0X XXXX XXXX`, the common case), bare
+ * 8-digit landlines with no area code, and 6-digit `13` numbers. Nothing else
+ * is invented.
+ *
+ * The fallback matters more than it looks: one real production dealer's
+ * `phone` field literally contains the text "Maple Leaf Automotive Pty Ltd".
+ * Anything that doesn't match a recognised shape is returned completely
+ * unchanged, with `tel: null`, so it renders as plain text rather than a
+ * broken `tel:` link. Do not "simplify" this fallback away: it is load
+ * bearing for that record, not defensive padding.
+ */
+export function formatPhone(raw: string | null): { display: string; tel: string | null } {
+  if (!raw) return { display: "", tel: null };
+
+  // A leading +61 is Australia's country code for a domestic 0-prefixed
+  // number, so normalise it before stripping punctuation and "+61 3 9088 6599"
+  // and "03 9088 6599" land on the same digit string.
+  const trimmed = raw.trim();
+  const withoutCountryCode = trimmed.startsWith("+61") ? `0${trimmed.slice(3)}` : trimmed;
+  const digits = withoutCountryCode.replace(/\D/g, "");
+
+  if (digits.length === 10 && digits.startsWith("04")) {
+    return { display: `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`, tel: digits };
+  }
+  if (digits.length === 10 && (digits.startsWith("1300") || digits.startsWith("1800"))) {
+    return { display: `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`, tel: digits };
+  }
+  if (digits.length === 10 && digits.startsWith("0")) {
+    return { display: `${digits.slice(0, 2)} ${digits.slice(2, 6)} ${digits.slice(6)}`, tel: digits };
+  }
+  if (digits.length === 8) {
+    return { display: `${digits.slice(0, 4)} ${digits.slice(4)}`, tel: digits };
+  }
+  if (digits.length === 6 && digits.startsWith("13")) {
+    return { display: `${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4)}`, tel: digits };
+  }
+
+  return { display: raw, tel: null };
+}
+
 const SALES_SERVICES = new Set(["New sales", "Used sales"]);
 
 /** Map pin colour category (design.md §6 — rust = sales, green = service, `#3a7d4e` = rental). */

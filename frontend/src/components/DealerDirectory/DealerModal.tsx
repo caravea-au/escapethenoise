@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { dealerCardImage, type DirectoryDealer } from "@/lib/strapi";
-import { distanceLabelFor, isOpenNow, todayHoursLabel, type DealerOrigin } from "@/lib/dealers";
+import { distanceLabelFor, formatPhone, isOpenNow, todayHoursLabel, type DealerOrigin } from "@/lib/dealers";
 import { DealerEnquiryForm } from "./DealerEnquiryForm";
 import { BrandsIcon, ClockIcon, CloseIcon, DirectionsIcon, PhoneIcon, PinIcon, ServicesIcon, WebsiteIcon } from "./icons";
 
@@ -14,6 +14,8 @@ type Props = {
   recaptchaEnabled: boolean;
   recaptchaSiteKey: string | null;
   recaptchaConfigError: boolean;
+  // Site-wide switch, not a per-dealer field. See DealerDirectory’s Props.
+  enquiryFormEnabled: boolean;
   onClose: () => void;
 };
 
@@ -34,6 +36,7 @@ export function DealerModal({
   recaptchaEnabled,
   recaptchaSiteKey,
   recaptchaConfigError,
+  enquiryFormEnabled,
   onClose,
 }: Props) {
   const titleId = useId();
@@ -97,6 +100,7 @@ export function DealerModal({
   const location = [dealer.suburb, dealer.state].filter(Boolean).join(", ");
   const address = [dealer.street, dealer.suburb, dealer.state, dealer.postcode].filter(Boolean).join(", ");
   const hoursLabel = now !== null ? todayHoursLabel(dealer.tradingHours, dealer.state, now) : null;
+  const phone = formatPhone(dealer.phone);
 
   const distanceLabel = distanceLabelFor(origin, dealer);
 
@@ -193,15 +197,24 @@ export function DealerModal({
             {address && (
               <div className="flex items-start gap-[11px] text-[13.5px] text-ink">
                 <PinIcon className="mt-px shrink-0 text-gold-deep" />
-                {address}
+                {/* Reuses directionsUrl() rather than building a second URL
+                    from the same parts, so this link and the "Get directions"
+                    button above are guaranteed to point at the same place. */}
+                <a href={directionsUrl(dealer)} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  {address}
+                </a>
               </div>
             )}
             {dealer.phone && (
               <div className="flex items-start gap-[11px] text-[13.5px] text-ink">
                 <PhoneIcon className="mt-px shrink-0 text-gold-deep" />
-                <a href={`tel:${dealer.phone}`} className="hover:underline">
-                  {dealer.phone}
-                </a>
+                {phone.tel ? (
+                  <a href={`tel:${phone.tel}`} className="hover:underline">
+                    {phone.display}
+                  </a>
+                ) : (
+                  <span>{phone.display}</span>
+                )}
               </div>
             )}
             {hoursLabel && (
@@ -251,19 +264,30 @@ export function DealerModal({
             </div>
           )}
 
-          {/* Every dealer in the directory can be sent an enquiry, whether or
-              not Connect has approved them. The ✓ Accredited pill above stays
-              gated on `dealer.approved`: that pill is a claim about the dealer,
-              this form is only a way to reach them, and the two are separate
-              decisions. The dealer-enquiry controller no longer checks approval
-              either, so a direct POST behaves the same as this form. */}
-          <DealerEnquiryForm
-            dealer={dealer}
-            recaptchaEnabled={recaptchaEnabled}
-            recaptchaSiteKey={recaptchaSiteKey}
-            recaptchaConfigError={recaptchaConfigError}
-            onDone={onClose}
-          />
+          {/* Shown only when staff have switched the enquiry form on for the
+              WHOLE directory, via Strapi’s Dealer Directory Settings single
+              type. Deliberately ONE switch rather than a field on each dealer,
+              so there is a single place to turn enquiries on or off, and it
+              arrives here as a prop rather than on `dealer` for exactly that
+              reason: it is not a property of any one dealer.
+
+              Three independent decisions meet on this screen and none of them
+              implies another: this switch, the ✓ Accredited pill above
+              (Connect’s `approved`, ETN-006), and whether the cache row is
+              published at all (ETN-013).
+
+              Presentational gate only. The dealer-enquiry controller does not
+              check it, so a direct POST is still accepted while the form is
+              hidden. That was a deliberate call, not an oversight. */}
+          {enquiryFormEnabled && (
+            <DealerEnquiryForm
+              dealer={dealer}
+              recaptchaEnabled={recaptchaEnabled}
+              recaptchaSiteKey={recaptchaSiteKey}
+              recaptchaConfigError={recaptchaConfigError}
+              onDone={onClose}
+            />
+          )}
         </div>
       </div>
     </div>,

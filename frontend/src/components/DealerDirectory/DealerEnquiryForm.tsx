@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/DealerOnboardingForm/Controls";
 import { GENERIC_SUBMIT_ERROR, messageForCode, readStrapiError } from "@/lib/formErrors";
+import { formatPhone } from "@/lib/dealers";
 import type { DirectoryDealer } from "@/lib/strapi";
 
 const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337";
@@ -36,6 +37,8 @@ type Props = {
 
 export function DealerEnquiryForm({ dealer, recaptchaEnabled, recaptchaSiteKey, recaptchaConfigError, onDone }: Props) {
   const recaptchaActive = recaptchaEnabled && !!recaptchaSiteKey;
+  // Named dealerPhone, not phone: `phone` below is the enquirer’s own number.
+  const dealerPhone = formatPhone(dealer.phone);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -168,7 +171,15 @@ export function DealerEnquiryForm({ dealer, recaptchaEnabled, recaptchaSiteKey, 
       {recaptchaConfigError && dealer.phone && (
         <p className="mt-[5px] text-[12.5px] text-muted">
           Our spam check is temporarily unavailable. If sending doesn&apos;t work, you can call {dealer.dealershipName}{" "}
-          directly on <a href={`tel:${dealer.phone}`} className="font-semibold text-green underline">{dealer.phone}</a>.
+          directly on{" "}
+          {dealerPhone.tel ? (
+            <a href={`tel:${dealerPhone.tel}`} className="font-semibold text-green underline">
+              {dealerPhone.display}
+            </a>
+          ) : (
+            <span className="font-semibold text-green">{dealerPhone.display}</span>
+          )}
+          .
         </p>
       )}
       <form ref={formRef} onSubmit={handleSubmit} noValidate className="mt-3.5 flex flex-col gap-[11px]">

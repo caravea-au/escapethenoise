@@ -1,0 +1,21 @@
+{
+  "kind": "singleType",
+  "collectionName": "dealer_directory_settings",
+  "info": {
+    "singularName": "dealer-directory-setting",
+    "pluralName": "dealer-directory-settings",
+    "displayName": "Dealer Directory Settings",
+    "description": "Site-wide switches for the /find-dealer directory. ONE row, and it applies to EVERY dealer at once: this is deliberately not a per-dealer field, so there is a single place to turn the enquiry form on or off for the whole site. Admin panel only, exactly like Integration Setting: there is no controller, service or route folder here, so this single type has no public content API of its own and no Settings -> Roles checkbox. The frontend never reads it directly. The dealer controller reads it server-side and reports it in the meta of GET /api/dealers, which the directory page already calls, so the switch costs no extra request and cannot be read by anyone the dealer list is not already public to."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "enquiryFormEnabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show the 'Enquire with this dealer' form in the dealer modal on /find-dealer. OFF by default, and off is also what a missing row means, so the form stays hidden until someone deliberately turns it on. This is a presentational gate only: the dealer-enquiry controller does not check it, so a direct POST to /api/dealer-enquiries is still accepted while it is off."
+    }
+  }
+}
