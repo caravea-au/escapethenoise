@@ -20,6 +20,7 @@ import { factories } from '@strapi/strapi';
 import { DEALER_SELECT_FIELDS, toPublicDealer } from '../dto/public-dealer';
 
 const DEALER_UID = 'api::dealer.dealer';
+const SETTINGS_UID = 'api::dealer-directory-setting.dealer-directory-setting';
 
 /**
  * Published-only, and the reason it has to be spelled out: `strapi.db.query` is
@@ -30,6 +31,30 @@ const DEALER_UID = 'api::dealer.dealer';
  */
 const PUBLISHED_ONLY = { publishedAt: { $notNull: true } };
 
+/**
+ * The site-wide enquiry-form switch, read straight off the Dealer Directory
+ * Settings single type.
+ *
+ * It is reported in this endpoint's `meta` rather than given a public route of
+ * its own, for three reasons: /find-dealer already calls this endpoint so the
+ * switch costs no extra request, it lands under the same `dealers` cache tag so
+ * one revalidation covers both, and it exposes no content API that the dealer
+ * list is not already public to.
+ *
+ * Fails CLOSED. A single type that has never been saved has no row at all, and
+ * a read error here must not take the whole directory down, so both cases
+ * resolve to false: the form stays hidden until someone deliberately turns it
+ * on. `=== true` because the column reads NULL, not false, on a row that
+ * predates it.
+ */
+async function enquiryFormEnabled(): Promise<boolean> {
+  try {
+    const row = await strapi.db.query(SETTINGS_UID).findOne({ select: ['enquiryFormEnabled'] });
+    return (row as { enquiryFormEnabled?: unknown } | null)?.enquiryFormEnabled === true;
+  } catch {
+    return false;
+  }
+}
 export default factories.createCoreController(DEALER_UID, () => ({
   /**
    * Public, sanitised dealer directory listing.
@@ -54,7 +79,7 @@ export default factories.createCoreController(DEALER_UID, () => ({
     const data = (rows as Record<string, unknown>[]).map(toPublicDealer);
 
     ctx.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
-    ctx.body = { data, meta: { total: data.length } };
+    ctx.body = { data, meta: { total: data.length, enquiryFormEnabled: await enquiryFormEnabled() } };
   },
 
   /**
