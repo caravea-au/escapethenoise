@@ -141,6 +141,82 @@ function normaliseState(value: unknown): string | null {
   return STATES[raw.toLowerCase().replace(/\s+/g, ' ')] ?? null;
 }
 
+// ── the match key ────────────────────────────────────────────────────────────
+
+/**
+ * TLD-insensitive domain stem: `https://www.example.com.au/dealers` → `example`.
+ *
+ * TLD-insensitive on purpose — the same dealership appears as
+ * `crusadercaravansmelbourne.com.au` in one system and `.com` in the other, and
+ * an exact-host comparison misses it. Tolerant of the ~189 scheme-less values in
+ * this data (`www.example.com.au`), which `new URL()` cannot parse.
+ *
+ * Both scheme strips are load-bearing. The second one exists because a real
+ * cached dealer carries `https//portmacquariecaravans.com.au`, a colon short of
+ * a URL, and without it the stem reads `https`, which is not a domain and is
+ * shared by every other value mistyped the same way. The `http`/`https` reject
+ * below catches whatever malformation is not anticipated here: a record with no
+ * usable stem is skipped, which is recoverable, where a record silently keyed on
+ * `https` merges two dealerships into one listing, which is not.
+ */
+export function domainStem(website: unknown): string | null {
+  const raw = String(website ?? '')
+    .trim()
+    .toLowerCase();
+  if (!raw) return null;
+  const host = raw
+    .replace(/^[a-z][a-z0-9+.-]*:\/*/, '')
+    .replace(/^https?\/+/, '')
+    .split('/')[0]
+    .split('?')[0]
+    .replace(/^www\./, '');
+  const stem = host.split('.')[0];
+  if (!stem || stem.length < 3 || stem === 'http' || stem === 'https') return null;
+  return stem;
+}
+
+/** Lowercase alphanumerics only, so `Hamilton North` and `HAMILTON NORTH` are one suburb. */
+const normaliseSuburb = (value: unknown): string =>
+  String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+/**
+ * The match key we derive when Connect supplies none of its own (ETN-014).
+ *
+ * Connect populated `reference` on 2026-08-17, when this mapper was written
+ * against it, and regressed to null shortly after. Eleven days later every one
+ * of 196 records still carried `reference: null`, `caravea_company_id: null` and
+ * no `submission_id` at all, so every record failed to map and the directory
+ * froze on its go-live seed with a 38-dealer backlog. Connect populating a real
+ * id remains the fix that matters and is still outstanding with them; this is
+ * what stops us being blocked on it.
+ *
+ * Domain plus suburb, measured over the real 196 rather than chosen: it yields
+ * 193 distinct keys, and all three collisions are one dealership that submitted
+ * twice (Ballarat City Caravans, Prestige Jayco Bendigo, Torus RV, each pair
+ * same domain, same street, days apart), so every collision here COLLAPSES a
+ * duplicate rather than merging two businesses. Postcode was the alternative and
+ * is worse: Connect stores postcodes as integers, so Darwin's `0829` arrives as
+ * `829` and that dealer would never be recognised again.
+ *
+ * The residual risk, accepted with zero instances in the feed today: two
+ * branches of one chain in the SAME suburb would share a key and merge into one
+ * listing. Ezytrail already has five locations sharing `ezytrail.com.au` and all
+ * five are in different suburbs.
+ *
+ * Prefixed `dz|` so a derived key is distinguishable at a glance from one
+ * Connect issued, in SQL and in the admin, exactly as the go-live seed's
+ * `seed|` refs are.
+ */
+export function derivedConnectRef(website: unknown, suburb: unknown): string | null {
+  const stem = domainStem(website);
+  const locality = normaliseSuburb(suburb);
+  // Half a key is worse than none: it would match some other half-keyed dealer.
+  if (!stem || !locality) return null;
+  return `dz|${stem}|${locality}`;
+}
+
 // ── response shape ───────────────────────────────────────────────────────────
 
 /**
@@ -277,11 +353,26 @@ export function toDealerRecord(record: Json): ConnectDealerRecord | null {
   const { submissionId, reference, registration, profile, location, information } =
     normaliseRecord(record);
 
-  // `reference` is the match key, so a record without one cannot be cached at
-  // all: there would be no way to recognise it again on the next sweep, and it
-  // would be re-created as a duplicate every 10 minutes. Fall back to
-  // `submission_id` for anything still arriving in the old shape.
-  const connectRef = reference ?? submissionId;
+  // A record without a match key cannot be cached at all: there would be no way
+  // to recognise it again on the next sweep, and it would be re-created as a
+  // duplicate every 10 minutes.
+  //
+  // Ordered by how much the key is OURS. `reference` is Connect's own id in
+  // their key space and always wins; `submission_id` covers anything still
+  // arriving in the old nested shape; the derived key is the floor, and exists
+  // only because all three of Connect's ids have read null since 2026-08-21.
+  // Leaving `reference` first is what makes the fallback self-healing: the
+  // sweep re-keys onto their id the moment they ship one (see the derived-key
+  // reconciliation in `dealer-sync.ts`), with no migration and no second deploy.
+  //
+  // Derived from the WEBSITE we store, not from `company.domain`. The two carry
+  // the same host on all 196 records, but only one of them ends up in a column,
+  // and the sync re-keys a cached dealer by recomputing this key from that
+  // column, so deriving from a field we do not keep would eventually key a row
+  // by something it no longer carries.
+  const website = str(profile.website) ?? str(profile.domain);
+  const connectRef =
+    reference ?? submissionId ?? derivedConnectRef(website, location.city);
   const dealershipName = str(profile.name);
   if (!connectRef || !dealershipName) return null;
 
@@ -298,7 +389,7 @@ export function toDealerRecord(record: Json): ConnectDealerRecord | null {
     postcode: str(location.postcode),
 
     phone: str(profile.phone_number),
-    website: str(profile.website),
+    website,
     description: str(profile.description),
 
     // `logo`/`photo_urls` arrive as free-text strings and end up in an <img src>,
