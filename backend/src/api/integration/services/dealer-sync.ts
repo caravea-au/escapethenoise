@@ -50,6 +50,8 @@ import type { Core } from '@strapi/strapi';
 
 import {
   ConnectFeedError,
+  derivedConnectRef,
+  domainStem,
   fetchConnectDealerFeed,
   toDealerRecord,
   type ConnectDealerRecord,
@@ -77,6 +79,8 @@ export type DealerSyncSummary = {
   duplicates: number;
   created: number;
   updated: number;
+  /** Cached dealers matched on the derived key and re-keyed onto the ref this sweep carried. */
+  rekeyed: number;
   /** Unchanged: no write, no publish, no `updatedAt` churn. */
   skipped: number;
   markedMissing: number;
@@ -99,6 +103,7 @@ const createSummary = (): DealerSyncSummary => ({
   duplicates: 0,
   created: 0,
   updated: 0,
+  rekeyed: 0,
   skipped: 0,
   markedMissing: 0,
   returned: 0,
@@ -133,6 +138,10 @@ const NO_PIN: Pin = {
 
 type CachedDealer = {
   documentId: string;
+  /** The ref this row is currently stored under. May be a `seed|` or `dz|` key rather than one Connect issued. */
+  connectRef: string;
+  /** `dz|stem|suburb` recomputed from this row's own website and suburb, or null if either is unusable. */
+  derivedKey: string | null;
   /** Whether a published version of this document exists. The ONLY thing that decides whether the sync may call publish(). */
   hasPublished: boolean;
   sourceHash: string | null;
@@ -178,7 +187,17 @@ function readPin(row: Record<string, unknown>): Pin {
  */
 async function loadCache(strapi: Core.Strapi): Promise<Map<string, CachedDealer>> {
   const rows = (await strapi.db.query(DEALER_UID).findMany({
-    select: ['documentId', 'connectRef', 'sourceHash', 'sourceStatus', 'publishedAt', ...PIN_FIELDS],
+    select: [
+      'documentId',
+      'connectRef',
+      'sourceHash',
+      'sourceStatus',
+      'publishedAt',
+      // Read only to rebuild the derived match key; neither is written by this query.
+      'website',
+      'suburb',
+      ...PIN_FIELDS,
+    ],
   })) as Record<string, unknown>[];
 
   const grouped = new Map<string, Record<string, unknown>[]>();
@@ -201,6 +220,8 @@ async function loadCache(strapi: Core.Strapi): Promise<Map<string, CachedDealer>
 
     cache.set(ref, {
       documentId: String(source.documentId),
+      connectRef: ref,
+      derivedKey: derivedConnectRef(source.website, source.suburb),
       hasPublished: group.some((row) => Boolean(row.publishedAt)),
       sourceHash: typeof source.sourceHash === 'string' ? source.sourceHash : null,
       sourceStatus: typeof source.sourceStatus === 'string' ? source.sourceStatus : null,
@@ -284,28 +305,6 @@ const normaliseName = (value: unknown): string =>
     .replace(/[^a-z0-9]/g, '');
 
 const normalisePostcode = (value: unknown): string => String(value ?? '').trim();
-
-/**
- * TLD-insensitive domain stem: `https://www.example.com.au/dealers` → `example`.
- *
- * TLD-insensitive on purpose — the same dealership appears as
- * `crusadercaravansmelbourne.com.au` in one system and `.com` in the other, and
- * an exact-host comparison misses it. Tolerant of the ~189 scheme-less values in
- * this data (`www.example.com.au`), which `new URL()` cannot parse.
- */
-function domainStem(website: unknown): string | null {
-  const raw = String(website ?? '')
-    .trim()
-    .toLowerCase();
-  if (!raw) return null;
-  const host = raw
-    .replace(/^[a-z]+:\/\//, '')
-    .split('/')[0]
-    .split('?')[0]
-    .replace(/^www\./, '');
-  const stem = host.split('.')[0];
-  return stem && stem.length >= 3 ? stem : null;
-}
 
 const EARTH_RADIUS_KM = 6371;
 
@@ -442,6 +441,95 @@ function sharedConnectStems(records: ConnectDealerRecord[]): Set<string> {
     seen.set(stem, (seen.get(stem) ?? 0) + 1);
   }
   return new Set([...seen.entries()].filter(([, count]) => count > 1).map(([stem]) => stem));
+}
+
+// ── matching a feed record to the row that already holds it ──────────────────
+
+/**
+ * Which cached dealer each incoming record belongs to.
+ *
+ * The cache is keyed on `connectRef`, so this used to be one `cache.get`. It is
+ * not enough any more, because the ref a record arrives with can legitimately
+ * CHANGE while the dealer stays the same:
+ *
+ *   seed|<documentId>          the go-live CSV seed, 165 rows, never synced
+ *   dz|<stem>|<suburb>         what ETN-014 derives while Connect sends no id
+ *   <Connect's own reference>  what we go back to the moment they ship one
+ *
+ * Each of those transitions is a re-key of an existing dealer, and a plain
+ * `cache.get` sees all of them as brand new. That is the doubling hazard
+ * recorded against the go-live seed: 196 creates stacked on 165 existing rows,
+ * every dealer listed twice, and no way back except by hand.
+ *
+ * So: match on the ref first, and only then on the derived key recomputed from
+ * each cached row's OWN website and suburb. Measured against production on
+ * 2026-09-01 the derived key reconciles 165 of the 165 seeded documents, which
+ * turns the first sweep from 196 creates into 165 updates and 28 creates.
+ *
+ * Two rules keep it from ever being a guess:
+ *
+ *  - A derived key held by more than one cached document is dropped, not
+ *    resolved. Ambiguity here would attach a dealer to a sibling's row and
+ *    overwrite it.
+ *  - Ref matches are ALL resolved before any derived match is considered, and a
+ *    cached row can be claimed once. Otherwise a record could take a row that
+ *    the record actually holding that ref was about to claim.
+ *
+ * Anything left unclaimed is genuinely absent from the feed, which is what
+ * `missingRefs` and the bulk-disappearance brake are computed from, so this
+ * runs before them, not after.
+ *
+ * TWO THINGS A CONTENT-DERIVED KEY CANNOT DO, both of which go away the moment
+ * Connect ships a real `reference`:
+ *
+ *  - A dealer who MOVES suburb, or changes domain, derives a new key and is
+ *    created as a second listing while the old row is flagged `missing` and
+ *    stays published. Rare, visible, and fixed by deleting the flagged row.
+ *  - If the derived key ever stopped matching WHOLESALE (Connect changing what
+ *    `location.city` means, say), this reconciles nothing and the sweep creates
+ *    the whole feed again. The brake below reports that, but it runs after the
+ *    upsert loop, so it does not prevent it. Watch `rekeyed` in the summary:
+ *    on the sweep that adopts a new key shape it should equal the cache size,
+ *    and on every sweep after it should be 0.
+ */
+type CacheMatch = {
+  cached: CachedDealer;
+  /** The ref the row was stored under, when this sweep is about to change it. Reporting only. */
+  rekeyedFrom: string | null;
+};
+
+function matchCache(
+  records: ConnectDealerRecord[],
+  cache: Map<string, CachedDealer>,
+): { matches: Map<string, CacheMatch>; claimed: Set<string> } {
+  const byDerived = new Map<string, CachedDealer | null>();
+  for (const cached of cache.values()) {
+    if (!cached.derivedKey) continue;
+    // Second occurrence poisons the entry rather than overwriting it.
+    byDerived.set(cached.derivedKey, byDerived.has(cached.derivedKey) ? null : cached);
+  }
+
+  const matches = new Map<string, CacheMatch>();
+  const claimed = new Set<string>();
+
+  for (const record of records) {
+    const direct = cache.get(record.connectRef);
+    if (!direct) continue;
+    matches.set(record.connectRef, { cached: direct, rekeyedFrom: null });
+    claimed.add(direct.connectRef);
+  }
+
+  for (const record of records) {
+    if (matches.has(record.connectRef)) continue;
+    const derived = derivedConnectRef(record.website, record.suburb);
+    if (!derived) continue;
+    const hit = byDerived.get(derived);
+    if (!hit || claimed.has(hit.connectRef)) continue;
+    matches.set(record.connectRef, { cached: hit, rekeyedFrom: hit.connectRef });
+    claimed.add(hit.connectRef);
+  }
+
+  return { matches, claimed };
 }
 
 // ── change detection ─────────────────────────────────────────────────────────
@@ -596,9 +684,15 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
   const submissionIndex = await loadSubmissionIndex(strapi);
   const sharedStems = sharedConnectStems([...byRef.values()]);
 
+  // Which cached row each record belongs to, resolved in one pass up front:
+  // a record can be holding a ref that has changed since the row was written,
+  // and the missing set below is the rows NOTHING claimed, not the refs absent
+  // from the feed.
+  const { matches, claimed } = matchCache([...byRef.values()], cache);
+
   // Rail 4, computed BEFORE any write so the decision is made on a complete
   // picture rather than on however far the upsert loop happened to get.
-  const missingRefs = [...cache.keys()].filter((ref) => !byRef.has(ref));
+  const missingRefs = [...cache.keys()].filter((ref) => !claimed.has(ref));
   const brakeTripped =
     cache.size > 0 && missingRefs.length / cache.size > MISSING_BRAKE_RATIO;
 
@@ -610,7 +704,8 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
   // instant-revalidate path exists for the human publish toggle only.
   await withoutRevalidate(async () => {
     for (const record of byRef.values()) {
-      const cached = cache.get(record.connectRef);
+      const match = matches.get(record.connectRef);
+      const cached = match?.cached;
 
       const pin = resolvePin(
         cached?.pin ?? NO_PIN,
@@ -675,6 +770,9 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
           }
 
           summary.updated += 1;
+          // `data.connectRef` is the ref THIS sweep carried, so the update above is
+          // what actually re-keys the row; this only records that it happened.
+          if (match?.rekeyedFrom) summary.rekeyed += 1;
           if (cached.sourceStatus === 'missing') summary.returned += 1;
         } else {
           // New dealers arrive PUBLISHED (ETN-013 D1): the directory stays
