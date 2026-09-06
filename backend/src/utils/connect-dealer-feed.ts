@@ -303,6 +303,14 @@ function isApproved(record: Json, registration: Json): boolean {
  */
 export type ConnectDealerRecord = {
   connectRef: string;
+  /**
+   * True when `connectRef` is the `dz|` key we derived rather than an id Connect
+   * issued. The sync needs to tell the two apart: a derived key is a stand-in for
+   * ONE dealership and collapses that dealership's duplicate feed records onto a
+   * single listing, whereas two Connect ids are two companies by Connect's own
+   * reckoning. See `collapseIdentifiedTwins` in `dealer-sync.ts`.
+   */
+  connectRefDerived: boolean;
   connectSubmissionId: string | null;
   dealershipName: string;
 
@@ -371,8 +379,8 @@ export function toDealerRecord(record: Json): ConnectDealerRecord | null {
   // column, so deriving from a field we do not keep would eventually key a row
   // by something it no longer carries.
   const website = str(profile.website) ?? str(profile.domain);
-  const connectRef =
-    reference ?? submissionId ?? derivedConnectRef(website, location.city);
+  const issuedRef = reference ?? submissionId;
+  const connectRef = issuedRef ?? derivedConnectRef(website, location.city);
   const dealershipName = str(profile.name);
   if (!connectRef || !dealershipName) return null;
 
@@ -380,6 +388,7 @@ export function toDealerRecord(record: Json): ConnectDealerRecord | null {
 
   return {
     connectRef,
+    connectRefDerived: issuedRef === null,
     connectSubmissionId: submissionId,
     dealershipName,
 
