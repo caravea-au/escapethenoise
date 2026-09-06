@@ -532,6 +532,58 @@ function matchCache(
   return { matches, claimed };
 }
 
+/**
+ * Keeps a dealership Connect lists twice on ONE listing once Connect approves
+ * only one of the pair.
+ *
+ * Connect mints `reference`/`caravea_company_id` on approval, not on submission
+ * (measured 2026-09-07: 7 of 163 on staging, 0 of 216 on production). Until then
+ * both of a dealership's duplicate records derive the SAME `dz|` key, so the
+ * `byRef` map in `runDealerSync` collapses them and they share one cached row.
+ * There are 8 such pairs on the live production feed today.
+ *
+ * Approving one of the pair un-collapses it: that record now carries Connect's id,
+ * no longer shares the derived key, matches no cached row and is CREATED as a
+ * second listing for a dealership that is already listed. Measured before this
+ * existed, minting an id onto one member of the `dz|caravandealer|southnowra`
+ * pair produced `created: 1` instead of a clean re-key.
+ *
+ * So within a derived-key group, an id-bearing record ABSORBS its derived-key
+ * twins: they are dropped from the feed and the survivor re-keys the shared row
+ * onto Connect's id, which is what `matchCache` was built to do.
+ *
+ * Deliberately narrow, and each condition is load-bearing:
+ *
+ *  - Exactly ONE id-bearing record in the group. Two Connect ids mean two
+ *    companies by Connect's own reckoning, and collapsing those would merge two
+ *    businesses, the failure mode a derived key can never be allowed to cause.
+ *    Zero means they already share a key and `byRef` handled it.
+ *  - Only records still keyed on a derived ref are absorbed. A record holding an
+ *    id is never dropped by this.
+ *
+ * This changes nothing while Connect issues no ids: with every record derived,
+ * no group ever has exactly one id-bearing member.
+ */
+function collapseIdentifiedTwins(byRef: Map<string, ConnectDealerRecord>): void {
+  const groups = new Map<string, ConnectDealerRecord[]>();
+  for (const record of byRef.values()) {
+    const derived = derivedConnectRef(record.website, record.suburb);
+    if (!derived) continue;
+    const group = groups.get(derived);
+    if (group) group.push(record);
+    else groups.set(derived, [record]);
+  }
+
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const identified = group.filter((record) => !record.connectRefDerived);
+    if (identified.length !== 1) continue;
+    for (const record of group) {
+      if (record.connectRefDerived) byRef.delete(record.connectRef);
+    }
+  }
+}
+
 // ── change detection ─────────────────────────────────────────────────────────
 
 /**
@@ -678,6 +730,7 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
   // would report as updated every time.
   const byRef = new Map<string, ConnectDealerRecord>();
   for (const record of mapped) byRef.set(record.connectRef, record);
+  collapseIdentifiedTwins(byRef);
   summary.duplicates = mapped.length - byRef.size;
 
   const cache = await loadCache(strapi);
@@ -723,9 +776,17 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
       }
 
       // connectLatitude/connectLongitude are NOT columns — they are candidates
-      // consumed by resolvePin above. Strapi's validateInput throws on any root
-      // key with no matching attribute, so they have to come off here.
-      const { connectLatitude: _lat, connectLongitude: _lng, ...fields } = record;
+      // consumed by resolvePin above. connectRefDerived is not one either: it is
+      // feed provenance, read by collapseIdentifiedTwins and nothing else. Strapi's
+      // validateInput throws on any root key with no matching attribute, and
+      // anything left here also lands in the content hash, so a non-column left
+      // in would rewrite all ~200 rows on the sweep that introduced it.
+      const {
+        connectLatitude: _lat,
+        connectLongitude: _lng,
+        connectRefDerived: _derived,
+        ...fields
+      } = record;
 
       const data: Record<string, unknown> = {
         ...fields,
