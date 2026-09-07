@@ -31,9 +31,19 @@ export function messageForCode(code: string, supportEmail: string | null): strin
       return "You've sent a few enquiries in a short space of time. Please wait a bit before trying again.";
     case "dealer-not-found":
       return "This dealer listing couldn't be found. Please refresh the page and try again.";
-    // Since ETN-010 the backend no longer refuses an unapproved dealer, so
-    // this code is only reachable from a page cached against an older backend.
-    // Kept because it costs nothing and the alternative is the generic error.
+    // ETN-017's gate: the dealer has no Connect company id, so there is no
+    // company to attribute the lead to and the backend refuses the write.
+    //
+    // Rarely seen, because the form is not rendered for such a dealer in the
+    // first place. Reaching this means a page was cached while they still had
+    // an id, or the POST was made directly. The wording says "yet" because that
+    // is the truth: Connect issues the id on approval, so it is a state the
+    // dealer leaves rather than a permanent refusal.
+    //
+    // `dealer-not-approved` is the code the pre-ETN-010 backend sent for the
+    // same situation, and is kept alongside it: a page cached from that far back
+    // would otherwise fall through to the generic error.
+    case "dealer-enquiries-unavailable":
     case "dealer-not-approved":
       return "This dealer isn't taking enquiries through the directory yet.";
     case "connect-unavailable":

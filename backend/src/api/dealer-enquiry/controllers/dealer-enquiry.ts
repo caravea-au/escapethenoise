@@ -66,6 +66,22 @@ const cleanSingleLine = (value: unknown, maxLength: number): string | undefined 
 
 type DealerRow = { id: number; documentId: string; dealershipName: string };
 
+/**
+ * The refusal for a dealer who cannot be sent an enquiry (ETN-017).
+ *
+ * One object, shared by every path that closes the gate, so the two of them can
+ * never drift into telling a caller different things about the same rule.
+ *
+ * The message is deliberately about the DEALER, not about the caller's request:
+ * nothing they typed is wrong and retrying will not help, so "check your input"
+ * would be actively misleading. It reveals nothing the directory does not
+ * already publish. /api/dealers carries `hasCaraveaCompanyId` for every dealer.
+ */
+const ENQUIRIES_CLOSED = {
+  code: 'dealer-enquiries-unavailable',
+  message: 'This dealer is not accepting enquiries.',
+} as const;
+
 async function findDealerRow(dealerDocumentId: string): Promise<DealerRow | null> {
   if (!dealerDocumentId) return null;
   return strapi.db.query(DEALER_UID).findOne({
@@ -75,27 +91,26 @@ async function findDealerRow(dealerDocumentId: string): Promise<DealerRow | null
 }
 
 /**
- * A dealer an enquiry can be filed against, from either source.
+ * A dealer an enquiry can be filed against.
  *
- * /find-dealer lists dealers out of the local `dealer` cache, so the id in
- * `data.dealer` is normally a Connect `reference` (`caraveacomp|Vrpb3uPIK2Qx…`)
- * matching a cached row rather than a dealer-submission documentId. The
- * dealer-submission lookup still runs FIRST: it is a cheap SQLite read and it
- * keeps an enquiry sent from a page cached before any of these swaps working.
+ * ONE source since ETN-017: the local `dealer` cache. /find-dealer lists out of
+ * it, so the id in `data.dealer` is a Connect `reference`
+ * (`caraveacomp|Vrpb3uPIK2Qx…`) matching a cached row. The dealer-submission
+ * lookup that used to run first is gone from this path (see resolveDealer), and
+ * with it the `row` field, which could now only ever be null.
  *
- * Since ETN-013 neither path leaves this server. The cache read replaced a SCAN
+ * Since ETN-013 this read does not leave the server at all. It replaced a SCAN
  * of Connect's paginated list — up to 20 sequential outbound requests per
  * submission, on a public endpoint whose only protection is a rate limit of 5
  * per IP per 15 minutes.
  *
- * `name` is ALWAYS taken from whichever source resolved the dealer, never from
- * the request body: it is denormalised onto the stored row, so an attacker who
- * could set it could write whatever they liked into an admin's view of who an
- * enquiry was for.
+ * `name` is ALWAYS taken from the resolved row, never from the request body: it
+ * is denormalised onto the stored enquiry, so an attacker who could set it could
+ * write whatever they liked into an admin's view of who a lead was for.
  */
 type ResolvedDealer = {
-  row: DealerRow | null;
-  externalId: string | null;
+  /** Connect's `reference`, i.e. the directory match key this was filed under. */
+  externalId: string;
   name: string;
   /**
    * Connect's own company id for this dealer, denormalised onto the enquiry so a
@@ -106,45 +121,56 @@ type ResolvedDealer = {
    * it could point a real consumer's contact details at any company they liked.
    * There is no hidden input for it on the form and there should not be one.
    *
-   * `null` is the normal answer. Connect issues this id ON APPROVAL only
-   * (ETN-015: 7 of 163 dealers on staging, 0 of 216 on production as at
-   * 2026-09-07), and a local dealer-submission row has no Connect id at all. Null
-   * means Connect has issued none — never the derived `dz|<stem>|<suburb>` key,
-   * which lives on `externalId` and is a different thing.
+   * Non-null, and that is new in ETN-017: the absence of this id is now the gate
+   * itself, so a dealer without one never resolves and never reaches this type.
+   * Distinct from `externalId`, which for an unapproved dealer is the derived
+   * `dz|<stem>|<suburb>` key and is a different thing entirely.
    */
-  caraveaCompanyId: string | null;
+  caraveaCompanyId: string;
 };
 
 /**
  * Resolves the dealer or returns the `error` the caller should send back.
  *
- * Approval is NOT checked. Every dealer in the directory can be sent an enquiry,
- * approved by Connect or not — the deliberate change in ETN-010.
+ * THREE gates, all of which DENY on failure. An enquiry is a lead with a
+ * consumer's contact details attached, so anything we cannot positively confirm
+ * has to stop the write rather than store a lead we cannot place.
  *
- * PUBLICATION STATE IS checked, inside `fetchCachedDealer`. A dealer staff have
- * unpublished in Strapi is REFUSED here, not merely hidden on the page: the
- * enquiry form is gone from their card, but a held link or a plain curl would
- * otherwise still file leads against a dealership the client has delisted. That
- * is ETN-013 D3, and it is what makes a hidden dealer genuinely invisible rather
- * than just absent from a list.
+ *  1. EXISTENCE. An id that resolves to no row is refused.
+ *  2. PUBLICATION STATE, inside `fetchCachedDealer`. A dealer staff have
+ *     unpublished in Strapi is REFUSED here, not merely hidden on the page: the
+ *     form is gone from their card, but a held link or a plain curl would
+ *     otherwise still file leads against a dealership the client has delisted.
+ *     That is ETN-013 D3.
+ *  3. A CONNECT COMPANY ID (ETN-017, below). No id, no enquiry.
  *
- * Existence still has to be proven, and every failure path DENIES: an enquiry is
- * a lead with a consumer's contact details attached, so an id we cannot resolve
- * must stop the write rather than store a lead against a dealer we could not
- * confirm exists.
+ * Gate 3 is enforced here and not only in the UI, which makes it stricter than
+ * the site-wide `enquiryFormEnabled` switch it stacks on. That one is
+ * deliberately presentational and a direct POST still succeeds while it is off.
+ * The ruling for this gate went the other way, following the publish gate's
+ * precedent: a thing that looks closed should really be closed, and a lead
+ * stored against a company Connect cannot be told about is a lead that goes
+ * nowhere.
+ *
+ * Note this REVERSES part of ETN-010 for most of the directory, and knowingly.
+ * ETN-010 opened enquiries to unapproved dealers on the reasoning that approval
+ * only affects the badge. Connect issues a company id on approval, so gating on
+ * one closes enquiries for the ~96% it has not approved. Approval itself is
+ * still not what is checked: `approved` remains badge-only (ETN-006) and the
+ * two are allowed to disagree. But in practice they agree today, so the effect
+ * on the directory is the same and should not come as a surprise later.
  */
 async function resolveDealer(
   dealerDocumentId: string,
 ): Promise<{ dealer?: ResolvedDealer; error?: { code: string; message: string } }> {
-  const row = await findDealerRow(dealerDocumentId);
-  if (row) {
-    // A dealer-submission is our own onboarding record, not a Connect company,
-    // so there is no Connect id to carry — null, not a lookup that failed.
-    return {
-      dealer: { row, externalId: null, name: row.dealershipName, caraveaCompanyId: null },
-    };
-  }
-
+  // The dealer-submission lookup that used to run ahead of this is GONE, and
+  // deliberately: a dealer-submission is our own onboarding record, not a
+  // Connect company, so it has no company id and gate 3 would close on every one
+  // of them anyway. It only ever served a page cached from before /find-dealer's
+  // source became the Connect cache, and leaving it in would have been a second
+  // way in that skipped this gate. An id of that shape now answers
+  // dealer-not-found, which is the truth as far as the directory is concerned.
+  // `findDealerRow` still serves the honeypot path below, which resolves nothing.
   const lookup = await fetchCachedDealer(dealerDocumentId);
 
   if (!lookup.ok) {
@@ -154,12 +180,25 @@ async function resolveDealer(
     return { error: { code: 'dealer-not-found', message: 'Unknown dealer.' } };
   }
 
+  // Gate 3. `fetchCachedDealer` already normalises a blank to null, and the
+  // public DTO derives `hasCaraveaCompanyId` from the same column with the same
+  // rule, so the form the page decided not to render and the POST refused here
+  // are answering one question, not two that could drift apart.
+  //
+  // Distinct from dealer-not-found on purpose. This one discloses nothing new:
+  // the page already publishes `hasCaraveaCompanyId` for every dealer, so the
+  // code tells a caller only what the directory told them, while giving anyone
+  // reading logs the difference between "no such dealer" and "that dealer is
+  // not taking enquiries".
+  if (!lookup.caraveaCompanyId) {
+    return { error: ENQUIRIES_CLOSED };
+  }
+
   return {
     dealer: {
-      row: null,
       externalId: dealerDocumentId,
       name: lookup.name,
-      caraveaCompanyId: lookup.caraveaCompanyId ?? null,
+      caraveaCompanyId: lookup.caraveaCompanyId,
     },
   };
 }
@@ -267,11 +306,11 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
       });
     }
 
-    // Resolves against dealer-submission first, then the `dealer` cache. Proves
-    // the dealer exists AND is published (ETN-013 D3), and takes their name from
-    // the row rather than the request body. Still does not gate on approval, so
-    // an unapproved dealer can be enquired with here exactly as they can from
-    // DealerModal.
+    // Resolves against the `dealer` cache. Proves the dealer exists, is
+    // published (ETN-013 D3) and has a Connect company id (ETN-017), and takes
+    // their name from the row rather than the request body. The company-id gate
+    // is what DealerModal is deciding on too, so what the page will not offer
+    // this endpoint will not accept either.
     const resolved = await resolveDealer(dealerDocumentId);
     if (resolved.error) {
       return ctx.badRequest(resolved.error.message, { code: resolved.error.code });
@@ -279,20 +318,18 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
     const dealer = resolved.dealer;
 
     // Second, narrower limit: the same visitor repeatedly messaging ONE dealer.
-    // Needs the resolved dealer, so it can only run here; the broad per-IP
-    // limit above already bounds total writes. The `where` matches on whichever
-    // identifier this dealer actually has — a Connect-sourced dealer has no
-    // relation to count on, and matching only `dealer` would leave every
-    // Connect dealer with no per-dealer limit at all.
+    // Needs the resolved dealer, so it can only run here; the broad per-IP limit
+    // above already bounds total writes. Counts on `dealerExternalId`, which is
+    // now the only identifier a resolved dealer has. A cache-sourced dealer has
+    // no relation to count on, and the dealer-submission branch that used to
+    // count on one cannot be reached since ETN-017 closed that path.
     const sixtyMinAgo = new Date(now - RATE_LIMIT_WINDOW_IP_DEALER_MS);
 
     const recentByIpAndDealer = await strapi.db.query(ENQUIRY_UID).count({
       where: {
         ipHash,
         createdAt: { $gte: sixtyMinAgo },
-        ...(dealer.row
-          ? { dealer: dealer.row.id }
-          : { dealerExternalId: dealer.externalId }),
+        dealerExternalId: dealer.externalId,
       },
     });
     if (recentByIpAndDealer >= RATE_LIMIT_PER_IP_DEALER) {
@@ -334,17 +371,19 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
     const interest = cleanSingleLine(data.interest, MAX_LENGTHS.interest);
 
     const payload = encodeAngles({
-      // Exactly one of these is set: the relation for a local dealer, the
-      // Connect submission_id for a pulled one.
-      dealer: dealer.row?.documentId,
-      dealerExternalId: dealer.externalId ?? undefined,
+      // The `dealer` RELATION is deliberately not set. It pointed at a
+      // dealer-submission row, and since ETN-017 nothing resolves to one. The
+      // directory has been served from the Connect cache since ETN-013, and
+      // `dealerExternalId` is what identifies a dealer here now. Historic rows
+      // keep whatever relation they were written with.
+      dealerExternalId: dealer.externalId,
       dealerName: dealer.name,
       // Additive, NOT a replacement for dealerExternalId: that stays the
       // directory match key this enquiry was filed under, which is what still
       // finds the dealer if their Connect id later changes the ref. This is
-      // Connect's own company id, and `undefined` (so the column stays NULL)
-      // whenever they have not issued one.
-      caraveaCompanyId: dealer.caraveaCompanyId ?? undefined,
+      // Connect's own company id, and since ETN-017 made its absence the gate,
+      // it is now always set on a row that gets written at all.
+      caraveaCompanyId: dealer.caraveaCompanyId,
       name,
       email,
       message,
