@@ -97,6 +97,22 @@ type ResolvedDealer = {
   row: DealerRow | null;
   externalId: string | null;
   name: string;
+  /**
+   * Connect's own company id for this dealer, denormalised onto the enquiry so a
+   * lead can be correlated back to Connect's company record (ETN-016).
+   *
+   * Resolved here, from the row, for exactly the reason `name` is: it is stored
+   * on the enquiry and read by whoever works the lead, so a caller who could set
+   * it could point a real consumer's contact details at any company they liked.
+   * There is no hidden input for it on the form and there should not be one.
+   *
+   * `null` is the normal answer. Connect issues this id ON APPROVAL only
+   * (ETN-015: 7 of 163 dealers on staging, 0 of 216 on production as at
+   * 2026-09-07), and a local dealer-submission row has no Connect id at all. Null
+   * means Connect has issued none — never the derived `dz|<stem>|<suburb>` key,
+   * which lives on `externalId` and is a different thing.
+   */
+  caraveaCompanyId: string | null;
 };
 
 /**
@@ -122,7 +138,11 @@ async function resolveDealer(
 ): Promise<{ dealer?: ResolvedDealer; error?: { code: string; message: string } }> {
   const row = await findDealerRow(dealerDocumentId);
   if (row) {
-    return { dealer: { row, externalId: null, name: row.dealershipName } };
+    // A dealer-submission is our own onboarding record, not a Connect company,
+    // so there is no Connect id to carry — null, not a lookup that failed.
+    return {
+      dealer: { row, externalId: null, name: row.dealershipName, caraveaCompanyId: null },
+    };
   }
 
   const lookup = await fetchCachedDealer(dealerDocumentId);
@@ -134,7 +154,14 @@ async function resolveDealer(
     return { error: { code: 'dealer-not-found', message: 'Unknown dealer.' } };
   }
 
-  return { dealer: { row: null, externalId: dealerDocumentId, name: lookup.name } };
+  return {
+    dealer: {
+      row: null,
+      externalId: dealerDocumentId,
+      name: lookup.name,
+      caraveaCompanyId: lookup.caraveaCompanyId ?? null,
+    },
+  };
 }
 
 export default factories.createCoreController(ENQUIRY_UID, () => ({
@@ -312,6 +339,12 @@ export default factories.createCoreController(ENQUIRY_UID, () => ({
       dealer: dealer.row?.documentId,
       dealerExternalId: dealer.externalId ?? undefined,
       dealerName: dealer.name,
+      // Additive, NOT a replacement for dealerExternalId: that stays the
+      // directory match key this enquiry was filed under, which is what still
+      // finds the dealer if their Connect id later changes the ref. This is
+      // Connect's own company id, and `undefined` (so the column stays NULL)
+      // whenever they have not issued one.
+      caraveaCompanyId: dealer.caraveaCompanyId ?? undefined,
       name,
       email,
       message,
