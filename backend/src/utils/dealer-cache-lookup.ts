@@ -43,6 +43,14 @@ export type CachedDealerLookup = {
   ok: boolean;
   /** Set only when `ok` — the dealership name as the cache holds it. */
   name?: string;
+  /**
+   * Connect's own company id for this dealer, when they have one. Set only when
+   * `ok`, and `null` — not absent — for the ~96% of dealers Connect has not
+   * approved and therefore issued no id to (ETN-015). Distinct from the ref this
+   * lookup keyed on, which is the derived `dz|<stem>|<suburb>` key for those same
+   * dealers.
+   */
+  caraveaCompanyId?: string | null;
   code?: 'dealer-not-found';
 };
 
@@ -69,12 +77,18 @@ export async function fetchCachedDealer(connectRef: string): Promise<CachedDeale
       connectRef,
       publishedAt: { $notNull: true },
     },
-    select: ['dealershipName'],
-  })) as { dealershipName?: string } | null;
+    select: ['dealershipName', 'caraveaCompanyId'],
+  })) as { dealershipName?: string; caraveaCompanyId?: string } | null;
 
   if (!row?.dealershipName) {
     return { ok: false, code: 'dealer-not-found' };
   }
 
-  return { ok: true, name: row.dealershipName };
+  return {
+    ok: true,
+    name: row.dealershipName,
+    // Normalised to null so "this dealer has no Connect id" is one value, not
+    // three (null from SQLite, undefined from an older row, '' from a blank).
+    caraveaCompanyId: row.caraveaCompanyId || null,
+  };
 }
