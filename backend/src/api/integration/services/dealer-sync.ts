@@ -781,6 +781,12 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
       // validateInput throws on any root key with no matching attribute, and
       // anything left here also lands in the content hash, so a non-column left
       // in would rewrite all ~200 rows on the sweep that introduced it.
+      //
+      // `caraveaCompanyId` IS a column and so deliberately stays in `fields`,
+      // hashed with everything else: a dealer's approval — the moment Connect
+      // first issues them an id — has to read as a change and produce a write,
+      // not be skipped as unchanged content. The cost is the one-time rewrite
+      // described above, on the first sweep after this column ships.
       const {
         connectLatitude: _lat,
         connectLongitude: _lng,
