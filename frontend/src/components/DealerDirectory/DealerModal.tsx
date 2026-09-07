@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { dealerCardImage, type DirectoryDealer } from "@/lib/strapi";
-import { distanceLabelFor, formatPhone, isOpenNow, todayHoursLabel, type DealerOrigin } from "@/lib/dealers";
+import { canEnquire, distanceLabelFor, formatPhone, isOpenNow, todayHoursLabel, type DealerOrigin } from "@/lib/dealers";
 import { DealerEnquiryForm } from "./DealerEnquiryForm";
 import { BrandsIcon, ClockIcon, CloseIcon, DirectionsIcon, PhoneIcon, PinIcon, ServicesIcon, WebsiteIcon } from "./icons";
 
@@ -14,7 +14,9 @@ type Props = {
   recaptchaEnabled: boolean;
   recaptchaSiteKey: string | null;
   recaptchaConfigError: boolean;
-  // Site-wide switch, not a per-dealer field. See DealerDirectory’s Props.
+  // Site-wide switch, not a per-dealer field. See DealerDirectory’s Props. Only
+  // half of whether this modal shows a form. canEnquire() has the other half,
+  // which IS per dealer.
   enquiryFormEnabled: boolean;
   onClose: () => void;
 };
@@ -264,22 +266,37 @@ export function DealerModal({
             </div>
           )}
 
-          {/* Shown only when staff have switched the enquiry form on for the
-              WHOLE directory, via Strapi’s Dealer Directory Settings single
-              type. Deliberately ONE switch rather than a field on each dealer,
-              so there is a single place to turn enquiries on or off, and it
-              arrives here as a prop rather than on `dealer` for exactly that
-              reason: it is not a property of any one dealer.
+          {/* Shown only when BOTH halves of canEnquire() agree: staff have
+              switched the enquiry form on for the WHOLE directory (Strapi’s
+              Dealer Directory Settings single type, #70), AND Connect has
+              issued this particular dealer a company id (ETN-017). The switch
+              arrives as a prop rather than on `dealer` precisely because it is
+              not a property of any one dealer; the id half is, and rides on
+              `dealer` as a derived boolean.
 
-              Three independent decisions meet on this screen and none of them
-              implies another: this switch, the ✓ Accredited pill above
-              (Connect’s `approved`, ETN-006), and whether the cache row is
-              published at all (ETN-013).
+              FOUR independent decisions now meet on this screen and none of
+              them implies another:
 
-              Presentational gate only. The dealer-enquiry controller does not
-              check it, so a direct POST is still accepted while the form is
-              hidden. That was a deliberate call, not an oversight. */}
-          {enquiryFormEnabled && (
+                1. the site-wide switch (#70), covering the whole directory at once;
+                2. this dealer having a Connect company id (ETN-017), the gate
+                   immediately below;
+                3. the ✓ Accredited pill above (Connect’s `approved`, ETN-006)
+                   a claim about the dealer, never a gate on anything;
+                4. whether the cache row is published at all (ETN-013), which
+                   decides if this modal can be opened in the first place.
+
+              2 and 3 agree on every dealer measured so far, because Connect
+              mints the id on approval. They are still separate questions and
+              are allowed to disagree: an approval Connect had not yet minted an
+              id for would correctly show the badge with no form, since there
+              would be no company to attribute the lead to.
+
+              Note this gate is NOT presentational-only, unlike the site-wide
+              switch it stacks on. The dealer-enquiry controller refuses a POST
+              for a dealer with no company id, so what looks closed here really
+              is closed. That is the same call ETN-013 D3 made for the publish gate,
+              and deliberately a stricter one than #70's. */}
+          {canEnquire(dealer, enquiryFormEnabled) && (
             <DealerEnquiryForm
               dealer={dealer}
               recaptchaEnabled={recaptchaEnabled}

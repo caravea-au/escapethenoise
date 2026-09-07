@@ -22,8 +22,15 @@
  * must stay reachable: refusing their enquiries would leave a live card whose
  * form silently fails.
  *
- * Approval is deliberately NOT checked (ETN-010): approved and unapproved
- * dealers alike can be sent an enquiry. Visibility is the publish toggle.
+ * Approval is deliberately NOT checked here, and still is not: `approved` drives
+ * the ✓ badge and nothing else (ETN-006). What the CALLER now checks instead is
+ * `caraveaCompanyId` (no Connect company id, no enquiry, ETN-017), which is
+ * why this lookup returns that field rather than gating on it itself. The two
+ * questions agree on every dealer measured so far, because Connect mints the id
+ * on approval, but they are not the same question and are allowed to diverge.
+ *
+ * That gate reverses ETN-010, which had opened enquiries to unapproved dealers,
+ * for the ~96% of the directory Connect has issued no id to.
  *
  * `name` is ALWAYS taken from the resolved row, never from the request body: it
  * is denormalised onto the stored enquiry, so a caller who could set it could
