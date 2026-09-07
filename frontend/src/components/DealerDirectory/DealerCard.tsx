@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { dealerCardImage, type DirectoryDealer } from "@/lib/strapi";
 import {
+  canEnquire,
   distanceLabelFor,
   isOpenNow,
   CHIP_PREDICATES,
@@ -19,7 +20,9 @@ type Props = {
   now: number | null;
   origin: DealerOrigin | null;
   selected: boolean;
-  // Site-wide switch, not a per-dealer field. See DealerDirectory’s Props.
+  // Site-wide switch, not a per-dealer field. See DealerDirectory’s Props. Only
+  // half of whether this card can promise an enquiry. canEnquire() has the
+  // other half, which IS per dealer.
   enquiryFormEnabled: boolean;
   onSelect: () => void;
   onOpenModal: () => void;
@@ -123,14 +126,15 @@ export function DealerCard({ dealer, now, origin, selected, enquiryFormEnabled, 
       )}
 
       {/* "& Enquire" is only promised when the modal this button opens will
-          actually carry a form. `enquiryFormEnabled` is ONE site-wide switch
-          (Strapi’s Dealer Directory Settings), not a per-dealer field, so the
-          wording has to check it too, or every selected card would promise an
-          enquiry the modal does not offer. It is still only shown when
-          selected, because that is the state whose modal the button opens
-          straight into. */}
+          actually carry a form, which is why both this and the modal ask
+          canEnquire() rather than testing the conditions separately: two
+          conditions have to line up (the site-wide switch AND this dealer
+          having a Connect company id) and a card that promises an enquiry then
+          opens on a modal with no form is the defect ETN-017 AC6 names. Still
+          only shown when selected, because that is the state whose modal the
+          button opens straight into. */}
       <Button variant={selected ? "primary" : "secondary"} fullWidth onClick={onOpenModal} className="mt-3">
-        {selected && enquiryFormEnabled ? "View Profile & Enquire →" : "View Profile →"}
+        {selected && canEnquire(dealer, enquiryFormEnabled) ? "View Profile & Enquire →" : "View Profile →"}
       </Button>
     </div>
   );
