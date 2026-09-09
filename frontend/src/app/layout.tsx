@@ -76,13 +76,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     w[l]=w[l]||[];
     w[l].push({
         'pixel.token': 'BC-NOBZ9MF1',
-        'pixel.endpoint': "https://basecamp.caravea.au/api/pixel/submit",
-        'pixel.debug': true,
-        'pixel.ecosystemKey': "{wl!F]4q0H'9~^-GBDpHo7ou[s!PW!Rx"
+        'pixel.endpoint': 'https://conect.au/api/pixel/submit',
+        'pixel.debug': true
     });
     var f=d.getElementsByTagName(s)[0],j=d.createElement(s);
     j.async=1;
-    j.src='https://basecamp.caravea.au/pixel/basecamp.js?v=' + Date.now();
+    j.src='https://conect.au/pixel/basecamp.js?v=' + Date.now();
     f.parentNode.insertBefore(j,f);
 })(window,document,'script','basecampDataLayer','BC-NOBZ9MF1');`,
           }}
