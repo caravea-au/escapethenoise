@@ -19,6 +19,10 @@
     "connectSubmissionId": {
       "type": "string"
     },
+    "caraveaCompanyId": {
+      "type": "string",
+      "private": true
+    },
 
     "dealershipName": { "type": "string", "required": true },
 

@@ -312,6 +312,25 @@ export type ConnectDealerRecord = {
    */
   connectRefDerived: boolean;
   connectSubmissionId: string | null;
+
+  /**
+   * Connect's OWN company id (`reference` / `caravea_company_id`), kept as a
+   * column in its own right instead of only being folded into `connectRef`.
+   *
+   * `connectRef` is a match key first and an identity second: it holds this value
+   * when Connect has issued one, and otherwise falls back to `submission_id` or
+   * the ETN-014 derived `dz|<stem>|<suburb>` key. Reading a real Connect id back
+   * out of it therefore means sniffing for a `dz|` prefix, which is a guess, not
+   * an identity check — and `connectRefDerived` above is feed provenance for one
+   * sweep, not something persisted for a later reader to consult.
+   *
+   * Connect mints this ON APPROVAL, not on submission (ETN-015, measured
+   * 2026-09-07: 7 of 163 on staging, 0 of 216 on production), so for most dealers
+   * it is null and correctly so. Null means "Connect has issued this dealership
+   * no id", never "we failed to read one".
+   */
+  caraveaCompanyId: string | null;
+
   dealershipName: string;
 
   street: string | null;
@@ -390,6 +409,11 @@ export function toDealerRecord(record: Json): ConnectDealerRecord | null {
     connectRef,
     connectRefDerived: issuedRef === null,
     connectSubmissionId: submissionId,
+    // `reference` alone, deliberately NOT `issuedRef`: `submission_id` is a ULID
+    // identifying one registration submission, not the company Connect issues an
+    // id for, so folding it in here would put a non-company id in a column named
+    // for one. This stays null until Connect approves the dealer.
+    caraveaCompanyId: reference,
     dealershipName,
 
     street: str(location.address),
