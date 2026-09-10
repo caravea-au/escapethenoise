@@ -67,13 +67,20 @@ export const PUBLIC_DEALER_FIELDS = [
   // though it happens to agree with one today. See `hasCaraveaCompanyId`.
   'approved',
   // Whether Connect has issued this dealer a `caravea_company_id`. This is the
-  // per-dealer enquiry gate (ETN-017), and it is published as a DERIVED BOOLEAN
-  // and never as the id itself: ETN-016 deliberately keeps `caraveaCompanyId`
-  // server-side only (it is `private` in the schema and is absent from this
-  // allow-list), and the page only ever needs the yes/no. Appended last for the
-  // same reason the coordinates were: this array is the JSON key order of every
-  // dealer object, so anything new goes on the end.
+  // per-dealer enquiry gate (ETN-017), published as a DERIVED BOOLEAN so cards
+  // and the modal can decide without caring about the raw value. Appended last
+  // for the same reason the coordinates were: this array is the JSON key order
+  // of every dealer object, so anything new goes on the end.
   'hasCaraveaCompanyId',
+  // Connect's raw company id for this dealer. ETN-016/017 shipped with this
+  // deliberately server-side only, so no line of it ever crossed this boundary
+  // (their AC4). REVERSED for the dealer enquiry form: the Basecamp CRM pixel
+  // reads form fields out of the DOM, so the enquiry form needs the id as a
+  // real hidden <input>, and that value has to get here somehow. The backend
+  // STILL resolves the id stored on the enquiry server-side off the cache row
+  // and never trusts this field, so nothing a caller submits can re-point a
+  // lead — this only makes the id visible where the CRM pixel can read it.
+  'caraveaCompanyId',
 ] as const;
 
 export type PublicDealerField = (typeof PUBLIC_DEALER_FIELDS)[number];
@@ -92,10 +99,9 @@ export type PublicDealer = Record<PublicDealerField, unknown>;
  */
 export const DEALER_SELECT_FIELDS = [
   'connectRef',
-  // Selected so `hasCaraveaCompanyId` can be derived from it, NEVER published.
-  // The allow-list above is the whole of what reaches the response and the raw
-  // id is not on it, so this column stays inside SQLite exactly as
-  // matchedAddress does.
+  // Selected so `hasCaraveaCompanyId` can be derived from it AND so the public
+  // `caraveaCompanyId` field can be served from it (see the allow-list above,
+  // which now publishes the id for the enquiry form's hidden input).
   'caraveaCompanyId',
   ...PUBLIC_DEALER_FIELDS.filter(
     (field) => field !== 'documentId' && field !== 'hasCaraveaCompanyId',
@@ -146,6 +152,16 @@ export function toPublicDealer(row: Record<string, unknown>): PublicDealer {
     if (field === 'hasCaraveaCompanyId') {
       const id = row.caraveaCompanyId;
       result.hasCaraveaCompanyId = typeof id === 'string' && id.trim().length > 0;
+      continue;
+    }
+
+    // Same normalisation as the gate above: blank or whitespace-only reads as
+    // no id, so the hidden enquiry-form input is empty (or absent) exactly when
+    // `hasCaraveaCompanyId` says the dealer has none. The two can never drift.
+    if (field === 'caraveaCompanyId') {
+      const id = row.caraveaCompanyId;
+      result.caraveaCompanyId =
+        typeof id === 'string' && id.trim().length > 0 ? id.trim() : null;
       continue;
     }
 
