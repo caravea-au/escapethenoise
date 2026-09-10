@@ -113,6 +113,11 @@ export function DealerEnquiryForm({ dealer, recaptchaEnabled, recaptchaSiteKey, 
         body: JSON.stringify({
           data: {
             dealer: dealer.documentId,
+            // The Basecamp CRM pixel reads form fields out of the DOM, not the
+            // JSON body, so the id ALSO rides as a real hidden <input> below
+            // (same value, one source: `dealer.caraveaCompanyId`). The backend
+            // ignores this body field and resolves the stored id server-side.
+            caraveaCompanyId: dealer.caraveaCompanyId,
             name: name.trim(),
             email: email.trim(),
             phone: phone.trim() || undefined,
@@ -305,6 +310,12 @@ export function DealerEnquiryForm({ dealer, recaptchaEnabled, recaptchaSiteKey, 
             onChange={(e) => setComment(e.target.value)}
           />
         </div>
+
+        {/* Connect's company id for this dealer, carried as a real hidden input
+            so the Basecamp CRM pixel (which scans the DOM on submit) receives
+            it. Value mirrors what the POST body sends; the backend stores the
+            server-resolved id regardless, so spoofing this buys nothing. */}
+        <input type="hidden" name="caraveaCompanyId" value={dealer.caraveaCompanyId ?? ""} />
 
         <Button variant="primary" fullWidth type="submit" disabled={submitting}>
           {submitting ? "Sending…" : "Send Enquiry"}
