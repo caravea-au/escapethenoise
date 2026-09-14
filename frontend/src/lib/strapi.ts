@@ -543,6 +543,14 @@ export type DirectoryDealer = {
   // the correct behaviour rather than a bug: there would be no company to
   // attribute the lead to.
   hasCaraveaCompanyId: boolean;
+
+  // Connect's raw company id, published so the enquiry form can carry it as a
+  // hidden <input> for the Basecamp CRM pixel, which reads form fields out of
+  // the DOM rather than the JSON POST body. Null exactly when
+  // `hasCaraveaCompanyId` is false (same server-side normalisation, so they can
+  // never drift). The backend still resolves the id it stores on the enquiry
+  // server-side off the cache row and never trusts this value.
+  caraveaCompanyId: string | null;
 };
 
 // Dealer photos/logo are absolute DigitalOcean Spaces URLs, not Strapi media —
