@@ -58,6 +58,11 @@ type Props = {
    * The SITE-WIDE enquiry-form switch, from Strapi’s Dealer Directory Settings
    * single type. One value for the whole directory, deliberately not a
    * per-dealer field, so there is a single place to turn the form on or off.
+   *
+   * Only half the answer since ETN-017. A form also needs the dealer to have a
+   * Connect company id, which IS per dealer and rides on `dealer`. The two are
+   * ANDed in `canEnquire` (lib/dealers) and both halves are passed straight down
+   * to DealerCard and DealerModal, which each ask that one predicate.
    */
   enquiryFormEnabled: boolean;
   /**

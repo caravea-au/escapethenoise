@@ -301,6 +301,31 @@ export const CHIP_PREDICATES: Record<ChipKey, (dealer: DirectoryDealer, nowMs: n
 // still exists in Caravea Connect and is still reachable by id for enquiries.
 // The permanent answer is a client-editable list (ETN-009); this constant is
 // the stopgap that buys time for it.
+/**
+ * Whether this dealer can be sent an enquiry, and therefore whether the form is
+ * rendered for them at all.
+ *
+ * TWO independent conditions, ANDed, and neither implies the other:
+ *
+ *  1. `enquiryFormEnabled`, ONE site-wide switch in Strapi's Dealer Directory
+ *     Settings (#70), covering the whole directory at once.
+ *  2. `hasCaraveaCompanyId`, per dealer (ETN-017). Connect issues that id on
+ *     approval, so a dealer it has not approved has nothing to attribute a lead
+ *     to and is offered no form.
+ *
+ * Lives here rather than inline in each component because DealerCard's
+ * "& Enquire" wording and DealerModal's form have to answer this identically:
+ * a card that promises an enquiry and opens on a modal with no form is the exact
+ * defect ETN-017 AC6 names. One predicate, two callers, guaranteed to agree.
+ *
+ * Deliberately NOT gated on `approved`: that drives the badge and only the badge
+ * (ETN-006). It agrees with this today because Connect mints the id on approval,
+ * but they are answers to different questions and are allowed to disagree.
+ */
+export function canEnquire(dealer: DirectoryDealer, enquiryFormEnabled: boolean): boolean {
+  return enquiryFormEnabled && dealer.hasCaraveaCompanyId;
+}
+
 export const PARTICIPATING_STATES: readonly string[] = ["NSW", "VIC", "QLD"];
 
 /**

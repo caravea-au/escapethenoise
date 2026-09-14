@@ -525,11 +525,24 @@ export type DirectoryDealer = {
   longitude: number | null;
   precision: "street" | "approx" | null;
 
-  // Whether Connect has approved this dealer. BADGE ONLY (ETN-006): every dealer
-  // gets an enquiry form regardless (ETN-010), and visibility is the Strapi
-  // publish toggle (ETN-013), not this. Defaults to false on anything we cannot
-  // read, so an unreadable approval state never claims accreditation.
+  // Whether Connect has approved this dealer. BADGE ONLY (ETN-006): visibility
+  // is the Strapi publish toggle (ETN-013), not this, and the enquiry form is
+  // gated on `hasCaraveaCompanyId` below, not on this. Defaults to false on
+  // anything we cannot read, so an unreadable approval state never claims
+  // accreditation.
   approved: boolean;
+
+  // Whether Connect has issued this dealer a company id, and so whether they can
+  // be sent an enquiry at all (ETN-017). Derived server-side: the id itself is
+  // private to Strapi and never crosses this boundary, and `canEnquire` in
+  // lib/dealers is the only thing that should read this field.
+  //
+  // NOT the same question as `approved`, even though the two agree on every
+  // dealer measured so far. Connect mints the id on approval, so an approval it
+  // has not yet minted an id for would show the badge with no form, and that is
+  // the correct behaviour rather than a bug: there would be no company to
+  // attribute the lead to.
+  hasCaraveaCompanyId: boolean;
 };
 
 // Dealer photos/logo are absolute DigitalOcean Spaces URLs, not Strapi media —
