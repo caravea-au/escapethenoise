@@ -5,7 +5,7 @@
     "singularName": "dealer-enquiry",
     "pluralName": "dealer-enquiries",
     "displayName": "Dealer Enquiry",
-    "description": "Consumer enquiries sent to a dealer from /find-dealer. HOLDS CONSUMER PII (name, email, phone, message) — the `find` and `findOne` actions must NEVER be granted to the Public role. Only `create` (via routes/dealer-enquiry.ts, auth: false) is public. Since /find-dealer switched to listing dealers pulled from Caravea Connect, an enquiry usually has NO local dealer row to relate to: it carries `dealerExternalId` (Connect's submission_id) and an empty `dealer` relation. `dealerName` is always resolved from a trusted source (the local row, or Connect's own response) and never taken from the request body."
+    "description": "Consumer enquiries sent to a dealer from /find-dealer. HOLDS CONSUMER PII (name, email, phone, message) — the `find` and `findOne` actions must NEVER be granted to the Public role. Only `create` (via routes/dealer-enquiry.ts, auth: false) is public. Since /find-dealer switched to listing dealers pulled from Caravea Connect, an enquiry usually has NO local dealer row to relate to: it carries `dealerExternalId` (Connect's submission_id) and an empty `dealer` relation. `dealerName` is always resolved from a trusted source (the local row, or Connect's own response) and never taken from the request body. `caraveaCompanyId` is Connect's own company id for the dealer, copied off the cached dealer row at submit time so a lead can be correlated back to Connect's company record — it is NULL for any dealer Connect has not approved and therefore issued no id to (the large majority; ETN-016), and null there is correct, not a failed lookup. It is deliberately NOT the same thing as `dealerExternalId`, which is the directory's match key and holds the derived `dz|<stem>|<suburb>` value for those same dealers."
   },
   "options": {
     "draftAndPublish": false
@@ -19,6 +19,7 @@
     },
     "dealerName": { "type": "string" },
     "dealerExternalId": { "type": "string" },
+    "caraveaCompanyId": { "type": "string" },
 
     "name": { "type": "string", "required": true },
     "email": { "type": "email", "required": true },
