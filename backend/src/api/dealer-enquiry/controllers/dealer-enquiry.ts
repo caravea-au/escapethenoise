@@ -132,7 +132,7 @@ type ResolvedDealer = {
 /**
  * Resolves the dealer or returns the `error` the caller should send back.
  *
- * THREE gates, all of which DENY on failure. An enquiry is a lead with a
+ * FOUR gates, all of which DENY on failure. An enquiry is a lead with a
  * consumer's contact details attached, so anything we cannot positively confirm
  * has to stop the write rather than store a lead we cannot place.
  *
@@ -143,22 +143,25 @@ type ResolvedDealer = {
  *     otherwise still file leads against a dealership the client has delisted.
  *     That is ETN-013 D3.
  *  3. A CONNECT COMPANY ID (ETN-017, below). No id, no enquiry.
+ *  4. ACCREDITATION (captain's decision 2026-09-22, below). The dealer's owner
+ *     must have logged in AFTER approval — Connect's `approved` flag is set on
+ *     that first login, so until then the dealership is not taking enquiries
+ *     even though its Conect CRM exists.
  *
- * Gate 3 is enforced here and not only in the UI, which makes it stricter than
- * the site-wide `enquiryFormEnabled` switch it stacks on. That one is
- * deliberately presentational and a direct POST still succeeds while it is off.
- * The ruling for this gate went the other way, following the publish gate's
- * precedent: a thing that looks closed should really be closed, and a lead
- * stored against a company Connect cannot be told about is a lead that goes
- * nowhere.
+ * Gates 3 and 4 are enforced here and not only in the UI, which makes them
+ * stricter than the site-wide `enquiryFormEnabled` switch they stack on. That
+ * one is deliberately presentational and a direct POST still succeeds while it
+ * is off. The ruling for these gates went the other way, following the publish
+ * gate's precedent: a thing that looks closed should really be closed, and a
+ * lead stored against a company Connect cannot be told about is a lead that
+ * goes nowhere.
  *
- * Note this REVERSES part of ETN-010 for most of the directory, and knowingly.
+ * Note gate 3 REVERSES part of ETN-010 for most of the directory, and knowingly.
  * ETN-010 opened enquiries to unapproved dealers on the reasoning that approval
  * only affects the badge. Connect issues a company id on approval, so gating on
  * one closes enquiries for the ~96% it has not approved. Approval itself is
- * still not what is checked: `approved` remains badge-only (ETN-006) and the
- * two are allowed to disagree. But in practice they agree today, so the effect
- * on the directory is the same and should not come as a surprise later.
+ * still not what gate 3 checks: `approved` is accreditation (first login after
+ * approval) and since the 2026-09-22 decision it is what gate 4 checks.
  */
 async function resolveDealer(
   dealerDocumentId: string,
@@ -191,6 +194,17 @@ async function resolveDealer(
   // reading logs the difference between "no such dealer" and "that dealer is
   // not taking enquiries".
   if (!lookup.caraveaCompanyId) {
+    return { error: ENQUIRIES_CLOSED };
+  }
+
+  // Gate 4. Accreditation: Connect sets `approved` on the dealer owner's first
+  // login AFTER approval (a separate milestone since Connect v3), and the
+  // captain's 2026-09-22 decision makes that the enquiry gate too — the form
+  // the page decided not to render and the POST refused here answer one
+  // question, not two that could drift apart. Same ENQUIRIES_CLOSED on
+  // purpose: the page already publishes `approved` for every dealer, so this
+  // discloses nothing the directory did not.
+  if (!lookup.approved) {
     return { error: ENQUIRIES_CLOSED };
   }
 
