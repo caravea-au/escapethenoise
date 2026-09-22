@@ -22,12 +22,13 @@
  * must stay reachable: refusing their enquiries would leave a live card whose
  * form silently fails.
  *
- * Approval is deliberately NOT checked here, and still is not: `approved` drives
- * the ✓ badge and nothing else (ETN-006). What the CALLER now checks instead is
- * `caraveaCompanyId` (no Connect company id, no enquiry, ETN-017), which is
- * why this lookup returns that field rather than gating on it itself. The two
- * questions agree on every dealer measured so far, because Connect mints the id
- * on approval, but they are not the same question and are allowed to diverge.
+ * Approval is deliberately NOT gated here, and still is not: this lookup only
+ * RETURNS the row's `approved` flag (accreditation: set on the owner's first
+ * login after approval). What the CALLER checks is `caraveaCompanyId` (no
+ * Connect company id, no enquiry, ETN-017) and, since the captain's
+ * 2026-09-22 decision, `approved` as well — a dealer accredited by login only.
+ * Keeping both decisions in the caller means the enquiry gate stays one place
+ * (`resolveDealer`), next to the publish and existence gates it stacks on.
  *
  * That gate reverses ETN-010, which had opened enquiries to unapproved dealers,
  * for the ~96% of the directory Connect has issued no id to.
@@ -58,6 +59,13 @@ export type CachedDealerLookup = {
    * dealers.
    */
   caraveaCompanyId?: string | null;
+  /**
+   * Accreditation flag from the cache row: true only once the dealer's owner
+   * has logged in after approval (Connect v3 milestone). Set only when `ok`.
+   * The enquiry controller gates on it — returned, not enforced, here so every
+   * enquiry gate stays in one place beside the others.
+   */
+  approved?: boolean;
   code?: 'dealer-not-found';
 };
 
@@ -84,8 +92,8 @@ export async function fetchCachedDealer(connectRef: string): Promise<CachedDeale
       connectRef,
       publishedAt: { $notNull: true },
     },
-    select: ['dealershipName', 'caraveaCompanyId'],
-  })) as { dealershipName?: string; caraveaCompanyId?: string } | null;
+    select: ['dealershipName', 'caraveaCompanyId', 'approved'],
+  })) as { dealershipName?: string; caraveaCompanyId?: string; approved?: boolean } | null;
 
   if (!row?.dealershipName) {
     return { ok: false, code: 'dealer-not-found' };
@@ -97,5 +105,8 @@ export async function fetchCachedDealer(connectRef: string): Promise<CachedDeale
     // Normalised to null so "this dealer has no Connect id" is one value, not
     // three (null from SQLite, undefined from an older row, '' from a blank).
     caraveaCompanyId: row.caraveaCompanyId || null,
+    // Normalised to a strict boolean so an unreadable state can never claim
+    // accreditation — same fail-closed rule the public DTO applies.
+    approved: row.approved === true,
   };
 }
