@@ -525,11 +525,12 @@ export type DirectoryDealer = {
   longitude: number | null;
   precision: "street" | "approx" | null;
 
-  // Whether Connect has approved this dealer. BADGE ONLY (ETN-006): visibility
-  // is the Strapi publish toggle (ETN-013), not this, and the enquiry form is
-  // gated on `hasCaraveaCompanyId` below, not on this. Defaults to false on
-  // anything we cannot read, so an unreadable approval state never claims
-  // accreditation.
+  // Whether Connect has accredited this dealer: set when the dealer's owner
+  // logs in for the first time AFTER approval (Connect v3 accreditation
+  // milestone), never at approval itself. Drives the ✓ Accredited badge
+  // (ETN-006) AND the enquiry-form gate (see `canEnquire` in lib/dealers).
+  // Defaults to false on anything we cannot read, so an unreadable approval
+  // state never claims accreditation.
   approved: boolean;
 
   // Whether Connect has issued this dealer a company id, and so whether they can
@@ -537,11 +538,11 @@ export type DirectoryDealer = {
   // private to Strapi and never crosses this boundary, and `canEnquire` in
   // lib/dealers is the only thing that should read this field.
   //
-  // NOT the same question as `approved`, even though the two agree on every
-  // dealer measured so far. Connect mints the id on approval, so an approval it
-  // has not yet minted an id for would show the badge with no form, and that is
-  // the correct behaviour rather than a bug: there would be no company to
-  // attribute the lead to.
+  // NOT the same question as `approved`, but since the 2026-09-22 enquiry-form
+  // gate both are required: an accredited dealer whose id was somehow not yet
+  // minted would show the badge with no form, and that is the correct
+  // behaviour rather than a bug: there would be no company to attribute the
+  // lead to.
   hasCaraveaCompanyId: boolean;
 
   // Connect's raw company id, published so the enquiry form can carry it as a

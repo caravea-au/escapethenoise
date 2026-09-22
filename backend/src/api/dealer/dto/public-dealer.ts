@@ -61,13 +61,16 @@ export const PUBLIC_DEALER_FIELDS = [
   'latitude',
   'longitude',
   'precision',
-  // Badge only (ETN-006). NOT a visibility gate: an unapproved dealer still
-  // appears in the directory. Visibility is the Strapi publish toggle, enforced
-  // in the controller's `where`. Deliberately not the enquiry gate either, even
-  // though it happens to agree with one today. See `hasCaraveaCompanyId`.
+  // Accreditation (ETN-006): set when the dealer's owner logs in AFTER
+  // approval. NOT a visibility gate: an unapproved dealer still appears in the
+  // directory. Visibility is the Strapi publish toggle, enforced in the
+  // controller's `where`. Drives the ✓ Accredited badge AND — since the
+  // captain's 2026-09-22 decision — the enquiry-form gate alongside
+  // `hasCaraveaCompanyId`. See `hasCaraveaCompanyId`.
   'approved',
-  // Whether Connect has issued this dealer a `caravea_company_id`. This is the
-  // per-dealer enquiry gate (ETN-017), published as a DERIVED BOOLEAN so cards
+  // Whether Connect has issued this dealer a `caravea_company_id`. One half of
+  // the per-dealer enquiry gate (ETN-017 + the 2026-09-22 accreditation gate on
+  // `approved` above), published as a DERIVED BOOLEAN so cards
   // and the modal can decide without caring about the raw value. Appended last
   // for the same reason the coordinates were: this array is the JSON key order
   // of every dealer object, so anything new goes on the end.

@@ -127,12 +127,13 @@ export function DealerCard({ dealer, now, origin, selected, enquiryFormEnabled, 
 
       {/* "& Enquire" is only promised when the modal this button opens will
           actually carry a form, which is why both this and the modal ask
-          canEnquire() rather than testing the conditions separately: two
+          canEnquire() rather than testing the conditions separately: three
           conditions have to line up (the site-wide switch AND this dealer
-          having a Connect company id) and a card that promises an enquiry then
-          opens on a modal with no form is the defect ETN-017 AC6 names. Still
-          only shown when selected, because that is the state whose modal the
-          button opens straight into. */}
+          having a Connect company id AND the dealer being accredited — its
+          owner having logged in after approval) and a card that promises an
+          enquiry then opens on a modal with no form is the defect ETN-017 AC6
+          names. Still only shown when selected, because that is the state
+          whose modal the button opens straight into. */}
       <Button variant={selected ? "primary" : "secondary"} fullWidth onClick={onOpenModal} className="mt-3">
         {selected && canEnquire(dealer, enquiryFormEnabled) ? "View Profile & Enquire →" : "View Profile →"}
       </Button>
