@@ -13,12 +13,13 @@
 // WHAT HAPPENS ON A VERIFIED DELIVERY (and nothing else — the payload is never
 // upserted into Strapi directly):
 //   1. Trigger the existing full dealer sweep by POSTing Strapi's
-//      /api/integrations/dealers/sync with STRAPI_API_TOKEN. That route
-//      requires full-access token auth; the frontend's token is documented
-//      read-only in docs/deploy/env.frontend.template, so in practice this
-//      trigger 401s and degrades. That is by design: the sweep already runs on
-//      its own schedule and the trigger is only the shortcut from minutes to
-//      seconds. A trigger failure is logged, never surfaced to Connect.
+//      /api/integrations/dealers/sync. That route requires Strapi auth and
+//      writes to every dealer row, so it gets a DEDICATED token env var,
+//      CONNECT_SYNC_STRAPI_TOKEN, scoped in the CMS admin to exactly the one
+//      custom action `api::integration.integration.syncDealers`. STRAPI_API_TOKEN
+//      is only a fallback: it stays read-only (see docs/deploy/env.frontend.template)
+//      and is expected to 401 against this write route. Any trigger failure is
+//      logged and degraded, never surfaced to Connect.
 //   2. Invalidate the frontend data cache for the dealer read
 //      (DEALERS_TAG, { expire: 0 }) so /find-dealer shows the sweep's result on
 //      the next load instead of after the 60s ISR window.
@@ -143,6 +144,20 @@ function clientIpKey(request: NextRequest): string {
 // ── sweep trigger ────────────────────────────────────────────────────────────
 
 /**
+ * Token for the sweep trigger, in preference order. CONNECT_SYNC_STRAPI_TOKEN
+ * is the dedicated var: a Strapi API token whose ONLY granted permission is the
+ * custom action `api::integration.integration.syncDealers` (Settings > API
+ * Tokens > custom, never full access, never reused from STRAPI_API_TOKEN). It
+ * exists because the sweep writes every dealer row while STRAPI_API_TOKEN is
+ * deliberately read-only for the frontend's reads. Without the dedicated token
+ * the fallback is used; against the write route that 401s, which is the
+ * documented degrade, not a misconfiguration to fix by widening anything.
+ */
+function sweepToken(): string | undefined {
+  return process.env.CONNECT_SYNC_STRAPI_TOKEN ?? process.env.STRAPI_API_TOKEN;
+}
+
+/**
  * POSTs the Strapi integration sweep. Never throws: every failure mode resolves
  * to a static outcome string the route logs. No timeout is left unbounded — the
  * sweep does a full outbound read of Connect's feed, so it can take a while,
@@ -230,7 +245,7 @@ export async function POST(request: NextRequest) {
   const event = summary?.event ?? "(unparsed)";
   const companyId = summary?.caraveaCompanyId ?? "(absent)";
 
-  const sweep = await triggerDealerSweep(process.env.STRAPI_API_TOKEN);
+  const sweep = await triggerDealerSweep(sweepToken());
 
   let revalidated = false;
   try {
