@@ -17,10 +17,12 @@
  *     receive an enquiry either. Without this the form is merely hidden — a held
  *     link or a curl still files leads against them.
  *
- * `sourceStatus` is deliberately NOT part of the gate. A dealer who has vanished
- * from Connect's feed is flagged `missing` but stays listed on the page, so they
- * must stay reachable: refusing their enquiries would leave a live card whose
- * form silently fails.
+ * `sourceStatus` is deliberately NOT part of the gate: the gate stays existence
+ * plus published, and nothing more. Since ETN-019 a dealer who has vanished from
+ * Connect's feed is auto-hidden by the sync (unpublished, not just flagged
+ * `missing`), so a vanished dealer fails the published gate below and is not
+ * reachable either; the old live-card-with-a-silently-failing-form hazard no
+ * longer applies.
  *
  * Approval is deliberately NOT gated here, and still is not: this lookup only
  * RETURNS the row's `approved` flag (accreditation: set on the owner's first
