@@ -5,7 +5,7 @@
     "singularName": "dealer",
     "pluralName": "dealers",
     "displayName": "Dealer",
-    "description": "The /find-dealer directory. A CACHE of the Caravea Connect dealer feed plus ONE locally owned thing: the publication state. Draft/publish here is EDITORIAL — unpublish a dealer and they leave the cards, the count, the tiles, the map and the filter dropdown, and can no longer be sent an enquiry, even though Connect keeps sending them. The sync writes the DRAFT and publishes only what is already published, so a manual unpublish is never undone. Every display field is owned by Connect and overwritten freely: fix a wrong phone number on Connect, not here, or it reverts within one cron interval. The six coordinate fields are the exception — they are locally owned (see the sync's resolveCoordinates). This collection deliberately holds NO PII: no owner_email, abn, licence numbers, submitter contacts or consent flags, all of which Connect's read shape carries and the mapper drops. connectRef is the match key but is deliberately NOT `unique`: Strapi 5 keeps a draft AND a published entry per document in this one table, so a unique index on a draftAndPublish collection collides with its own published counterpart the moment a row is published. Uniqueness is enforced by the sync, which is the only writer and loads every existing row keyed by connectRef before writing."
+    "description": "The /find-dealer directory. A CACHE of the Caravea Connect dealer feed plus ONE locally owned thing: the publication state. Draft/publish here is EDITORIAL — unpublish a dealer and they leave the cards, the count, the tiles, the map and the filter dropdown, and can no longer be sent an enquiry, even though Connect keeps sending them. The sync additionally auto-hides a dealer whose feed status is suspended or rejected, or who has vanished from the feed (stamping the private autoHiddenAt marker and unpublishing), and auto-returns a dealer it hid itself once the feed approves them again; a dealer a human hid is never republished by the sync; while the feed says suspended, Connect wins and the sync re-hides a manual republish. Every display field is owned by Connect and overwritten freely: fix a wrong phone number on Connect, not here, or it reverts within one cron interval. The six coordinate fields are the exception — they are locally owned (see the sync's resolveCoordinates). This collection deliberately holds NO PII: no owner_email, abn, licence numbers, submitter contacts or consent flags, all of which Connect's read shape carries and the mapper drops. connectRef is the match key but is deliberately NOT `unique`: Strapi 5 keeps a draft AND a published entry per document in this one table, so a unique index on a draftAndPublish collection collides with its own published counterpart the moment a row is published. Uniqueness is enforced by the sync, which is the only writer and loads every existing row keyed by connectRef before writing."
   },
   "options": {
     "draftAndPublish": true
@@ -80,6 +80,8 @@
 
     "approved": { "type": "boolean", "default": false },
 
+    "connectStatus": { "type": "string" },
+
     "sourceHash": { "type": "string", "private": true },
     "sourceStatus": {
       "type": "enumeration",
@@ -88,6 +90,7 @@
       "private": true
     },
     "missingSince": { "type": "datetime", "private": true },
+    "autoHiddenAt": { "type": "datetime", "private": true },
     "syncedAt": { "type": "datetime", "private": true }
   }
 }
