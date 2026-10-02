@@ -370,6 +370,18 @@ export type ConnectDealerRecord = {
 
   approved: boolean;
 
+  /**
+   * Connect's OWN raw feed status, read from the same tree nodes isApproved
+   * consults (`pending` / `approved` / `suspended` on prod today, and the
+   * record shape carries `rejected_at`). This is the auto-hide signal: the
+   * sync unpublishes a dealer whose status lands in its hide set, so the raw
+   * value has to survive the mapping instead of collapsing into the `approved`
+   * badge boolean. Deliberately a free string and NOT an enum: an unknown
+   * upstream status must be stored, not rejected, and membership in the sync's
+   * hide set is the only place the value is interpreted.
+   */
+  connectStatus: string | null;
+
   /** Connect's own coordinate, a candidate only. Always approximate — see the sync. */
   connectLatitude: number | null;
   connectLongitude: number | null;
@@ -404,6 +416,11 @@ export function toDealerRecord(record: Json): ConnectDealerRecord | null {
   if (!connectRef || !dealershipName) return null;
 
   const logo = information.logo_url ?? profile.logo_url;
+
+  // Mirrors isApproved's status read (the same two tree nodes), kept as the raw
+  // string rather than a boolean: this is the sync's auto-hide signal, not a
+  // badge. Lowercased and length-capped to the column's sensible size.
+  const feedStatus = str(registration.status) ?? str(record.status);
 
   return {
     connectRef,
@@ -458,6 +475,7 @@ export function toDealerRecord(record: Json): ConnectDealerRecord | null {
     stateAssociation: str(information.state_association),
 
     approved: isApproved(record, registration),
+    connectStatus: feedStatus ? feedStatus.toLowerCase().slice(0, 40) : null,
 
     connectLatitude: num(location.latitude),
     connectLongitude: num(location.longitude),
