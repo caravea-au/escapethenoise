@@ -938,6 +938,10 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
             } as never);
             summary.autoHidden += 1;
           } else if (willReturn) {
+            // A return is a return whether or not a publish call was needed:
+            // the marker is what the sync owns, and the aggregated ping below
+            // keys on this counter.
+            summary.autoReturned += 1;
             if (!cached.hasPublished) {
               await strapi.documents(DEALER_UID as never).publish({
                 documentId: cached.documentId,
