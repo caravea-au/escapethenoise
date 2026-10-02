@@ -35,12 +35,18 @@
  *     wipe rendered as a calm "0 caravan dealers" and nothing alerted.
  *  3. Records in but none mapped is a no-op, logged as a failure — that is a
  *     shape change, not an empty directory. It shipped silently on 2026-08-17.
- *  4. Bulk-disappearance brake: if more than 20% of cached dealers are absent
- *     from one sweep, mark NONE of them and fail for a human to look at.
- *  5. Nothing is ever hard-deleted or unpublished by this job. A dealer who
- *     vanishes upstream is flagged `sourceStatus: missing` and stays listed;
- *     unpublishing would overload the editorial state, and a returning dealer
- *     would then silently resurrect one staff had deliberately hidden.
+ *  4. Bulk-disappearance brake: if more than 20% of cached dealers would leave
+ *     the directory in one sweep, either absent from the feed or marked
+ *     suspended or rejected by it, mark NONE of them, hide NONE of them, and
+ *     fail for a human to look at.
+ *  5. The sync auto-hides and auto-returns, per the `autoHiddenAt` marker: a
+ *     feed status of suspended or rejected, or absence from the feed, gets the
+ *     card unpublished and the marker stamped; once the feed approves the
+ *     dealer again the sync republishes and clears the marker. A dealer a
+ *     human hid is never republished, which is why the marker exists: without
+ *     it a returning dealer would silently resurrect one staff had deliberately
+ *     hidden. While the feed says suspended, Connect wins: a manual republish
+ *     is re-hidden on the next sweep.
  *  6. Unchanged dealers cost ZERO writes, so the admin's "Modified" badge means
  *     something and `updatedAt` is not churned every 10 minutes.
  */
@@ -57,7 +63,11 @@ import {
   type ConnectDealerRecord,
 } from '../../../utils/connect-dealer-feed';
 import { DEALER_NOT_SPAM_FILTER } from '../../../utils/dealer-not-spam-filter';
-import { withoutRevalidate } from '../../../utils/revalidate-frontend';
+import {
+  DEALERS_TAG,
+  pingRevalidate,
+  withoutRevalidate,
+} from '../../../utils/revalidate-frontend';
 
 const DEALER_UID = 'api::dealer.dealer';
 const SUBMISSION_UID = 'api::dealer-submission.dealer-submission';
@@ -65,6 +75,14 @@ const SETTING_UID = 'api::integration-setting.integration-setting';
 
 /** Above this share of the cache missing in one sweep, mark nothing and fail (rail 4). */
 const MISSING_BRAKE_RATIO = 0.2;
+
+/**
+ * Feed statuses that mean the dealer is off the programme: the sync unpublishes
+ * their card and stamps `autoHiddenAt` (Neil ruling D1, 2026-10-02). The status
+ * itself is a free string from the feed, so membership here is the only place
+ * it is ever interpreted.
+ */
+const AUTO_HIDE_STATUSES = new Set(['suspended', 'rejected']);
 
 // ── summary ──────────────────────────────────────────────────────────────────
 
@@ -86,6 +104,10 @@ export type DealerSyncSummary = {
   markedMissing: number;
   /** Previously `missing`, present again in this sweep. */
   returned: number;
+  /** Cards the sync itself removed from the directory this sweep (feed status or absence). */
+  autoHidden: number;
+  /** Cards the sync restored: it had hidden them itself and the feed approved them again. */
+  autoReturned: number;
   requests: number;
   pins: { street: number; approx: number; none: number };
   /** Dealership names with no coordinate from any source, for hand-resolution. Capped. */
@@ -107,6 +129,8 @@ const createSummary = (): DealerSyncSummary => ({
   skipped: 0,
   markedMissing: 0,
   returned: 0,
+  autoHidden: 0,
+  autoReturned: 0,
   requests: 0,
   pins: { street: 0, approx: 0, none: 0 },
   unpinned: [],
@@ -146,6 +170,10 @@ type CachedDealer = {
   hasPublished: boolean;
   sourceHash: string | null;
   sourceStatus: string | null;
+  /** Connect's own raw feed status last written, or null. Compared in the skip check. */
+  connectStatus: string | null;
+  /** Non-null means THE SYNC hid this card; null means a human owns the publish state. */
+  autoHiddenAt: string | null;
   pin: Pin;
 };
 
@@ -173,6 +201,12 @@ function readPin(row: Record<string, unknown>): Pin {
   };
 }
 
+/** SQLite may hand a datetime back as a string or a Date; normalise to an ISO string or null. */
+function isoOrNull(value: unknown): string | null {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  return typeof value === 'string' && value !== '' ? value : null;
+}
+
 /**
  * Every cached dealer, keyed by connectRef.
  *
@@ -192,6 +226,8 @@ async function loadCache(strapi: Core.Strapi): Promise<Map<string, CachedDealer>
       'connectRef',
       'sourceHash',
       'sourceStatus',
+      'connectStatus',
+      'autoHiddenAt',
       'publishedAt',
       // Read only to rebuild the derived match key; neither is written by this query.
       'website',
@@ -225,6 +261,8 @@ async function loadCache(strapi: Core.Strapi): Promise<Map<string, CachedDealer>
       hasPublished: group.some((row) => Boolean(row.publishedAt)),
       sourceHash: typeof source.sourceHash === 'string' ? source.sourceHash : null,
       sourceStatus: typeof source.sourceStatus === 'string' ? source.sourceStatus : null,
+      connectStatus: typeof source.connectStatus === 'string' ? source.connectStatus : null,
+      autoHiddenAt: isoOrNull(source.autoHiddenAt),
       pin: readPin(source),
     });
   }
@@ -588,11 +626,21 @@ function collapseIdentifiedTwins(byRef: Map<string, ConnectDealerRecord>): void 
 
 /**
  * Fields excluded from the hash. `syncedAt` moves every sweep by definition;
- * `sourceStatus` / `missingSince` are the sync's own bookkeeping, compared
- * separately so a returning dealer is detected even when their content is
- * byte-identical to what we already hold.
+ * `sourceStatus` / `missingSince` are the sync's own bookkeeping, and
+ * `connectStatus` / `autoHiddenAt` are the auto-hide bookkeeping; all are
+ * compared separately so a status flip or a hide or return is detected even
+ * when the content is byte-identical to what we already hold. `autoHiddenAt`
+ * must never churn the hash: it moves on every hide and return, which would
+ * otherwise report every affected dealer as content-modified forever.
  */
-const VOLATILE_FIELDS = new Set(['syncedAt', 'sourceHash', 'sourceStatus', 'missingSince']);
+const VOLATILE_FIELDS = new Set([
+  'syncedAt',
+  'sourceHash',
+  'sourceStatus',
+  'missingSince',
+  'connectStatus',
+  'autoHiddenAt',
+]);
 
 /**
  * Content hash of everything the sweep would write.
@@ -746,8 +794,29 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
   // Rail 4, computed BEFORE any write so the decision is made on a complete
   // picture rather than on however far the upsert loop happened to get.
   const missingRefs = [...cache.keys()].filter((ref) => !claimed.has(ref));
+
+  // Feed records still present but suspended or rejected remove their card just
+  // as an absent record does, so the brake counts both as hide targets. Keyed
+  // by the CACHED ref, because a record may be about to re-key the row it
+  // matches onto a different ref.
+  const feedHideRefs = new Set<string>();
+  for (const record of byRef.values()) {
+    const match = matches.get(record.connectRef);
+    if (match && AUTO_HIDE_STATUSES.has(record.connectStatus ?? '')) {
+      feedHideRefs.add(match.cached.connectRef);
+    }
+  }
+
+  // One combined threshold (Neil D3): absence and feed-driven hides together,
+  // over PUBLISHED cached rows only, since those are the only cards the sweep
+  // could actually remove from the directory.
+  const hideTargets = [...cache.keys()].filter((ref) => {
+    const absent = !claimed.has(ref);
+    if (!absent && !feedHideRefs.has(ref)) return false;
+    return cache.get(ref)!.hasPublished;
+  });
   const brakeTripped =
-    cache.size > 0 && missingRefs.length / cache.size > MISSING_BRAKE_RATIO;
+    cache.size > 0 && hideTargets.length / cache.size > MISSING_BRAKE_RATIO;
 
   const syncedAt = new Date().toISOString();
 
@@ -803,14 +872,30 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
       };
       data.sourceHash = contentHash(data);
 
-      // THE SKIP. No write, no publish, no `updatedAt` churn — and crucially no
+      // The hide and return decisions are made BEFORE the skip, so a suspended
+      // dealer whose profile does not change (the common case: nothing on their
+      // card moved) is still caught instead of being skipped every sweep.
+      // willHide requires autoHiddenAt null because a human publish clears the
+      // marker (see the dealer lifecycles): a manual republish while the feed
+      // says suspended re-arms the hide, so Connect wins (Neil D4).
+      const feedHidden = AUTO_HIDE_STATUSES.has(record.connectStatus ?? '');
+      const willHide =
+        cached !== undefined && feedHidden && cached.hasPublished && cached.autoHiddenAt === null;
+      const willReturn =
+        cached !== undefined && !feedHidden && cached.autoHiddenAt !== null;
+
+      // THE SKIP. No write, no publish, no `updatedAt` churn, and crucially no
       // publish(), which is where the baseplate's inventory-sync silently undoes
-      // a manual unpublish. `sourceStatus` is compared separately so a dealer
-      // returning from `missing` still gets the one write that clears the flag.
+      // a manual unpublish. `sourceStatus` and `connectStatus` are compared
+      // separately so a dealer returning from `missing` or flipping feed status
+      // still gets the one write that reflects it.
       if (
         cached &&
+        !willHide &&
+        !willReturn &&
         cached.sourceHash === data.sourceHash &&
-        cached.sourceStatus === 'live'
+        cached.sourceStatus === 'live' &&
+        cached.connectStatus === record.connectStatus
       ) {
         summary.skipped += 1;
         continue;
@@ -822,15 +907,43 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
           // version alone unless asked, which is exactly what we want: a hidden
           // dealer's draft keeps receiving fresh data (so publishing them later
           // publishes current values, not a snapshot from when they were hidden)
-          // while they stay absent from the page.
+          // while they stay absent from the page. The marker rides along: the
+          // hide stamps it, the return clears it, everything else leaves
+          // whatever ownership it records untouched.
+          const draftData =
+            willHide && !brakeTripped
+              ? { ...data, autoHiddenAt: syncedAt }
+              : willReturn
+                ? { ...data, autoHiddenAt: null }
+                : data;
+
           await strapi.documents(DEALER_UID as never).update({
             documentId: cached.documentId,
-            data,
+            data: draftData,
           } as never);
 
-          // ...and publish ONLY if a published version already exists. This one
-          // condition is the publication gate.
-          if (cached.hasPublished) {
+          // One publish-side decision per dealer, in priority order. THE HIDE
+          // (Neil D1/D4/D6) unpublishes the card and counts as a directory
+          // removal; with the brake tripped it is deferred to the next sweep and
+          // no marker is stamped, because a stamped-but-still-published row
+          // would then be skipped on the sweep that follows and never hidden.
+          // THE RETURN (Neil D6, ETN-013 D2 preserved) republishes only when the
+          // card has NO published version, i.e. the sync itself had unpublished
+          // it: a card with no published version and no marker was hidden by a
+          // human and is never republished here. Everything else keeps the
+          // ETN-013 gate: publish only if a published version already exists.
+          if (willHide && !brakeTripped) {
+            await strapi.documents(DEALER_UID as never).unpublish({
+              documentId: cached.documentId,
+            } as never);
+            summary.autoHidden += 1;
+          } else if (willReturn) {
+            if (!cached.hasPublished) {
+              await strapi.documents(DEALER_UID as never).publish({
+                documentId: cached.documentId,
+              } as never);
+            }
+          } else if (cached.hasPublished) {
             await strapi.documents(DEALER_UID as never).publish({
               documentId: cached.documentId,
             } as never);
@@ -843,13 +956,23 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
           if (cached.sourceStatus === 'missing') summary.returned += 1;
         } else {
           // New dealers arrive PUBLISHED (ETN-013 D1): the directory stays
-          // complete with nobody tending it. Accepted consequence — a Connect
+          // complete with nobody tending it. Accepted consequence: a Connect
           // test or lorem row goes live until someone hides it, and hiding it is
-          // then permanent, because the sweep never republishes.
-          await strapi.documents(DEALER_UID as never).create({
-            data,
-            status: 'published',
-          } as never);
+          // then permanent, because the sync never republishes what a human hid.
+          // The exception (Neil D2): a record arriving ALREADY suspended or
+          // rejected was never visible, so it is created as a draft with the
+          // marker stamped and it auto-returns if the feed approves it later.
+          if (AUTO_HIDE_STATUSES.has(record.connectStatus ?? '')) {
+            await strapi.documents(DEALER_UID as never).create({
+              data: { ...data, autoHiddenAt: syncedAt },
+              status: 'draft',
+            } as never);
+          } else {
+            await strapi.documents(DEALER_UID as never).create({
+              data,
+              status: 'published',
+            } as never);
+          }
           summary.created += 1;
         }
       } catch (error) {
@@ -858,13 +981,15 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
     }
 
     if (brakeTripped) {
-      // Rail 4. Marks NOTHING. A fifth of the directory vanishing at once is far
-      // more likely to be an upstream import mid-flight than a fifth of the
-      // dealers leaving the programme, and the flag is the thing a human acts on.
+      // Rail 4. Marks NOTHING and hides NOTHING. A fifth of the directory
+      // vanishing or being suspended at once is far more likely to be an
+      // upstream import mid-flight than a fifth of the dealers leaving the
+      // programme, and the flag is the thing a human acts on.
       summary.status = 'failed';
       summary.errors.push(
-        `bulk-disappearance brake: ${missingRefs.length} of ${cache.size} cached dealers absent ` +
-          `(over ${Math.round(MISSING_BRAKE_RATIO * 100)}%) — none marked missing`,
+        `bulk-disappearance brake: ${hideTargets.length} of ${cache.size} published cached dealers ` +
+          `would leave the directory this sweep (absent, or suspended/rejected upstream, over ` +
+          `${Math.round(MISSING_BRAKE_RATIO * 100)}%); nothing marked missing, nothing auto-hidden`,
       );
       strapi.log.error(`[dealer-sync] ${summary.errors[summary.errors.length - 1]}`);
       return;
@@ -874,30 +999,54 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
       const cached = cache.get(ref)!;
       // Already flagged: leave it alone. `missingSince` records when it FIRST
       // went missing, and re-stamping it every 10 minutes would erase exactly
-      // the information it exists to carry.
-      if (cached.sourceStatus === 'missing') continue;
+      // the information it exists to carry. An already-missing dealer who still
+      // has a published version (a row flagged before the auto-hide shipped)
+      // still gets the ONE-TIME hide below, but never a re-stamped missingSince.
+      const alreadyMissing = cached.sourceStatus === 'missing';
+      // Auto-hide on absence (Neil D6): a PUBLISHED dealer who vanished from
+      // the feed leaves the directory this sweep, with the marker stamped so
+      // the sync can undo the removal itself when they return. A dealer who
+      // was already auto-hidden keeps their marker, and a staff-hidden dealer
+      // (no marker, no published version) is only flagged, never unpublished
+      // and never resurrected.
+      const autoHide = cached.hasPublished && cached.autoHiddenAt === null;
+      if (alreadyMissing && !autoHide) continue;
 
       try {
+        const stamp: Record<string, unknown> = {};
+        if (!alreadyMissing) {
+          stamp.sourceStatus = 'missing';
+          stamp.missingSince = syncedAt;
+        }
+        if (autoHide) stamp.autoHiddenAt = syncedAt;
+
         await strapi.documents(DEALER_UID as never).update({
           documentId: cached.documentId,
-          data: { sourceStatus: 'missing', missingSince: syncedAt },
+          data: stamp,
         } as never);
 
-        // Same publish rule as above. Keeps draft and published in step so the
-        // admin does not show a permanent phantom "Modified" badge, without ever
-        // republishing a dealer staff deliberately hid.
-        if (cached.hasPublished) {
-          await strapi.documents(DEALER_UID as never).publish({
+        if (autoHide) {
+          await strapi.documents(DEALER_UID as never).unpublish({
             documentId: cached.documentId,
           } as never);
+          summary.autoHidden += 1;
         }
 
-        summary.markedMissing += 1;
+        if (!alreadyMissing) summary.markedMissing += 1;
       } catch (error) {
         summary.errors.push(`${ref} mark-missing: ${errorMessage(error)}`);
       }
     }
   });
+
+  // End-of-sweep aggregated ping: hide and return move cards on the directory,
+  // the sweep's own writes are suppressed, and Connect's push receiver only
+  // waits out a 20 second cap before revalidating, so without this the change
+  // would sit out the frontend's full 60 second cache window. One ping per
+  // sweep, never per row.
+  if (summary.autoHidden + summary.autoReturned > 0) {
+    await pingRevalidate(strapi, DEALERS_TAG);
+  }
 
   if (summary.errors.length > 0 && summary.status === 'ok') {
     // Per-dealer write failures do not invalidate the sweep, but they must not
