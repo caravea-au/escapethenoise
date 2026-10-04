@@ -38,7 +38,9 @@ const cronTasks = {
         const line =
           `[dealer-sync] ${summary.status}: fetched ${summary.fetched}, ` +
           `created ${summary.created}, updated ${summary.updated}, skipped ${summary.skipped}, ` +
-          `missing ${summary.markedMissing}, pins ${summary.pins.street}/${summary.pins.approx}/${summary.pins.none}` +
+          `missing ${summary.markedMissing}, autoHidden ${summary.autoHidden}, ` +
+          `autoReturned ${summary.autoReturned}, ` +
+          `pins ${summary.pins.street}/${summary.pins.approx}/${summary.pins.none}` +
           (summary.errors.length ? ` — ${summary.errors.length} error(s)` : '');
 
         if (summary.status === 'failed') strapi.log.error(line);
