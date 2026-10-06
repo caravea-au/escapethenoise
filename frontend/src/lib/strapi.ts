@@ -3,7 +3,10 @@
 // enabled for buying-guide, so no token is required; if STRAPI_API_TOKEN is
 // set (e.g. to read drafts) it is sent as a Bearer header.
 
-const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337";
+// Exported for callers outside this module that need the same base URL the
+// reads use (the Connect push receiver POSTs a sweep trigger to it). Keeping
+// the default in one place stops the two from drifting.
+export const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337";
 const TOKEN = process.env.STRAPI_API_TOKEN;
 
 // ── Strapi blocks (rich text) node shapes we render ──────────────────────────

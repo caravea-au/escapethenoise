@@ -1,4 +1,4 @@
-﻿# NoBetterTime â†” Caravea Connect â€” staging access and sample test data
+# NoBetterTime â†” Caravea Connect â€” staging access and sample test data
 
 ## Connection details
 
@@ -547,6 +547,28 @@ The stable company key is `company.caravea_company_id`, and `event` plus `occurr
 
 A reference receiver that verifies the signature lives in the Connect repo at `scripts/nobettertime_sync_receiver.py`.
 Point `NOBETTERTIME_SYNC_URL` at it and set the same secret on both sides to exercise the outbound path without NoBetterTime's real endpoint.
+
+## Receiver (built ETN-018)
+
+NoBetterTime's receiver is live code now: a Next.js Route Handler at `POST /api/connect/sync` on the NoBetterTime frontend host
+(`https://staging.nobettertime.com.au/api/connect/sync` on staging, the production host when this ships).
+It implements the contract above exactly: HMAC-SHA256 over `<X-Caravea-Timestamp> + "\n" + <raw body>`, `sha256=` + 64 lowercase hex
+header, fail closed to a bare 401 on any verification failure, 413 over 256KB bodies, 429 past 20 requests/min/IP.
+
+- **Secret.** `CONNECT_SYNC_SECRET` on the NoBetterTime frontend side must equal Connect's `NOBETTERTIME_SYNC_SECRET` for the same
+  environment. Unset means the route 401s every delivery and the push channel stays dormant.
+- **Sweep trigger.** On a verified delivery the receiver POSTs NoBetterTime's own Strapi integration sweep
+  (`POST /api/integrations/dealers/sync`) with a dedicated token env var `CONNECT_SYNC_STRAPI_TOKEN`, scoped in the Strapi admin to
+  the single action `api::integration.integration.syncDealers` (never full access, never the read-only `STRAPI_API_TOKEN`, which is
+  only a fallback that is expected to 401). Then it invalidates the frontend dealer cache (`revalidateTag("dealers", { expire: 0 })`).
+- **Degrade behaviour.** Any sweep failure (unset token, wrong scope, Strapi down) is logged and skipped; the route still answers
+  `200 {"received": true}` and still invalidates the cache, because any 2xx is accepted by Connect and a retry could not fix the cause.
+  The payload is never upserted directly; the sweep is the only writer.
+- **Clock window.** Timestamps must sit within ±900s of receiver time (matching Connect's longest queue backoff), tunable via
+  `CONNECT_SYNC_CLOCK_TOLERANCE_SECONDS`. Whether Connect re-signs per queue retry is unresolved; 900s covers the whole 60/300/900
+  ladder either way.
+- **Idempotency.** Deliveries are treated as idempotent and a replayed, correctly-signed event inside the window is accepted; the sweep
+  it triggers is the same idempotent full sync the cron schedule runs.
 
 ---
 
