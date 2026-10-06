@@ -79,7 +79,7 @@ export const DAYS = [
 export const STATES = ["VIC", "NSW", "QLD", "SA", "WA", "TAS", "NT", "ACT"];
 
 export const DMS_SYSTEMS = [
-  "Caravea Connect",
+  "Caravea Conect",
   "EasyCars (Jeal)",
   "AutoPlay",
   "Pentana / ERAnet",
