@@ -314,9 +314,10 @@ export const CHIP_PREDICATES: Record<ChipKey, (dealer: DirectoryDealer, nowMs: n
  *     to and is offered no form.
  *  3. `approved` (captain's decision 2026-09-22): a dealer whose owner has not
  *     logged in after approval is not offered the form yet. Connect v3 sets
- *     this flag on the owner's FIRST LOGIN — accreditation is a separate
- *     milestone from approval — so this keeps enquiries behind the same
- *     milestone the ✓ Accredited badge already uses.
+ *     this flag on the owner's FIRST LOGIN, so accreditation is a separate
+ *     milestone from approval. `approved` also used to drive the "✓
+ *     Accredited" badge beside the dealer name; that badge was removed at the
+ *     client's request (2026-10-07), so this gate is now the flag's only use.
  *
  * Lives here rather than inline in each component because DealerCard's
  * "& Enquire" wording and DealerModal's form have to answer this identically:
