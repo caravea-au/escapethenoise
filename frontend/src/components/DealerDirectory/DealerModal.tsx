@@ -148,21 +148,9 @@ export function DealerModal({
         </div>
 
         <div className="px-7 pb-[26px] pt-[22px]">
-          <div className="flex flex-wrap items-center gap-[9px]">
-            <h3 id={titleId} className="font-oswald text-2xl font-bold tracking-[-.4px] text-green">
-              {dealer.dealershipName}
-            </h3>
-            {/* Mirrors DealerCard: the ✓ badge is only shown for a dealer
-                Connect has approved, and every other dealer gets no pill at
-                all rather than a neutral placeholder. Same dealer, same badge,
-                same place beside the name, whether you read it in the list or
-                the modal. */}
-            {dealer.approved && (
-              <span className="rounded-chip bg-badge-accredited-bg px-[9px] py-[3px] text-[10.5px] font-bold tracking-[.3px] text-rust-deep">
-                ✓ Accredited
-              </span>
-            )}
-          </div>
+          <h3 id={titleId} className="font-oswald text-2xl font-bold tracking-[-.4px] text-green">
+            {dealer.dealershipName}
+          </h3>
           <div className="mt-2 flex flex-wrap items-center gap-[5px] text-[13.5px] text-muted">
             <PinIcon className="text-rust" />
             <span>
@@ -282,11 +270,11 @@ export function DealerModal({
                 1. the site-wide switch (#70), covering the whole directory at once;
                 2. this dealer having a Connect company id (ETN-017), the gate
                    immediately below;
-                3. the ✓ Accredited pill above (Connect’s `approved`, ETN-006)
-                   — badge AND enquiry gate as of 2026-09-22: set on the
-                   owner's first login AFTER approval, so an approved dealer
-                   whose owner has not logged in yet correctly shows neither
-                   pill nor form;
+                3. Connect's `approved` flag (ETN-006) — accreditation as a
+                   milestone, set on the owner's first login AFTER approval. It
+                   used to be displayed as the "✓ Accredited" badge beside the
+                   name; the client asked for that badge to go (2026-10-07), so
+                   it now exists only as this enquiry gate;
                 4. whether the cache row is published at all (ETN-013), which
                    decides if this modal can be opened in the first place.
 

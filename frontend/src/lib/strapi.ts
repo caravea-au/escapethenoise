@@ -530,8 +530,10 @@ export type DirectoryDealer = {
 
   // Whether Connect has accredited this dealer: set when the dealer's owner
   // logs in for the first time AFTER approval (Connect v3 accreditation
-  // milestone), never at approval itself. Drives the ✓ Accredited badge
-  // (ETN-006) AND the enquiry-form gate (see `canEnquire` in lib/dealers).
+  // milestone), never at approval itself. Gates the enquiry form via
+  // `canEnquire` in lib/dealers. It used to also drive the ✓ Accredited badge
+  // (ETN-006); that badge was removed at the client's request (2026-10-07),
+  // so this flag no longer has any visual representation.
   // Defaults to false on anything we cannot read, so an unreadable approval
   // state never claims accreditation.
   approved: boolean;
@@ -543,7 +545,7 @@ export type DirectoryDealer = {
   //
   // NOT the same question as `approved`, but since the 2026-09-22 enquiry-form
   // gate both are required: an accredited dealer whose id was somehow not yet
-  // minted would show the badge with no form, and that is the correct
+  // minted would still be offered no form, and that is the correct
   // behaviour rather than a bug: there would be no company to attribute the
   // lead to.
   hasCaraveaCompanyId: boolean;
