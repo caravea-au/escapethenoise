@@ -107,9 +107,9 @@ export function TrustBar({ data, partnersOnly = false }: { data?: HomeTrustBar; 
                     key={l.src}
                     src={l.src}
                     alt={l.alt}
-                    width={140}
+                    width={220}
                     height={104}
-                    className="block h-[80px] w-auto max-w-[104px] object-contain md:h-[104px]"
+                    className="block h-[80px] w-auto max-w-full object-contain md:h-[104px]"
                   />
                 ))}
               </div>
