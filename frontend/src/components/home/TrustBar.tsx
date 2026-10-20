@@ -22,8 +22,8 @@ const FALLBACK_STATS = [
 // CIAA plus only the associations of the states the directory serves (NSW/VIC/QLD).
 const FALLBACK_STATES = [
   { src: "/brand/ciaa-logo.webp", alt: "Caravan Industry Association of Australia" },
-  { src: "/brand/states/state-qld.webp", alt: "Caravanning Queensland" },
-  { src: "/brand/states/state-nsw.webp", alt: "Caravan & Camping Industry Association NSW" },
+  { src: "/brand/states/state-qld-logo.webp", alt: "Caravanning Queensland" },
+  { src: "/brand/states/state-nsw-logo.webp", alt: "Caravan & Camping Industry Association NSW" },
   { src: "/brand/states/state-vic-badge.webp", alt: "Caravan Industry Victoria" },
 ];
 
