@@ -7,9 +7,7 @@ import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
 import { Button } from "@/components/ui/Button";
 import { ArticleBody, YouTubeEmbed } from "@/components/ArticleBody/ArticleBody";
-import { LogoMarquee } from "@/components/LogoMarquee/LogoMarquee";
 import {
-  getIndustryPartners,
   getVehicleListingBySlug,
   getVehicleListingSlugs,
   strapiMedia,
@@ -191,15 +189,6 @@ export default async function VehicleListingDetailPage({
   const specSections = vehicle.specSections ?? [];
   const videoSrc = vehicle.watchVideoUrl ? youtubeEmbedSrc(vehicle.watchVideoUrl) : null;
 
-  const partnersData = await getIndustryPartners();
-  const partnerLogos = (partnersData?.partners ?? [])
-    .map((p) => ({
-      src: strapiMedia(p.logo?.url) ?? "",
-      alt: p.name,
-      href: p.url ?? undefined,
-    }))
-    .filter((it) => it.src);
-
   return (
     <article>
       {/* Hero */}
@@ -258,23 +247,6 @@ export default async function VehicleListingDetailPage({
         {specSections.map((s, i) => (
           <SpecSection key={i} section={s} />
         ))}
-
-        {/* Key Industry Partners — site-wide logo set (Strapi), scrolling marquee */}
-        {partnerLogos.length > 0 && (
-          <section className="mt-12">
-            <Heading as="h2" className="mb-5 text-center text-[22px] tracking-[-0.3px] text-green">
-              {partnersData?.heading || "Key Industry Partners"}
-            </Heading>
-            <div className="overflow-hidden rounded-card border border-line bg-cream py-7">
-              <LogoMarquee
-                items={partnerLogos}
-                gapClassName="gap-[70px]"
-                imageClassName="block h-[46px] w-auto shrink-0 object-contain"
-                fadeColor="#f6f1e4"
-              />
-            </div>
-          </section>
-        )}
 
         {/* Find Your Perfect RV CTA */}
         <section className="mt-12 rounded-card border border-line bg-cream px-6 py-8 text-center sm:px-10">
