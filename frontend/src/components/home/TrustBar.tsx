@@ -30,8 +30,9 @@ const FALLBACK_STATES = [
 type LogoItem = { src: string; alt: string };
 
 // Trust bar — stats + an infinite state-association logo marquee (design.md §8).
-// `partnersOnly` renders just the partners heading + marquee: the stats and the
-// "official directory of" CIAA line overstate current coverage.
+// `partnersOnly` renders just the partners heading + a static logo row: the stats and
+// the "official directory of" CIAA line overstate current coverage, and four logos
+// are too few to fill the marquee loop on wide screens (it shows a blank tail).
 export function TrustBar({ data, partnersOnly = false }: { data?: HomeTrustBar; partnersOnly?: boolean }) {
   const eyebrow = data?.eyebrow ?? FALLBACK_EYEBROW;
   const heading = data?.heading ?? FALLBACK_HEADING;
@@ -99,7 +100,22 @@ export function TrustBar({ data, partnersOnly = false }: { data?: HomeTrustBar; 
           </div>
 
           <div className="relative overflow-hidden rounded-[20px] bg-cream-deep py-[30px] shadow-[0_24px_56px_-26px_rgba(0,0,0,.7),inset_0_1px_0_rgba(255,255,255,.5)]">
-            <LogoMarquee items={logos} fadeColor="#EFE7D2" />
+            {partnersOnly ? (
+              <div className="grid grid-cols-2 place-items-center gap-y-8 px-6 md:flex md:justify-around md:px-11">
+                {logos.map((l) => (
+                  <Image
+                    key={l.src}
+                    src={l.src}
+                    alt={l.alt}
+                    width={140}
+                    height={104}
+                    className="block h-[80px] w-auto max-w-[104px] object-contain md:h-[104px]"
+                  />
+                ))}
+              </div>
+            ) : (
+              <LogoMarquee items={logos} fadeColor="#EFE7D2" />
+            )}
           </div>
 
           {!partnersOnly && (
