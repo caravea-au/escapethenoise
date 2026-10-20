@@ -101,7 +101,7 @@ export function TrustBar({ data, partnersOnly = false }: { data?: HomeTrustBar; 
 
           <div className="relative overflow-hidden rounded-[20px] bg-cream-deep py-[30px] shadow-[0_24px_56px_-26px_rgba(0,0,0,.7),inset_0_1px_0_rgba(255,255,255,.5)]">
             {partnersOnly ? (
-              <div className="grid grid-cols-2 place-items-center gap-y-8 px-6 md:flex md:justify-around md:px-11">
+              <div className="grid grid-cols-2 place-items-center gap-x-4 gap-y-8 px-4 md:px-11 lg:flex lg:justify-around">
                 {logos.map((l) => (
                   <Image
                     key={l.src}
