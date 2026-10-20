@@ -9,8 +9,7 @@ import { strapiMedia, type HomeTrustBar } from "@/lib/strapi";
 const FALLBACK_EYEBROW = "Trusted across Australia";
 const FALLBACK_HEADING = "The national standard in\naccredited caravan dealers";
 const FALLBACK_PARTNERS_EYEBROW = "Backed by the industry";
-const FALLBACK_PARTNERS_HEADING =
-  "In partnership with Australia's state & territory caravanning associations";
+const FALLBACK_PARTNERS_HEADING = "In Partnership with Leading Caravan Industry Associations";
 const FALLBACK_CIAA_LABEL = "The official directory of";
 const FALLBACK_CIAA_LOGO = "/brand/ciaa-logo-rev.webp";
 
@@ -20,22 +19,20 @@ const FALLBACK_STATS = [
   { value: "60", showPlus: true, label: "Brands Represented" },
 ];
 
+// CIAA plus only the associations of the states the directory serves (NSW/VIC/QLD).
 const FALLBACK_STATES = [
+  { src: "/brand/ciaa-logo.webp", alt: "Caravan Industry Association of Australia" },
   { src: "/brand/states/state-qld.webp", alt: "Caravanning Queensland" },
   { src: "/brand/states/state-nsw.webp", alt: "Caravan & Camping Industry Association NSW" },
   { src: "/brand/states/state-vic.webp", alt: "Caravan Industry Victoria" },
-  { src: "/brand/states/state-crpv.webp", alt: "Caravan & Residential Parks Victoria" },
-  { src: "/brand/states/state-sa.webp", alt: "Caravan & Camping SA" },
-  { src: "/brand/states/state-saparks.webp", alt: "SA Parks" },
-  { src: "/brand/states/state-wa.webp", alt: "Caravan & Camping Western Australia" },
-  { src: "/brand/states/state-nt.webp", alt: "Caravanning NT" },
-  { src: "/brand/states/state-tas.webp", alt: "Caravanning Tasmania" },
 ];
 
 type LogoItem = { src: string; alt: string };
 
 // Trust bar — stats + an infinite state-association logo marquee (design.md §8).
-export function TrustBar({ data }: { data?: HomeTrustBar }) {
+// `partnersOnly` renders just the partners heading + marquee: the stats and the
+// "official directory of" CIAA line overstate current coverage.
+export function TrustBar({ data, partnersOnly = false }: { data?: HomeTrustBar; partnersOnly?: boolean }) {
   const eyebrow = data?.eyebrow ?? FALLBACK_EYEBROW;
   const heading = data?.heading ?? FALLBACK_HEADING;
   const partnersEyebrow = data?.partnersEyebrow ?? FALLBACK_PARTNERS_EYEBROW;
@@ -57,40 +54,44 @@ export function TrustBar({ data }: { data?: HomeTrustBar }) {
       <div className="absolute inset-0 bg-[radial-gradient(60%_80%_at_6%_100%,rgba(229,192,121,.12),transparent_55%)]" />
 
       <Container className="relative pt-16 pb-[60px]">
-        <div className="mx-auto max-w-[680px] text-center">
-          <Eyebrow tone="gold" className="inline-flex items-center gap-[9px] tracking-[2.5px]">
-            <span className="h-[7px] w-[7px] rounded-full bg-gold" />
-            {eyebrow}
-          </Eyebrow>
-          <Heading
-            as="h2"
-            className="mt-3.5 whitespace-pre-line text-[28px] uppercase leading-[1.04] tracking-[-.5px] text-white md:text-[31px] lg:text-[41px] xl:text-[44px]"
-          >
-            {heading}
-          </Heading>
-        </div>
-
-        <div className="mt-12 grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-5">
-          {stats.map((s, i) => (
-            <div key={s.label ?? i} className={`text-center ${i > 0 ? "border-l border-cream-deep/[.14]" : ""}`}>
-              <div className="font-oswald text-[54px] font-bold leading-[.85] tracking-[-2px] text-cream-deep lg:text-[72px] xl:text-[82px]">
-                {s.value}
-                {s.showPlus && <span className="text-gold">+</span>}
-              </div>
-              <div className="mt-3.5 text-[13px] font-semibold uppercase tracking-[1px] text-[#bdb293]">
-                {s.label}
-              </div>
+        {!partnersOnly && (
+          <>
+            <div className="mx-auto max-w-[680px] text-center">
+              <Eyebrow tone="gold" className="inline-flex items-center gap-[9px] tracking-[2.5px]">
+                <span className="h-[7px] w-[7px] rounded-full bg-gold" />
+                {eyebrow}
+              </Eyebrow>
+              <Heading
+                as="h2"
+                className="mt-3.5 whitespace-pre-line text-[28px] uppercase leading-[1.04] tracking-[-.5px] text-white md:text-[31px] lg:text-[41px] xl:text-[44px]"
+              >
+                {heading}
+              </Heading>
             </div>
-          ))}
-        </div>
 
-        <div className="mt-[58px] border-t border-cream-deep/[.14] pt-12">
+            <div className="mt-12 grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-5">
+              {stats.map((s, i) => (
+                <div key={s.label ?? i} className={`text-center ${i > 0 ? "border-l border-cream-deep/[.14]" : ""}`}>
+                  <div className="font-oswald text-[54px] font-bold leading-[.85] tracking-[-2px] text-cream-deep lg:text-[72px] xl:text-[82px]">
+                    {s.value}
+                    {s.showPlus && <span className="text-gold">+</span>}
+                  </div>
+                  <div className="mt-3.5 text-[13px] font-semibold uppercase tracking-[1px] text-[#bdb293]">
+                    {s.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className={partnersOnly ? "" : "mt-[58px] border-t border-cream-deep/[.14] pt-12"}>
           <div className="mx-auto mb-[30px] max-w-[560px] text-center">
             <Eyebrow tone="gold" className="tracking-[2.5px]">
               {partnersEyebrow}
             </Eyebrow>
             <Heading
-              as="h3"
+              as={partnersOnly ? "h2" : "h3"}
               className="mt-2.5 text-[20px] font-semibold uppercase leading-[1.15] tracking-[.3px] text-white lg:text-[25px] xl:text-[27px]"
             >
               {partnersHeading}
@@ -101,18 +102,20 @@ export function TrustBar({ data }: { data?: HomeTrustBar }) {
             <LogoMarquee items={logos} fadeColor="#EFE7D2" />
           </div>
 
-          <div className="mt-[30px] flex flex-col items-center gap-4">
-            <span className="text-[12.5px] font-medium tracking-[.2px] text-[#bdb293]">
-              {ciaaLabel}
-            </span>
-            <Image
-              src={ciaaLogo}
-              alt="Caravan Industry Association of Australia"
-              width={180}
-              height={58}
-              className="block h-[58px] w-auto"
-            />
-          </div>
+          {!partnersOnly && (
+            <div className="mt-[30px] flex flex-col items-center gap-4">
+              <span className="text-[12.5px] font-medium tracking-[.2px] text-[#bdb293]">
+                {ciaaLabel}
+              </span>
+              <Image
+                src={ciaaLogo}
+                alt="Caravan Industry Association of Australia"
+                width={180}
+                height={58}
+                className="block h-[58px] w-auto"
+              />
+            </div>
+          )}
         </div>
       </Container>
     </section>
