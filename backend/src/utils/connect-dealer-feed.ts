@@ -311,6 +311,8 @@ export type ConnectDealerRecord = {
    * reckoning. See `collapseIdentifiedTwins` in `dealer-sync.ts`.
    */
   connectRefDerived: boolean;
+  /** caravea_company_ids Connect says were merged into this dealer; the sync re-keys cached rows held under them. */
+  mergedReferences: string[];
   connectSubmissionId: string | null;
 
   /**
@@ -425,6 +427,7 @@ export function toDealerRecord(record: Json): ConnectDealerRecord | null {
   return {
     connectRef,
     connectRefDerived: issuedRef === null,
+    mergedReferences: strArray(registration.merged_references),
     connectSubmissionId: submissionId,
     // `reference` alone, deliberately NOT `issuedRef`: `submission_id` is a ULID
     // identifying one registration submission, not the company Connect issues an
