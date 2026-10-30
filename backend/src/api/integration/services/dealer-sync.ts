@@ -160,7 +160,7 @@ const NO_PIN: Pin = {
   geocodedAddress: null,
 };
 
-type CachedDealer = {
+export type CachedDealer = {
   documentId: string;
   /** The ref this row is currently stored under. May be a `seed|` or `dz|` key rather than one Connect issued. */
   connectRef: string;
@@ -536,7 +536,12 @@ type CacheMatch = {
   rekeyedFrom: string | null;
 };
 
-function matchCache(
+function visibilityRank(row: CachedDealer): number {
+  if (row.hasPublished) return 0;
+  return row.autoHiddenAt !== null ? 1 : 2;
+}
+
+export function matchCache(
   records: ConnectDealerRecord[],
   cache: Map<string, CachedDealer>,
 ): { matches: Map<string, CacheMatch>; claimed: Set<string> } {
@@ -555,6 +560,22 @@ function matchCache(
     if (!direct) continue;
     matches.set(record.connectRef, { cached: direct, rekeyedFrom: null });
     claimed.add(direct.connectRef);
+  }
+
+  // A merge survivor's record names the refs it absorbed. Re-key the cached row
+  // held under one of them (published, else auto-hidden, else staff-hidden; ties
+  // by merged_references order) so the dealer stays one card, not two.
+  for (const record of records) {
+    if (matches.has(record.connectRef)) continue;
+    let hit: CachedDealer | undefined;
+    for (const ref of record.mergedReferences) {
+      const row = cache.get(ref);
+      if (!row || claimed.has(row.connectRef)) continue;
+      if (!hit || visibilityRank(row) < visibilityRank(hit)) hit = row;
+    }
+    if (!hit) continue;
+    matches.set(record.connectRef, { cached: hit, rekeyedFrom: hit.connectRef });
+    claimed.add(hit.connectRef);
   }
 
   for (const record of records) {
@@ -860,6 +881,7 @@ export async function runDealerSync(strapi: Core.Strapi): Promise<DealerSyncSumm
         connectLatitude: _lat,
         connectLongitude: _lng,
         connectRefDerived: _derived,
+        mergedReferences: _merged,
         ...fields
       } = record;
 
