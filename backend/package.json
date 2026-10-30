@@ -24,7 +24,8 @@
     "strapi": "strapi",
     "upgrade": "npx @strapi/upgrade latest",
     "upgrade:dry": "npx @strapi/upgrade latest --dry",
-    "seed:dealer-cache": "node scripts/seed-dealer-cache.cjs"
+    "seed:dealer-cache": "node scripts/seed-dealer-cache.cjs",
+    "test": "tsc --outDir .tmp/test --module commonjs --target es2019 --skipLibCheck --esModuleInterop --rootDir . tests/dealer-sync-merged-references.test.ts && node --test \".tmp/test/tests/*.test.js\""
   },
   "dependencies": {
     "@strapi/plugin-cloud": "5.40.0",
