@@ -105,7 +105,9 @@ test('a sweep rewrites the survivor ref on the same documentId and never writes 
         },
       ]),
     );
-  // One published dealer (draft + published row) keyed on the absorbed ref A.
+  // One published dealer (draft + published row) keyed on the absorbed ref A,
+  // carrying a pin a staff member placed by hand (the draft row is the one read).
+  const adminPin = { latitude: -33.8688, longitude: 151.2093, precision: 'street', geocodeSource: 'admin' };
   const dealerRows = [A, A].map((connectRef, index) => ({
     documentId: 'doc-A',
     connectRef,
@@ -113,6 +115,7 @@ test('a sweep rewrites the survivor ref on the same documentId and never writes 
     sourceHash: 'old',
     website: null,
     suburb: null,
+    ...adminPin,
   }));
   const strapi = {
     db: {
@@ -148,6 +151,9 @@ test('a sweep rewrites the survivor ref on the same documentId and never writes 
     const update = dealerCalls.find((call) => call.op === 'update');
     assert.equal(update?.arg.documentId, 'doc-A');
     assert.equal(update?.arg.data.connectRef, B);
+    for (const [key, value] of Object.entries(adminPin)) {
+      assert.equal(update?.arg.data[key], value, `manual pin ${key} kept through the re-key`);
+    }
     assert.ok(update && !('mergedReferences' in update.arg.data), 'mergedReferences is not a column');
     assert.ok(!dealerCalls.some((call) => call.op === 'create'));
     assert.equal(dealerCalls.filter((call) => call.op === 'publish').length, 1, 'published state kept');
