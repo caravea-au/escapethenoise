@@ -28,6 +28,12 @@ const FALLBACK_MENU: StrapiLink[] = [
 // ETN-001/ETN-003) — matches the export's "Visit a Dealer →" header button.
 const FALLBACK_CTA: StrapiLink = { label: "Visit a Dealer →", url: "/find-dealer" };
 
+// Secondary header CTA: the Let's Go Caravan Typeform quiz (external, new tab).
+const QUIZ_LINK: StrapiLink = {
+  label: "Take the Quiz",
+  url: "https://letsgocaravan.typeform.com/to/TFQOzGLz",
+};
+
 // Tier-2 — global header (design.md §4). Reversed lockup on the green band.
 // Content comes from the Strapi `header` single type, with hardcoded fallbacks.
 export async function Navbar() {
@@ -69,23 +75,35 @@ export async function Navbar() {
             </Link>
           ))}
         </nav>
-        {cta?.label && (
-          // Display-toggle classes live on this wrapper, not on Button itself:
-          // Button's own base classes already include an unconditional
-          // `inline-flex`, which wins the Tailwind cascade over a bare
-          // `hidden` at equal specificity regardless of viewport, so passing
-          // `hidden md:inline-flex` straight into Button's className never
-          // actually hides it below md.
-          <div className="ml-auto hidden shrink-0 md:inline-flex">
+        {/* Display-toggle classes live on this wrapper, not on Button itself:
+            Button's own base classes already include an unconditional
+            `inline-flex`, which wins the Tailwind cascade over a bare
+            `hidden` at equal specificity regardless of viewport, so passing
+            `hidden md:inline-flex` straight into Button's className never
+            actually hides it below md. */}
+        <div className="ml-auto hidden shrink-0 items-center gap-3 md:inline-flex">
+          {/* lg+ only: at md the extra button crushes the nav into a column. */}
+          <span className="hidden lg:inline-flex">
+            <Button
+              href={QUIZ_LINK.url}
+              variant="glass"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="whitespace-nowrap rounded-[9px] px-[19px] py-[11px] text-sm"
+            >
+              {QUIZ_LINK.label}
+            </Button>
+          </span>
+          {cta?.label && (
             <Button
               href={cta.url}
               className="whitespace-nowrap rounded-[9px] px-[19px] py-[11px] text-sm"
             >
               {cta.label}
             </Button>
-          </div>
-        )}
-        <MobileMenu menu={menu} cta={cta ?? null} />
+          )}
+        </div>
+        <MobileMenu menu={menu} cta={cta ?? null} quiz={QUIZ_LINK} />
       </Container>
     </header>
   );
