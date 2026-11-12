@@ -11,9 +11,11 @@ import type { StrapiLink } from "@/lib/strapi";
 export function MobileMenu({
   menu,
   cta,
+  quiz,
 }: {
   menu: StrapiLink[];
   cta: StrapiLink | null;
+  quiz: StrapiLink;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -76,12 +78,23 @@ export function MobileMenu({
                 {l.label}
               </Link>
             ))}
+            <Button
+              href={quiz.url}
+              variant="glass"
+              fullWidth
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setOpen(false)}
+              className="mt-2 rounded-[9px] text-sm"
+            >
+              {quiz.label}
+            </Button>
             {cta?.label && (
               <Button
                 href={cta.url}
                 fullWidth
                 onClick={() => setOpen(false)}
-                className="mt-2 rounded-[9px] text-sm"
+                className="rounded-[9px] text-sm"
               >
                 {cta.label}
               </Button>
